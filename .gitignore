@@ -2,13 +2,15 @@
 .claude/
 CLAUDE.md
 
-# === Herramientas de Automatización y Scripts de Extracción ===
-Tools/
+# === Datos extraídos/generados (crudos, no el código que los produce) ===
 Data/
-*.json
 *.csv
 *.db
 *.sqlite
+
+# === Dependencias externas compiladas dentro de Tools/ ===
+Tools/wowsimcli-src/
+Tools/wowsimcli
 
 # === Archivos de Configuración del Sistema y VS Code ===
 .vscode/
