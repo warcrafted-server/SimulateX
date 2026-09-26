@@ -158,6 +158,30 @@ mide con el primer lote real antes de confirmar que no hace falta recortar.
      de generación): cada entrada indica `gear_file`, `talent_set`, `apl`,
      `phase`, `faction` y si es una `variante` de un gearset con varias
      combinaciones válidas.
+
+3. **(Hecho)** Generar y validar el `RaidSimRequest` completo por spec (no solo
+   el gearset: también talentos, consumibles y opciones de spec como munición/
+   tótems/sellos, que en wowsims viven en TypeScript con enums, no en JSON
+   parseable con regex de forma fiable):
+   - `Tools/generar_extractores_go.py` copia, para cada una de las 20 specs
+     (paquete Go, no 21: `warrior` y `deathknight` comparten paquete Go entre
+     varias sub-specs), el bloque `CharacterSuiteConfig{...}` de su `_test.go`
+     oficial a un nuevo fichero `zzz_gen_extractor_test.go` **en el mismo
+     paquete** (mismo directorio, mismo `package X`), evitando así reimportar
+     o retraducir a mano los identificadores de talentos/consumibles/opciones
+     de spec — se resuelven directamente porque son del mismo paquete Go.
+   - El test generado llama `generator.GetTest(generator.NumTests() - 1)` (el
+     subtest "Average": el `RaidSimRequest` base con opciones de simulación
+     completas) y vuelca el resultado a `input.json` en ese mismo directorio.
+   - Validado ejecutando `go test -tags with_db -run TestGenExtractor
+     ./sim/<paquete>/...` + `wowsimcli sim` para las 20 specs: **17/20 dan
+     DPS/HPS reales coherentes** (hunter ~6402, mage ~11069, warlock ~15180,
+     deathknight dps ~11017, healing_priest ~3821 HPS, tanques con DPS de
+     amenaza 2000-3600, etc.). Las 3 restantes (holy_paladin,
+     restoration_druid, restoration_shaman) dan 0 por una limitación real del
+     propio wowsims, no de este pipeline (ver sección siguiente).
+   - Estos ficheros Go generados y sus `input.json` viven dentro de
+     `Tools/wowsimcli-src/` (ya excluido completo de git); no se versionan.
 2. Definir la matriz de builds de referencia (`Tools/builds/*.json`) — requiere
    revisar los presets de talentos/gear que ya trae wowsims por clase/spec para no
    inventar builds poco realistas.
@@ -167,6 +191,20 @@ mide con el primer lote real antes de confirmar que no hace falta recortar.
 5. Ejecutar el pipeline completo para un subconjunto pequeño (1-2 clases) como prueba
    de extremo a extremo antes de lanzarlo para las 10 clases completas.
 6. Integrar la lectura de estos datos en `SimulateX.lua` (hook de tooltip).
+
+## Limitación descubierta: 3 specs de sanador sin rotación real en wowsims
+
+Al validar las 20 specs generadas (ver sección de pasos de ejecución), 17
+producen DPS/HPS reales. Las 3 restantes — **holy_paladin, restoration_druid,
+restoration_shaman** — dan 0.0 porque su `DefaultRotation` en el propio código
+fuente de wowsims es un placeholder vacío (`{"priorityList": [{"action":
+{"autocastOtherCooldowns": {}}}]}`, sin ninguna acción de sanación real), a
+diferencia de `healing_priest` que sí tiene un APL de sanación completo vía
+fichero `.apl.json`. No es un fallo de extracción: es una limitación real y
+actual del propio proyecto wowsims/wotlk (esas 3 specs de sanador no tienen su
+lógica de rotación de sanación implementada todavía). Quedan sin datos de HPS
+reales por ahora; se podría revisar en el futuro si el proyecto los añade
+aguas arriba, o abordarlo como línea de trabajo separada si hace falta.
 
 ## Nivel 80 vs niveles bajos — alcance de wowsims
 
