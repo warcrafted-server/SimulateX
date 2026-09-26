@@ -1,0 +1,121 @@
+{
+  "spec": "healing_priest",
+  "gear_presets": [
+    {
+      "const_name": "DISC_PRERAID_PRESET",
+      "label": "Disc Preraid Preset",
+      "gear_file": "preraid_disc",
+      "talent_trees": [
+        0
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "HOLY_PRERAID_PRESET",
+      "label": "Holy Preraid Preset",
+      "gear_file": "preraid_holy",
+      "talent_trees": [
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "DISC_P1_PRESET",
+      "label": "Disc P1 Preset",
+      "gear_file": "p1_disc",
+      "talent_trees": [
+        0
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "HOLY_P1_PRESET",
+      "label": "Holy P1 Preset",
+      "gear_file": "p1_holy",
+      "talent_trees": [
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "DISC_P2_PRESET",
+      "label": "Disc P2 Preset",
+      "gear_file": "p2_disc",
+      "talent_trees": [
+        0
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "HOLY_P2_PRESET",
+      "label": "Holy P2 Preset",
+      "gear_file": "p2_holy",
+      "talent_trees": [
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "DISC_P3_PRESET",
+      "label": "Disc P3 Preset",
+      "gear_file": "p3_disc",
+      "talent_trees": [
+        0
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "HOLY_P3_PRESET",
+      "label": "Holy P3 Preset",
+      "gear_file": "p3_holy",
+      "talent_trees": [
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "DISC_P4_PRESET",
+      "label": "Disc P4 Preset",
+      "gear_file": "p4_disc",
+      "talent_trees": [
+        0
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "HOLY_P4_PRESET",
+      "label": "Holy P4 Preset",
+      "gear_file": "p4_holy",
+      "talent_trees": [
+        1
+      ],
+      "faction": null
+    }
+  ],
+  "apl_presets": [
+    {
+      "const_name": "ROTATION_PRESET_DISC",
+      "label": "Disc",
+      "apl_file": "disc",
+      "talent_trees": []
+    },
+    {
+      "const_name": "ROTATION_PRESET_HOLY",
+      "label": "Holy",
+      "apl_file": "holy",
+      "talent_trees": []
+    }
+  ],
+  "talent_sets": [
+    {
+      "const_name": "DiscTalents",
+      "label": "Disc",
+      "talents_string": "0503203130300512301313231251-2351010303"
+    },
+    {
+      "const_name": "HolyTalents",
+      "label": "Holy",
+      "talents_string": "05032031103-234051032002152530004311051"
+    }
+  ]
+}

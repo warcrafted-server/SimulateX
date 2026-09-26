@@ -1,0 +1,258 @@
+{
+  "spec": "rogue",
+  "gear_presets": [
+    {
+      "const_name": "PRERAID_PRESET_ASSASSINATION",
+      "label": "PreRaid Assassination",
+      "gear_file": "preraid_assassination",
+      "talent_trees": [
+        0
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P1_PRESET_ASSASSINATION",
+      "label": "P1 Assassination",
+      "gear_file": "p1_assassination",
+      "talent_trees": [
+        0
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P2_PRESET_ASSASSINATION",
+      "label": "P2 Assassination",
+      "gear_file": "p2_assassination",
+      "talent_trees": [
+        0
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P3_PRESET_ASSASSINATION",
+      "label": "P3 Assassination",
+      "gear_file": "p3_assassination",
+      "talent_trees": [
+        0
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P4_PRESET_ASSASSINATION",
+      "label": "P4 Assassination",
+      "gear_file": "p4_assassination",
+      "talent_trees": [
+        0
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P5_PRESET_ASSASSINATION",
+      "label": "P5 Assassination",
+      "gear_file": "p5_assassination",
+      "talent_trees": [
+        0
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "PRERAID_PRESET_COMBAT",
+      "label": "PreRaid Combat",
+      "gear_file": "preraid_combat",
+      "talent_trees": [
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P1_PRESET_COMBAT",
+      "label": "P1 Combat",
+      "gear_file": "p1_combat",
+      "talent_trees": [
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P2_PRESET_COMBAT",
+      "label": "P2 Combat",
+      "gear_file": "p2_combat",
+      "talent_trees": [
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P3_PRESET_COMBAT",
+      "label": "P3 Combat",
+      "gear_file": "p3_combat",
+      "talent_trees": [
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P4_PRESET_COMBAT",
+      "label": "P4 Combat",
+      "gear_file": "p4_combat",
+      "talent_trees": [
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P5_PRESET_COMBAT",
+      "label": "P5 Combat",
+      "gear_file": "p5_combat",
+      "talent_trees": [
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P1_PRESET_HEMO_SUB",
+      "label": "P1 Hemo Sub",
+      "gear_file": "p1_hemosub",
+      "talent_trees": [
+        2
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P2_PRESET_HEMO_SUB",
+      "label": "P2 Hemo Sub",
+      "gear_file": "p2_hemosub",
+      "talent_trees": [
+        2
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P3_PRESET_HEMO_SUB",
+      "label": "P3 Hemo Sub",
+      "gear_file": "p3_hemosub",
+      "talent_trees": [
+        2
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P3_PRESET_DANCE_SUB",
+      "label": "P3 Dance Sub",
+      "gear_file": "p3_dancesub",
+      "talent_trees": [
+        2
+      ],
+      "faction": null
+    }
+  ],
+  "apl_presets": [
+    {
+      "const_name": "ROTATION_PRESET_MUTILATE",
+      "label": "Mutilate",
+      "apl_file": "mutilate",
+      "talent_trees": [
+        0
+      ]
+    },
+    {
+      "const_name": "ROTATION_PRESET_RUPTURE_MUTILATE",
+      "label": "Rupture Mutilate",
+      "apl_file": "rupture_mutilate",
+      "talent_trees": [
+        0
+      ]
+    },
+    {
+      "const_name": "ROTATION_PRESET_MUTILATE_EXPOSE",
+      "label": "Mutilate w/ Expose",
+      "apl_file": "mutilate_expose",
+      "talent_trees": [
+        0
+      ]
+    },
+    {
+      "const_name": "ROTATION_PRESET_RUPTURE_MUTILATE_EXPOSE",
+      "label": "Rupture Mutilate w/ Expose",
+      "apl_file": "rupture_mutilate_expose",
+      "talent_trees": [
+        0
+      ]
+    },
+    {
+      "const_name": "ROTATION_PRESET_COMBAT",
+      "label": "Combat",
+      "apl_file": "combat",
+      "talent_trees": [
+        1
+      ]
+    },
+    {
+      "const_name": "ROTATION_PRESET_COMBAT_EXPOSE",
+      "label": "Combat w/ Expose",
+      "apl_file": "combat_expose",
+      "talent_trees": [
+        1
+      ]
+    },
+    {
+      "const_name": "ROTATION_PRESET_COMBAT_CLEAVE_SND",
+      "label": "Combat Cleave SND",
+      "apl_file": "combat_cleave_snd",
+      "talent_trees": [
+        1
+      ]
+    },
+    {
+      "const_name": "ROTATION_PRESET_COMBAT_CLEAVE_SND_EXPOSE",
+      "label": "Combat Cleave SND w/ Expose",
+      "apl_file": "combat_cleave_snd_expose",
+      "talent_trees": [
+        1
+      ]
+    },
+    {
+      "const_name": "ROTATION_PRESET_AOE",
+      "label": "Fan AOE",
+      "apl_file": "fan_aoe",
+      "talent_trees": []
+    }
+  ],
+  "talent_sets": [
+    {
+      "const_name": "CombatHackTalents",
+      "label": "Combat Axes/Swords",
+      "talents_string": "00532010414-0252051000035015223100501251"
+    },
+    {
+      "const_name": "CombatCQCTalents",
+      "label": "Combat Fists",
+      "talents_string": "00532010414-0252051050035010223100501251"
+    },
+    {
+      "const_name": "AssassinationTalents137",
+      "label": "Assassination 13/7",
+      "talents_string": "005303104352100520103331051-005005003-502"
+    },
+    {
+      "const_name": "AssassinationTalents182",
+      "label": "Assassination 18/2",
+      "talents_string": "005303104352100520103331051-005005005003-2"
+    },
+    {
+      "const_name": "AssassinationTalentsBF",
+      "label": "Assassination Blade Flurry",
+      "talents_string": "005303104352100520103231-005205005003001-501"
+    },
+    {
+      "const_name": "SubtletyTalents",
+      "label": "Subtlety",
+      "talents_string": "30532010114--5022012030321121350115031151"
+    },
+    {
+      "const_name": "HemoSubtletyTalents",
+      "label": "Hemo Sub",
+      "talents_string": "30532010135--502201203032112135011503122"
+    }
+  ]
+}

@@ -1,0 +1,262 @@
+{
+  "spec": "deathknight",
+  "gear_presets": [
+    {
+      "const_name": "P1_BLOOD_PRESET",
+      "label": "P1 Blood",
+      "gear_file": "p1_blood",
+      "talent_trees": [
+        0
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P2_BLOOD_PRESET",
+      "label": "P2 Blood",
+      "gear_file": "p2_blood",
+      "talent_trees": [
+        0
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P3_BLOOD_PRESET",
+      "label": "P3 Blood",
+      "gear_file": "p3_blood",
+      "talent_trees": [
+        0
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P4_BLOOD_PRESET",
+      "label": "P4 Blood",
+      "gear_file": "p4_blood",
+      "talent_trees": [
+        0
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "PRERAID_FROST_PRESET",
+      "label": "Pre-Raid Frost",
+      "gear_file": "preraid_frost",
+      "talent_trees": [
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P1_FROST_PRESET",
+      "label": "P1 Frost",
+      "gear_file": "p1_frost",
+      "talent_trees": [
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P2_FROST_PRESET",
+      "label": "P2 Frost",
+      "gear_file": "p2_frost",
+      "talent_trees": [
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P3_FROST_PRESET",
+      "label": "P3 Frost",
+      "gear_file": "p3_frost",
+      "talent_trees": [
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P4_FROST_PRESET",
+      "label": "P4 Frost",
+      "gear_file": "p4_frost",
+      "talent_trees": [
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P1_FROSTSUBUNH_PRESET",
+      "label": "P1 Frost Sub Unh",
+      "gear_file": "p1_frost_subUh",
+      "talent_trees": [
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "PRERAID_UNHOLY_2H_PRESET",
+      "label": "Pre-Raid 2H Unholy",
+      "gear_file": "preraid_uh_2h",
+      "talent_trees": [
+        2
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P1_UNHOLY_2H_PRESET",
+      "label": "P1 2H Unholy",
+      "gear_file": "p1_uh_2h",
+      "talent_trees": [
+        2
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P4_UNHOLY_2H_PRESET",
+      "label": "P4 2H Unholy",
+      "gear_file": "p4_uh_2h",
+      "talent_trees": [
+        2
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "PRERAID_UNHOLY_DW_PRESET",
+      "label": "Pre-Raid DW Unholy",
+      "gear_file": "preraid_uh_dw",
+      "talent_trees": [
+        2
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P1_UNHOLY_DW_PRESET",
+      "label": "P1 DW Unholy",
+      "gear_file": "p1_uh_dw",
+      "talent_trees": [
+        2
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P2_UNHOLY_DW_PRESET",
+      "label": "P2 DW Unholy",
+      "gear_file": "p2_uh_dw",
+      "talent_trees": [
+        2
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P3_UNHOLY_DW_PRESET",
+      "label": "P3 DW Unholy",
+      "gear_file": "p3_uh_dw",
+      "talent_trees": [
+        2
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P4_UNHOLY_DW_PRESET",
+      "label": "P4 DW Unholy",
+      "gear_file": "p4_uh_dw",
+      "talent_trees": [
+        2
+      ],
+      "faction": null
+    }
+  ],
+  "apl_presets": [
+    {
+      "const_name": "BLOOD_DPS_ROTATION_PRESET_DEFAULT",
+      "label": "Blood DPS",
+      "apl_file": "blood_dps",
+      "talent_trees": [
+        0
+      ]
+    },
+    {
+      "const_name": "BLOOD_PESTI_AOE_ROTATION_PRESET_DEFAULT",
+      "label": "Blood Pesti AOE",
+      "apl_file": "blood_pesti_aoe",
+      "talent_trees": [
+        0
+      ]
+    },
+    {
+      "const_name": "FROST_BL_PESTI_ROTATION_PRESET_DEFAULT",
+      "label": "Frost BL Pesti",
+      "apl_file": "frost_bl_pesti",
+      "talent_trees": [
+        1
+      ]
+    },
+    {
+      "const_name": "FROST_UH_PESTI_ROTATION_PRESET_DEFAULT",
+      "label": "Frost UH Pesti",
+      "apl_file": "frost_uh_pesti",
+      "talent_trees": [
+        1
+      ]
+    },
+    {
+      "const_name": "UNHOLY_DW_ROTATION_PRESET_DEFAULT",
+      "label": "Unholy DW SS",
+      "apl_file": "unholy_dw_ss",
+      "talent_trees": [
+        2
+      ]
+    },
+    {
+      "const_name": "UNHOLY_2H_ROTATION_PRESET_DEFAULT",
+      "label": "Unholy 2H SS",
+      "apl_file": "uh_2h_ss",
+      "talent_trees": [
+        2
+      ]
+    },
+    {
+      "const_name": "UNHOLY_DND_AOE_ROTATION_PRESET_DEFAULT",
+      "label": "Unholy DND AOE",
+      "apl_file": "uh_dnd_aoe",
+      "talent_trees": [
+        2
+      ]
+    }
+  ],
+  "talent_sets": [
+    {
+      "const_name": "FrostTalents",
+      "label": "Frost BL",
+      "talents_string": "23050005-32005350352203012300033101351"
+    },
+    {
+      "const_name": "FrostUnholyTalents",
+      "label": "Frost UH",
+      "talents_string": "01-32002350342203012300033101351-230200305003"
+    },
+    {
+      "const_name": "UnholyDualWieldTalents",
+      "label": "Unholy DW",
+      "talents_string": "-320043500002-2300303050032152000150013133051"
+    },
+    {
+      "const_name": "UnholyDualWieldSSTalents",
+      "label": "Unholy DW SS",
+      "talents_string": "-320033500002-2301303050032151000150013133151"
+    },
+    {
+      "const_name": "Unholy2HTalents",
+      "label": "Unholy 2H",
+      "talents_string": "-320050500002-2302003350032052000150013133151"
+    },
+    {
+      "const_name": "UnholyAoeTalents",
+      "label": "Unholy AOE",
+      "talents_string": "-320050500002-2302303050032052000150013133151"
+    },
+    {
+      "const_name": "BloodTalents",
+      "label": "Blood DPS",
+      "talents_string": "2305120530003303231023001351--2302003050032"
+    }
+  ]
+}

@@ -1,0 +1,193 @@
+{
+  "spec": "warlock",
+  "gear_presets": [
+    {
+      "const_name": "SWP_BIS",
+      "label": "Straight Outa SWP",
+      "gear_file": "swp",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "PRERAID_AFFLICTION_PRESET",
+      "label": "Preraid Affliction",
+      "gear_file": "preraid_affliction",
+      "talent_trees": [
+        0
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P1_AFFLICTION_PRESET",
+      "label": "P1 Affliction",
+      "gear_file": "p1_affliction",
+      "talent_trees": [
+        0
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P2_AFFLICTION_PRESET",
+      "label": "P2 Affliction",
+      "gear_file": "p2_affliction",
+      "talent_trees": [
+        0
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P3_AFFLICTION_ALLIANCE_PRESET",
+      "label": "P3 Affliction [A]",
+      "gear_file": "p3_affliction_alliance",
+      "talent_trees": [
+        0
+      ],
+      "faction": "Alliance"
+    },
+    {
+      "const_name": "P3_AFFLICTION_HORDE_PRESET",
+      "label": "P3 Affliction [H]",
+      "gear_file": "p3_affliction_horde",
+      "talent_trees": [
+        0
+      ],
+      "faction": "Horde"
+    },
+    {
+      "const_name": "P4_AFFLICTION_PRESET",
+      "label": "P4 Affliction",
+      "gear_file": "p4_affliction",
+      "talent_trees": [
+        0
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "PRERAID_DEMODESTRO_PRESET",
+      "label": "Preraid Demo/Destro",
+      "gear_file": "preraid_demodestro",
+      "talent_trees": [
+        1,
+        2
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P1_DEMODESTRO_PRESET",
+      "label": "P1 Demo/Destro",
+      "gear_file": "p1_demodestro",
+      "talent_trees": [
+        1,
+        2
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P2_DEMODESTRO_PRESET",
+      "label": "P2 Demo/Destro",
+      "gear_file": "p2_demodestro",
+      "talent_trees": [
+        1,
+        2
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P3_DEMO_ALLIANCE_PRESET",
+      "label": "P3 Demo [A]",
+      "gear_file": "p3_demo_alliance",
+      "talent_trees": [
+        1
+      ],
+      "faction": "Alliance"
+    },
+    {
+      "const_name": "P3_DEMO_HORDE_PRESET",
+      "label": "P3 Demo [H]",
+      "gear_file": "p3_demo_horde",
+      "talent_trees": [
+        1
+      ],
+      "faction": "Horde"
+    },
+    {
+      "const_name": "P4_DEMO_PRESET",
+      "label": "P4 Demo",
+      "gear_file": "p4_demo",
+      "talent_trees": [
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P3_DESTRO_ALLIANCE_PRESET",
+      "label": "P3 Destro [A]",
+      "gear_file": "p3_destro_alliance",
+      "talent_trees": [
+        2
+      ],
+      "faction": "Alliance"
+    },
+    {
+      "const_name": "P3_DESTRO_HORDE_PRESET",
+      "label": "P3 Destro [H]",
+      "gear_file": "p3_destro_horde",
+      "talent_trees": [
+        2
+      ],
+      "faction": "Horde"
+    },
+    {
+      "const_name": "P4_DESTRO_PRESET",
+      "label": "P4 Destro",
+      "gear_file": "p4_destro",
+      "talent_trees": [
+        2
+      ],
+      "faction": null
+    }
+  ],
+  "apl_presets": [
+    {
+      "const_name": "APL_Affliction_Default",
+      "label": "Affliction",
+      "apl_file": "affliction",
+      "talent_trees": [
+        0
+      ]
+    },
+    {
+      "const_name": "APL_Demo_Default",
+      "label": "Demo",
+      "apl_file": "demo",
+      "talent_trees": [
+        1
+      ]
+    },
+    {
+      "const_name": "APL_Destro_Default",
+      "label": "Destro",
+      "apl_file": "destro",
+      "talent_trees": [
+        2
+      ]
+    }
+  ],
+  "talent_sets": [
+    {
+      "const_name": "AfflictionTalents",
+      "label": "Affliction",
+      "talents_string": "2350002030023510253500331151--550000051"
+    },
+    {
+      "const_name": "DemonologyTalents",
+      "label": "Demonology",
+      "talents_string": "-203203301035012530135201351-550000052"
+    },
+    {
+      "const_name": "DestructionTalents",
+      "label": "Destruction",
+      "talents_string": "-03310030003-05203205210331051335230351"
+    }
+  ]
+}

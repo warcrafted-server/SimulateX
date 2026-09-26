@@ -1,0 +1,53 @@
+{
+  "spec": "restoration_shaman",
+  "gear_presets": [
+    {
+      "const_name": "PRERAID_PRESET",
+      "label": "PreRaid",
+      "gear_file": "preraid",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P1_PRESET",
+      "label": "P1 Preset",
+      "gear_file": "p1",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P2_PRESET",
+      "label": "P2 Preset",
+      "gear_file": "p2",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P3_PRESET",
+      "label": "P3 Preset",
+      "gear_file": "p3",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P4_PRESET",
+      "label": "P4 Preset",
+      "gear_file": "p4",
+      "talent_trees": [],
+      "faction": null
+    }
+  ],
+  "apl_presets": [],
+  "talent_sets": [
+    {
+      "const_name": "TankHealingTalents",
+      "label": "Tank Healing",
+      "talents_string": "-30205033-05005331335010501122331251"
+    },
+    {
+      "const_name": "RaidHealingTalents",
+      "label": "Raid Healing",
+      "talents_string": "-3020503-50005331335310501122331251"
+    }
+  ]
+}

@@ -1,0 +1,93 @@
+{
+  "spec": "enhancement_shaman",
+  "gear_presets": [
+    {
+      "const_name": "PRERAID_PRESET",
+      "label": "Preraid Preset",
+      "gear_file": "preraid",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P1_PRESET",
+      "label": "P1 Preset",
+      "gear_file": "p1",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P2_PRESET_FT",
+      "label": "P2 Preset FT",
+      "gear_file": "p2_ft",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P2_PRESET_WF",
+      "label": "P2 Preset WF",
+      "gear_file": "p2_wf",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P3_PRESET_ALLIANCE",
+      "label": "P3 Preset [A]",
+      "gear_file": "p3_alliance",
+      "talent_trees": [],
+      "faction": "Alliance"
+    },
+    {
+      "const_name": "P3_PRESET_HORDE",
+      "label": "P3 Preset [H]",
+      "gear_file": "p3_horde",
+      "talent_trees": [],
+      "faction": "Horde"
+    },
+    {
+      "const_name": "P4_PRESET_FT",
+      "label": "P4 Preset FT",
+      "gear_file": "p4_ft",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P4_PRESET_WF",
+      "label": "P4 Preset WF",
+      "gear_file": "p4_wf",
+      "talent_trees": [],
+      "faction": null
+    }
+  ],
+  "apl_presets": [
+    {
+      "const_name": "ROTATION_FT_DEFAULT",
+      "label": "Default FT",
+      "apl_file": "default_ft",
+      "talent_trees": []
+    },
+    {
+      "const_name": "ROTATION_WF_DEFAULT",
+      "label": "Default WF",
+      "apl_file": "default_wf",
+      "talent_trees": []
+    },
+    {
+      "const_name": "ROTATION_PHASE_3",
+      "label": "Phase 3",
+      "apl_file": "phase_3",
+      "talent_trees": []
+    }
+  ],
+  "talent_sets": [
+    {
+      "const_name": "StandardTalents",
+      "label": "Standard",
+      "talents_string": "053030152-30405003105021333031131031051"
+    },
+    {
+      "const_name": "Phase3Talents",
+      "label": "Phase 3",
+      "talents_string": "053030152-30505003105001333031131131051"
+    }
+  ]
+}

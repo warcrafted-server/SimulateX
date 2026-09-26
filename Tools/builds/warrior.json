@@ -1,0 +1,202 @@
+{
+  "spec": "warrior",
+  "gear_presets": [
+    {
+      "const_name": "PRERAID_ARMS_PRESET",
+      "label": "Preraid Arms",
+      "gear_file": "preraid_arms",
+      "talent_trees": [
+        0
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P1_ARMS_PRESET",
+      "label": "P1 Arms",
+      "gear_file": "p1_arms",
+      "talent_trees": [
+        0
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P2_ARMS_PRESET",
+      "label": "P2 Arms",
+      "gear_file": "p2_arms",
+      "talent_trees": [
+        0
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P3_ARMS_2P_PRESET_ALLIANCE",
+      "label": "P3 Arms 2p [A]",
+      "gear_file": "p3_arms_2p_alliance",
+      "talent_trees": [
+        0
+      ],
+      "faction": "Alliance"
+    },
+    {
+      "const_name": "P3_ARMS_4P_PRESET_ALLIANCE",
+      "label": "P3 Arms 4p [A]",
+      "gear_file": "p3_arms_4p_alliance",
+      "talent_trees": [
+        0
+      ],
+      "faction": "Alliance"
+    },
+    {
+      "const_name": "P3_ARMS_2P_PRESET_HORDE",
+      "label": "P3 Arms 2p [H]",
+      "gear_file": "p3_arms_2p_horde",
+      "talent_trees": [
+        0
+      ],
+      "faction": "Horde"
+    },
+    {
+      "const_name": "P3_ARMS_4P_PRESET_HORDE",
+      "label": "P3 Arms 4p [H]",
+      "gear_file": "p3_arms_4p_horde",
+      "talent_trees": [
+        0
+      ],
+      "faction": "Horde"
+    },
+    {
+      "const_name": "P4_ARMS_PRESET_ALLIANCE",
+      "label": "P4 Arms [A]",
+      "gear_file": "p4_arms_alliance",
+      "talent_trees": [
+        0
+      ],
+      "faction": "Alliance"
+    },
+    {
+      "const_name": "P4_ARMS_PRESET_HORDE",
+      "label": "P4 Arms [H]",
+      "gear_file": "p4_arms_horde",
+      "talent_trees": [
+        0
+      ],
+      "faction": "Horde"
+    },
+    {
+      "const_name": "PRERAID_FURY_PRESET",
+      "label": "Preraid Fury",
+      "gear_file": "preraid_fury",
+      "talent_trees": [
+        1,
+        2
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P1_FURY_PRESET",
+      "label": "P1 Fury",
+      "gear_file": "p1_fury",
+      "talent_trees": [
+        1,
+        2
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P2_FURY_PRESET",
+      "label": "P2 Fury",
+      "gear_file": "p2_fury",
+      "talent_trees": [
+        1,
+        2
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "P3_FURY_PRESET_ALLIANCE",
+      "label": "P3 Fury [A]",
+      "gear_file": "p3_fury_alliance",
+      "talent_trees": [
+        1,
+        2
+      ],
+      "faction": "Alliance"
+    },
+    {
+      "const_name": "P3_FURY_PRESET_HORDE",
+      "label": "P3 Fury [H]",
+      "gear_file": "p3_fury_horde",
+      "talent_trees": [
+        1,
+        2
+      ],
+      "faction": "Horde"
+    },
+    {
+      "const_name": "P4_FURY_PRESET_ALLIANCE",
+      "label": "P4 Fury [A]",
+      "gear_file": "p4_fury_alliance",
+      "talent_trees": [
+        1,
+        2
+      ],
+      "faction": "Alliance"
+    },
+    {
+      "const_name": "P4_FURY_PRESET_HORDE",
+      "label": "P4 Fury [H]",
+      "gear_file": "p4_fury_horde",
+      "talent_trees": [
+        1,
+        2
+      ],
+      "faction": "Horde"
+    }
+  ],
+  "apl_presets": [
+    {
+      "const_name": "ROTATION_FURY",
+      "label": "Fury",
+      "apl_file": "fury",
+      "talent_trees": [
+        1
+      ]
+    },
+    {
+      "const_name": "ROTATION_FURY_SUNDER",
+      "label": "Fury + Sunder",
+      "apl_file": "fury_sunder",
+      "talent_trees": [
+        1
+      ]
+    },
+    {
+      "const_name": "ROTATION_ARMS",
+      "label": "Arms",
+      "apl_file": "arms",
+      "talent_trees": [
+        0
+      ]
+    },
+    {
+      "const_name": "ROTATION_ARMS_SUNDER",
+      "label": "Arms + Sunder",
+      "apl_file": "arms_sunder",
+      "talent_trees": [
+        0
+      ]
+    }
+  ],
+  "talent_sets": [
+    {
+      "const_name": "ArmsTalents",
+      "label": "Arms",
+      "talents_string": "3022032023335100102012213231251-305-2033"
+    },
+    {
+      "const_name": "FuryTalents",
+      "label": "Fury",
+      "talents_string": "32002301233-305053000520310053120500351"
+    }
+  ]
+}

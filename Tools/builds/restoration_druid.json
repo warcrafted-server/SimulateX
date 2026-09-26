@@ -1,0 +1,53 @@
+{
+  "spec": "restoration_druid",
+  "gear_presets": [
+    {
+      "const_name": "PRERAID_PRESET",
+      "label": "PreRaid",
+      "gear_file": "preraid",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P1_PRESET",
+      "label": "P1 Preset",
+      "gear_file": "p1",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P2_PRESET",
+      "label": "P2 Preset",
+      "gear_file": "p2",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P3_PRESET",
+      "label": "P3 Preset",
+      "gear_file": "p3",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P4_PRESET",
+      "label": "P4 Preset",
+      "gear_file": "p4",
+      "talent_trees": [],
+      "faction": null
+    }
+  ],
+  "apl_presets": [],
+  "talent_sets": [
+    {
+      "const_name": "CelestialFocusTalents",
+      "label": "Celestial Focus",
+      "talents_string": "05320031103--230023312131502331050313051"
+    },
+    {
+      "const_name": "ThiccRestoTalents",
+      "label": "Thicc Resto",
+      "talents_string": "05320001--230023312331502531053313051"
+    }
+  ]
+}

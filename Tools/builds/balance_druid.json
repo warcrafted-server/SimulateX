@@ -1,0 +1,96 @@
+{
+  "spec": "balance_druid",
+  "gear_presets": [
+    {
+      "const_name": "PRERAID_PRESET",
+      "label": "Pre-raid Preset",
+      "gear_file": "preraid",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P1_PRESET",
+      "label": "P1 Preset",
+      "gear_file": "p1",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P2_PRESET",
+      "label": "P2 Preset",
+      "gear_file": "p2",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P3_PRESET_ALLI",
+      "label": "P3 Preset [A]",
+      "gear_file": "p3_alliance",
+      "talent_trees": [],
+      "faction": "Alliance"
+    },
+    {
+      "const_name": "P3_PRESET_HORDE",
+      "label": "P3 Preset [H]",
+      "gear_file": "p3_horde",
+      "talent_trees": [],
+      "faction": "Horde"
+    },
+    {
+      "const_name": "P4_PRESET_ALLI",
+      "label": "P4 Preset [A]",
+      "gear_file": "p4_alliance",
+      "talent_trees": [],
+      "faction": "Alliance"
+    },
+    {
+      "const_name": "P4_PRESET_HORDE",
+      "label": "P4 Preset [H]",
+      "gear_file": "p4_horde",
+      "talent_trees": [],
+      "faction": "Horde"
+    }
+  ],
+  "apl_presets": [
+    {
+      "const_name": "ROTATION_PRESET_P3_APL",
+      "label": "P3",
+      "apl_file": "basic_p3",
+      "talent_trees": []
+    },
+    {
+      "const_name": "ROTATION_PRESET_P4_FOCUS_APL",
+      "label": "P4 Focus Glyph",
+      "apl_file": "p4_focus_glyph",
+      "talent_trees": []
+    },
+    {
+      "const_name": "ROTATION_PRESET_P4_STARFIRE_APL",
+      "label": "P4 Starfire Glyph",
+      "apl_file": "p4_starfire_glyph",
+      "talent_trees": []
+    }
+  ],
+  "talent_sets": [
+    {
+      "const_name": "Phase1Talents",
+      "label": "Phase 1",
+      "talents_string": "5032003115331303213305311231--205003012"
+    },
+    {
+      "const_name": "Phase2Talents",
+      "label": "Phase 2",
+      "talents_string": "5012203115331303213305311231--205003012"
+    },
+    {
+      "const_name": "Phase3Talents",
+      "label": "Phase 3",
+      "talents_string": "5102223115331303213305311031--205003012"
+    },
+    {
+      "const_name": "Phase4Talents",
+      "label": "Phase 4",
+      "talents_string": "5102223115331303213305311031--205003012"
+    }
+  ]
+}

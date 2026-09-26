@@ -1,0 +1,34 @@
+{
+  "spec": "smite_priest",
+  "gear_presets": [
+    {
+      "const_name": "PRERAID_PRESET",
+      "label": "Preraid Preset",
+      "gear_file": "preraid",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P1_PRESET",
+      "label": "P1 Preset",
+      "gear_file": "p1",
+      "talent_trees": [],
+      "faction": null
+    }
+  ],
+  "apl_presets": [
+    {
+      "const_name": "ROTATION_PRESET_APL",
+      "label": "Default",
+      "apl_file": "default",
+      "talent_trees": []
+    }
+  ],
+  "talent_sets": [
+    {
+      "const_name": "StandardTalents",
+      "label": "Standard",
+      "talents_string": "05332031013005023310001-005551002020152-00502"
+    }
+  ]
+}

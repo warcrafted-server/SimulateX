@@ -1,0 +1,31 @@
+{
+  "spec": "smite_priest",
+  "builds": [
+    {
+      "gear_file": "preraid",
+      "label": "Preraid Preset",
+      "phase": "preraid",
+      "subspec": null,
+      "faction": null,
+      "talent_set": "StandardTalents",
+      "talent_rule": "unico_o_toda_la_spec",
+      "apl": "ROTATION_PRESET_APL",
+      "apl_rule": "unico_o_toda_la_spec",
+      "status": "ok",
+      "motivo": null
+    },
+    {
+      "gear_file": "p1",
+      "label": "P1 Preset",
+      "phase": "p1",
+      "subspec": null,
+      "faction": null,
+      "talent_set": "StandardTalents",
+      "talent_rule": "unico_o_toda_la_spec",
+      "apl": "ROTATION_PRESET_APL",
+      "apl_rule": "unico_o_toda_la_spec",
+      "status": "ok",
+      "motivo": null
+    }
+  ]
+}

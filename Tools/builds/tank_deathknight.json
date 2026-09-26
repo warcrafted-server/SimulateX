@@ -1,0 +1,88 @@
+{
+  "spec": "tank_deathknight",
+  "gear_presets": [
+    {
+      "const_name": "P1_BLOOD_PRESET",
+      "label": "P1 Blood",
+      "gear_file": "p1_blood",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P2_BLOOD_PRESET",
+      "label": "P2 Blood",
+      "gear_file": "p2_blood",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P3_BLOOD_PRESET",
+      "label": "P3 Blood",
+      "gear_file": "p3_blood",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P4_BLOOD_PRESET",
+      "label": "P4 Blood",
+      "gear_file": "p4_blood",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P1_FROST_PRESET",
+      "label": "P1 Frost",
+      "gear_file": "p1_frost",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P2_FROST_PRESET",
+      "label": "P2 Frost",
+      "gear_file": "p2_frost",
+      "talent_trees": [],
+      "faction": null
+    }
+  ],
+  "apl_presets": [
+    {
+      "const_name": "BLOOD_IT_SPAM_ROTATION_PRESET_DEFAULT",
+      "label": "Blood Icy Touch",
+      "apl_file": "blood_icy_touch",
+      "talent_trees": []
+    },
+    {
+      "const_name": "BLOOD_AGGRO_ROTATION_PRESET_DEFAULT",
+      "label": "Blood Aggro",
+      "apl_file": "blood_aggro",
+      "talent_trees": []
+    }
+  ],
+  "talent_sets": [
+    {
+      "const_name": "BloodTalents",
+      "label": "Blood",
+      "talents_string": "005512153330030320102013-3050505000023-005"
+    },
+    {
+      "const_name": "BloodAggroTalents",
+      "label": "Blood Aggro",
+      "talents_string": "0355220530303303201020131301--0052003050032"
+    },
+    {
+      "const_name": "DoubleBuffBloodTalents",
+      "label": "2B Blood",
+      "talents_string": "005512153330030320102013-3050505000023201-002"
+    },
+    {
+      "const_name": "FrostTalents",
+      "label": "Frost",
+      "talents_string": "005510003-3050535000223301030023310035-005"
+    },
+    {
+      "const_name": "DoubleBuffFrostTalents",
+      "label": "2B Frost",
+      "talents_string": "00551005303003002-305053510022330100002301-005"
+    }
+  ]
+}

@@ -1,0 +1,109 @@
+{
+  "spec": "enhancement_shaman",
+  "builds": [
+    {
+      "gear_file": "preraid",
+      "label": "Preraid Preset",
+      "phase": "preraid",
+      "subspec": null,
+      "faction": null,
+      "talent_set": "Phase3Talents",
+      "talent_rule": "fase",
+      "apl": "ROTATION_PHASE_3",
+      "apl_rule": "fase",
+      "status": "ok",
+      "motivo": null
+    },
+    {
+      "gear_file": "p1",
+      "label": "P1 Preset",
+      "phase": "p1",
+      "subspec": null,
+      "faction": null,
+      "talent_set": "Phase3Talents",
+      "talent_rule": "fase",
+      "apl": "ROTATION_PHASE_3",
+      "apl_rule": "fase",
+      "status": "ok",
+      "motivo": null
+    },
+    {
+      "gear_file": "p2_ft",
+      "label": "P2 Preset FT",
+      "phase": "p2",
+      "subspec": "ft",
+      "faction": null,
+      "talent_set": "Phase3Talents",
+      "talent_rule": "fase",
+      "apl": "ROTATION_FT_DEFAULT",
+      "apl_rule": "subspec",
+      "status": "ok",
+      "motivo": null
+    },
+    {
+      "gear_file": "p2_wf",
+      "label": "P2 Preset WF",
+      "phase": "p2",
+      "subspec": "wf",
+      "faction": null,
+      "talent_set": "Phase3Talents",
+      "talent_rule": "fase",
+      "apl": "ROTATION_WF_DEFAULT",
+      "apl_rule": "subspec",
+      "status": "ok",
+      "motivo": null
+    },
+    {
+      "gear_file": "p3_alliance",
+      "label": "P3 Preset [A]",
+      "phase": "p3",
+      "subspec": "alliance",
+      "faction": "Alliance",
+      "talent_set": "Phase3Talents",
+      "talent_rule": "fase",
+      "apl": "ROTATION_PHASE_3",
+      "apl_rule": "fase",
+      "status": "ok",
+      "motivo": null
+    },
+    {
+      "gear_file": "p3_horde",
+      "label": "P3 Preset [H]",
+      "phase": "p3",
+      "subspec": "horde",
+      "faction": "Horde",
+      "talent_set": "Phase3Talents",
+      "talent_rule": "fase",
+      "apl": "ROTATION_PHASE_3",
+      "apl_rule": "fase",
+      "status": "ok",
+      "motivo": null
+    },
+    {
+      "gear_file": "p4_ft",
+      "label": "P4 Preset FT",
+      "phase": "p4",
+      "subspec": "ft",
+      "faction": null,
+      "talent_set": "Phase3Talents",
+      "talent_rule": "fase",
+      "apl": "ROTATION_FT_DEFAULT",
+      "apl_rule": "subspec",
+      "status": "ok",
+      "motivo": null
+    },
+    {
+      "gear_file": "p4_wf",
+      "label": "P4 Preset WF",
+      "phase": "p4",
+      "subspec": "wf",
+      "faction": null,
+      "talent_set": "Phase3Talents",
+      "talent_rule": "fase",
+      "apl": "ROTATION_WF_DEFAULT",
+      "apl_rule": "subspec",
+      "status": "ok",
+      "motivo": null
+    }
+  ]
+}

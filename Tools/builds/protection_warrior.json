@@ -1,0 +1,67 @@
+{
+  "spec": "protection_warrior",
+  "gear_presets": [
+    {
+      "const_name": "PRERAID_BALANCED_PRESET",
+      "label": "P1 PreRaid Preset",
+      "gear_file": "preraid_balanced",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P4_PRERAID_PRESET",
+      "label": "P4 PreRaid Preset",
+      "gear_file": "p4_preraid",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P1_BALANCED_PRESET",
+      "label": "P1 Preset",
+      "gear_file": "p1_balanced",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P2_SURVIVAL_PRESET",
+      "label": "P2 Preset",
+      "gear_file": "p2_survival",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P3_PRESET",
+      "label": "P3 Preset",
+      "gear_file": "p3",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P4_PRESET",
+      "label": "P4 Preset",
+      "gear_file": "p4",
+      "talent_trees": [],
+      "faction": null
+    }
+  ],
+  "apl_presets": [
+    {
+      "const_name": "ROTATION_DEFAULT",
+      "label": "Default APL",
+      "apl_file": "default",
+      "talent_trees": []
+    }
+  ],
+  "talent_sets": [
+    {
+      "const_name": "StandardTalents",
+      "label": "Standard",
+      "talents_string": "2500030023-302-053351225000012521030113321"
+    },
+    {
+      "const_name": "UATalents",
+      "label": "UA",
+      "talents_string": "35023301230051002020120002-2-05035122500000252"
+    }
+  ]
+}

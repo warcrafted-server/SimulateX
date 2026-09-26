@@ -1,0 +1,61 @@
+{
+  "spec": "feral_druid",
+  "gear_presets": [
+    {
+      "const_name": "PRERAID_PRESET",
+      "label": "Preraid Preset",
+      "gear_file": "preraid",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P1_PRESET",
+      "label": "P1 Preset",
+      "gear_file": "p1",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P2_PRESET",
+      "label": "P2 Preset",
+      "gear_file": "p2",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P3_PRESET",
+      "label": "P3 Preset",
+      "gear_file": "p3",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P4_PRESET",
+      "label": "P4 Preset",
+      "gear_file": "p4",
+      "talent_trees": [],
+      "faction": null
+    }
+  ],
+  "apl_presets": [
+    {
+      "const_name": "APL_ROTATION_DEFAULT",
+      "label": "APL Default",
+      "apl_file": "default",
+      "talent_trees": []
+    },
+    {
+      "const_name": "APL_ROTATION_CUSTOM_EXAMPLE",
+      "label": "Custom APL Example",
+      "apl_file": "custom_apl_example",
+      "talent_trees": []
+    }
+  ],
+  "talent_sets": [
+    {
+      "const_name": "StandardTalents",
+      "label": "Standard",
+      "talents_string": "-543202132322010053120030310511-203503012"
+    }
+  ]
+}

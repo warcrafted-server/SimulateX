@@ -1,0 +1,68 @@
+{
+  "spec": "elemental_shaman",
+  "gear_presets": [
+    {
+      "const_name": "PRERAID_PRESET",
+      "label": "Pre-raid Preset",
+      "gear_file": "preraid",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P1_PRESET",
+      "label": "P1 Preset",
+      "gear_file": "p1",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P2_PRESET",
+      "label": "P2 Preset",
+      "gear_file": "p2",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P3_PRESET_ALLI",
+      "label": "P3 Preset [A]",
+      "gear_file": "p3_alliance",
+      "talent_trees": [],
+      "faction": "Alliance"
+    },
+    {
+      "const_name": "P3_PRESET_HORDE",
+      "label": "P3 Preset [H]",
+      "gear_file": "p3_horde",
+      "talent_trees": [],
+      "faction": "Horde"
+    },
+    {
+      "const_name": "P4_PRESET",
+      "label": "P4 Preset",
+      "gear_file": "p4",
+      "talent_trees": [],
+      "faction": null
+    }
+  ],
+  "apl_presets": [
+    {
+      "const_name": "ROTATION_PRESET_DEFAULT",
+      "label": "Default",
+      "apl_file": "default",
+      "talent_trees": []
+    },
+    {
+      "const_name": "ROTATION_PRESET_ADVANCED",
+      "label": "Advanced",
+      "apl_file": "advanced",
+      "talent_trees": []
+    }
+  ],
+  "talent_sets": [
+    {
+      "const_name": "StandardTalents",
+      "label": "Standard",
+      "talents_string": "0533001523213351322301351-005050031"
+    }
+  ]
+}

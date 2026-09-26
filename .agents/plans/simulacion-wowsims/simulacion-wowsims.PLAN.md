@@ -29,27 +29,39 @@ aproximación genérica.
 
 ### 2. Matriz de builds de referencia
 
-Se simula cada combinación de:
+**Alcance confirmado: solo PvE.** El motor de wowsims/wotlk no tiene modo de
+simulación PvP (está diseñado exclusivamente para encuentros de raid/mazmorra PvE).
+Investigar una alternativa para PvP queda como línea de trabajo separada, fuera de
+este pipeline (ver sección "PvP — pendiente de investigación" al final).
 
-- **Clase** (10): Guerrero, Paladín, Cazador, Pícaro, Sacerdote, Chamán, Mago, Brujo,
-  Druida, Caballero de la Muerte.
-- **Árbol de talentos principal** relevante para cada rol de esa clase (no todas las
-  combinaciones posibles de talentos, solo los árboles "estándar" reconocidos por la
-  comunidad para 3.3.5a — wowsims ya trae presets de talentos por spec en su UI, se
-  reutilizan esos).
-- **Rol**: DPS, Heal, Tank — solo para las combinaciones clase/árbol que ese rol permite
-  (p. ej. Guerrero Armas = DPS, Guerrero Protección = Tank; Sacerdote Disciplina/Sagrado
-  = Heal, Sacerdote Sombras = DPS).
-- **Contexto**: PvE y PvP por separado (encuentro/objetivo de simulación distinto:
-  PvE usa un dummy de raid tipo boss de referencia; PvP usa el modo de simulación
-  PvP/arena que expone wowsims si está disponible para esa clase, o un encuentro de
-  daño sostenido de referencia si no).
+Se usan directamente las 24 combinaciones de spec que el propio repo de wowsims
+organiza en `ui/<spec>/gear_sets/`, cada una con su rol implícito:
 
-Total aproximado: ~30-35 combinaciones clase/árbol/rol × 2 contextos (PvE/PvP) ≈
-60-70 "builds de referencia". Cada build de referencia tiene un gearset base
-representativo de su fase de contenido (BiS típico reconocido por la comunidad; se
-puede tomar directamente de los presets/ejemplos que trae el propio repo de wowsims
-en `ui/<class>/presets.ts` o similar).
+```
+balance_druid, feral_druid, feral_tank_druid, restoration_druid,
+hunter (mm y sv comparten directorio),
+rogue (assassination/combat/hemosub),
+mage (arcane/fire/frost/ffb),
+warlock (affliction/demodestro/destro),
+warrior (arms/fury), protection_warrior,
+holy_paladin, protection_paladin, retribution_paladin,
+healing_priest (disc/holy), shadow_priest, smite_priest,
+elemental_shaman, enhancement_shaman, restoration_shaman,
+deathknight (blood/frost/uh), tank_deathknight
+```
+
+**Todas las fases disponibles, no solo la más alta.** Para cada spec se genera una
+build de referencia por cada fase de contenido que tenga gearset propio (`preraid`,
+`p1` … `p5`, según disponga esa spec — no todas llegan a P5). Motivo: un jugador
+en progresión necesita saber qué mejora *para su punto de progresión actual*, no
+solo el salto final a equipo end-game que aún no puede alcanzar. Esto multiplica el
+número de builds de referencia (spec × fases disponibles, variable por spec, entre
+5 y 7 cada una) pero es necesario para que el addon sea útil en cualquier momento
+de la progresión del jugador, no solo al final.
+
+Nomenclatura de fase de contenido 3.3.5a (para referencia): P1 = Naxxramas/Malygos/
+Sartharion, P2 = Ulduar, P3 = Trial of the Crusader, P4 = Icecrown Citadel,
+P5 = Rubí Santuario.
 
 ### 3. Selección de objetos candidatos por build
 
@@ -126,6 +138,26 @@ mide con el primer lote real antes de confirmar que no hace falta recortar.
      iteraciones): resultado coherente (~7611 DPS de media, con distribución e
      intervalo realistas), confirmando que el pipeline `RaidSimRequest` JSON →
      `wowsimcli sim` → `RaidSimResult` JSON funciona de extremo a extremo.
+
+2. **(Hecho)** Generar la matriz de builds de referencia de nivel 80:
+   - `Tools/generar_builds.py` parsea los 21 ficheros `ui/<spec>/presets.ts` del
+     código fuente clonado y extrae, sin transcripción manual, cada gearset con
+     sus talentos y rotaciones (APL) candidatos → `Tools/builds/<spec>.json`.
+   - `Tools/emparejar_builds.py` empareja cada gearset con su set de talentos y
+     rotación correcto, por convención de nombre de fichero (ej. `p1_mm` →
+     `MarksmanTalents`), con reglas en cascada: coincidencia exacta de sub-spec,
+     luego por fase de contenido, luego única opción en toda la spec. Cuando hay
+     más de una combinación igualmente válida (ej. dos estilos de runa en un
+     Caballero de la Muerte Escarcha), se generan **todas** como builds de
+     referencia distintas en vez de forzar una elección arbitraria — prioridad:
+     máxima cobertura, cero pérdida de precisión.
+   - Resultado: **429 builds de referencia** cubriendo 196 de los 197 gearsets
+     detectados (queda fuera solo `warlock/swp`, un preset anecdótico sin fase
+     de contenido asociada, "Straight Outa SWP").
+   - Salida en `Tools/builds/_mapeo/<spec>.json` (no versionado, es intermedio
+     de generación): cada entrada indica `gear_file`, `talent_set`, `apl`,
+     `phase`, `faction` y si es una `variante` de un gearset con varias
+     combinaciones válidas.
 2. Definir la matriz de builds de referencia (`Tools/builds/*.json`) — requiere
    revisar los presets de talentos/gear que ya trae wowsims por clase/spec para no
    inventar builds poco realistas.
@@ -135,6 +167,48 @@ mide con el primer lote real antes de confirmar que no hace falta recortar.
 5. Ejecutar el pipeline completo para un subconjunto pequeño (1-2 clases) como prueba
    de extremo a extremo antes de lanzarlo para las 10 clases completas.
 6. Integrar la lectura de estos datos en `SimulateX.lua` (hook de tooltip).
+
+## Nivel 80 vs niveles bajos — alcance de wowsims
+
+wowsims/wotlk solo tiene gearsets/talentos/rotaciones para nivel 80 (fases de
+contenido de raid P1-P5). No existe ningún dato de simulación para niveles 1-79
+(mazmorras normales, misiones, leveleo).
+
+**Decisión: para niveles 1-79 no se simula, se usa una aproximación honesta tipo
+GearScore.** Se investigó y confirmó que ningún addon de comparación de equipo
+(Pawn, GearScore, AtlasLoot, Cymry) usa simulación de combate fuera de end-game;
+todos degeneran a `ilvl × modificador de slot × multiplicador de rareza` +
+prioridad de estadística principal por clase/spec (fuente: guías de leveleo de
+Icy Veins para WotLK Classic). SimulateX debe hacer lo mismo para 1-79, y
+señalizarlo claramente en la UI como estimación (no simulación), a diferencia del
+dato preciso de nivel 80. Detalle de implementación pendiente, no bloquea el
+pipeline de nivel 80 que ya tiene datos reales.
+
+## PvP — investigado, enfoque distinto al de PvE
+
+wowsims/wotlk no simula PvP. Se investigó si existía una vía de calidad equivalente
+a la de PvE y la conclusión es que no la hay:
+
+- Existe un fork comunitario no oficial ("WoWSims 3.3.5 Backport", de Poli93/
+  Jarjkeqt, específico para servidores Warmane) con lógica PvP experimental
+  (resiliencia, tabla de ataque PvP, stuns). No está mantenido por el proyecto
+  oficial, su cobertura de clases no está confirmada y su continuidad depende de
+  un solo colaborador externo — no es una base fiable para construir sobre ella.
+- No existe otro simulador de combate PvP de calidad para 3.3.5a (SimulationCraft
+  es retail-only).
+
+**Decisión: PvP se resuelve con stat weights ordinales de la comunidad, no con
+simulación.** Fuente: guías PvP de Icy Veins específicas de WotLK Classic, por
+clase/spec, que dan una prioridad de estadísticas clara (Resiliencia primero, con
+soft-cap ~1400-1414 según clase, seguida de Aguante/Penetración de armadura/
+Crítico/Celeridad según rol). Es una aproximación lineal — el mismo tipo de
+solución que se descartó para PvE por falta de precisión — pero aquí es la mejor
+opción realista dado que no hay motor de simulación PvP maduro disponible. El
+addon debe dejar claro en la UI que el dato PvP es una estimación por prioridad de
+estadísticas, no una simulación de combate, a diferencia del dato PvE.
+
+Esto es una línea de trabajo separada del pipeline PvE (que ya tiene datos
+simulables con precisión) y se puede implementar en paralelo sin bloquear nada.
 
 ## Referencias técnicas (de investigación previa, confirmadas contra el repo)
 

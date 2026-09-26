@@ -1,0 +1,297 @@
+{
+  "spec": "mage",
+  "gear_presets": [
+    {
+      "const_name": "ARCANE_PRERAID_PRESET",
+      "label": "Arcane Preraid Preset",
+      "gear_file": "preraid_arcane",
+      "talent_trees": [
+        0
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "ARCANE_P1_PRESET",
+      "label": "Arcane P1 Preset",
+      "gear_file": "p1_arcane",
+      "talent_trees": [
+        0
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "ARCANE_P2_PRESET",
+      "label": "Arcane P2 Preset",
+      "gear_file": "p2_arcane",
+      "talent_trees": [
+        0
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "ARCANE_P3_PRESET_ALLIANCE",
+      "label": "Arcane P3 Preset [A]",
+      "gear_file": "p3_arcane_alliance",
+      "talent_trees": [
+        0
+      ],
+      "faction": "Alliance"
+    },
+    {
+      "const_name": "ARCANE_P3_PRESET_HORDE",
+      "label": "Arcane P3 Preset [H]",
+      "gear_file": "p3_arcane_horde",
+      "talent_trees": [
+        0
+      ],
+      "faction": "Horde"
+    },
+    {
+      "const_name": "ARCANE_P4_PRESET_ALLIANCE",
+      "label": "Arcane P4 Preset [A]",
+      "gear_file": "p4_arcane_alliance",
+      "talent_trees": [
+        0
+      ],
+      "faction": "Alliance"
+    },
+    {
+      "const_name": "ARCANE_P4_PRESET_HORDE",
+      "label": "Arcane P4 Preset [H]",
+      "gear_file": "p4_arcane_horde",
+      "talent_trees": [
+        0
+      ],
+      "faction": "Horde"
+    },
+    {
+      "const_name": "FIRE_PRERAID_PRESET",
+      "label": "Fire Preraid Preset",
+      "gear_file": "preraid_fire",
+      "talent_trees": [
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "FIRE_P1_PRESET",
+      "label": "Fire P1 Preset",
+      "gear_file": "p1_fire",
+      "talent_trees": [
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "FIRE_P2_PRESET",
+      "label": "Fire P2 Preset",
+      "gear_file": "p2_fire",
+      "talent_trees": [
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "FIRE_P3_PRESET_ALLIANCE",
+      "label": "Fire P3 Preset [A]",
+      "gear_file": "p3_fire_alliance",
+      "talent_trees": [
+        1
+      ],
+      "faction": "Alliance"
+    },
+    {
+      "const_name": "FIRE_P3_PRESET_HORDE",
+      "label": "Fire P3 Preset [H]",
+      "gear_file": "p3_fire_horde",
+      "talent_trees": [
+        1
+      ],
+      "faction": "Horde"
+    },
+    {
+      "const_name": "FIRE_P4_PRESET_ALLIANCE",
+      "label": "Fire P4 Preset [A]",
+      "gear_file": "p4_fire_alliance",
+      "talent_trees": [
+        1
+      ],
+      "faction": "Alliance"
+    },
+    {
+      "const_name": "FIRE_P4_PRESET_HORDE",
+      "label": "Fire P4 Preset [H]",
+      "gear_file": "p4_fire_horde",
+      "talent_trees": [
+        1
+      ],
+      "faction": "Horde"
+    },
+    {
+      "const_name": "FFB_P2_PRESET",
+      "label": "FFB P2 Preset",
+      "gear_file": "p2_ffb",
+      "talent_trees": [
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "FFB_P3_PRESET_ALLIANCE",
+      "label": "FFB P3 Preset [A]",
+      "gear_file": "p3_ffb_alliance",
+      "talent_trees": [
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "FFB_P3_PRESET_HORDE",
+      "label": "FFB P3 Preset [H]",
+      "gear_file": "p3_ffb_horde",
+      "talent_trees": [
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "FFB_P4_PRESET_ALLIANCE",
+      "label": "FFB P4 Preset [A]",
+      "gear_file": "p4_ffb_alliance",
+      "talent_trees": [
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "FFB_P4_PRESET_HORDE",
+      "label": "FFB P4 Preset [H]",
+      "gear_file": "p4_ffb_horde",
+      "talent_trees": [
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "FROST_P1_PRESET",
+      "label": "Frost P1 Preset",
+      "gear_file": "p1_frost",
+      "talent_trees": [
+        2
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "FROST_P2_PRESET",
+      "label": "Frost P2 Preset",
+      "gear_file": "p2_frost",
+      "talent_trees": [
+        2
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "FROST_P3_PRESET_ALLIANCE",
+      "label": "Frost P3 Preset [A]",
+      "gear_file": "p3_frost_alliance",
+      "talent_trees": [
+        2
+      ],
+      "faction": "Alliance"
+    },
+    {
+      "const_name": "FROST_P3_PRESET_HORDE",
+      "label": "Frost P3 Preset [H]",
+      "gear_file": "p3_frost_horde",
+      "talent_trees": [
+        2
+      ],
+      "faction": "Horde"
+    }
+  ],
+  "apl_presets": [
+    {
+      "const_name": "ARCANE_ROTATION_PRESET_DEFAULT",
+      "label": "Arcane",
+      "apl_file": "arcane",
+      "talent_trees": [
+        0
+      ]
+    },
+    {
+      "const_name": "ARCANE_ROTATION_PRESET_AOE",
+      "label": "Arcane AOE",
+      "apl_file": "arcane_aoe",
+      "talent_trees": [
+        0
+      ]
+    },
+    {
+      "const_name": "FIRE_ROTATION_PRESET_DEFAULT",
+      "label": "Fire",
+      "apl_file": "fire",
+      "talent_trees": [
+        1
+      ]
+    },
+    {
+      "const_name": "FROSTFIRE_ROTATION_PRESET_DEFAULT",
+      "label": "Frostfire",
+      "apl_file": "frostfire",
+      "talent_trees": [
+        1
+      ]
+    },
+    {
+      "const_name": "FIRE_ROTATION_PRESET_AOE",
+      "label": "Fire AOE",
+      "apl_file": "fire_aoe",
+      "talent_trees": [
+        1
+      ]
+    },
+    {
+      "const_name": "FROST_ROTATION_PRESET_DEFAULT",
+      "label": "Frost",
+      "apl_file": "frost",
+      "talent_trees": [
+        2
+      ]
+    },
+    {
+      "const_name": "FROST_ROTATION_PRESET_AOE",
+      "label": "Frost AOE",
+      "apl_file": "frost_aoe",
+      "talent_trees": [
+        2
+      ]
+    }
+  ],
+  "talent_sets": [
+    {
+      "const_name": "ArcaneTalents",
+      "label": "Arcane",
+      "talents_string": "23000513310033015032310250532-03-023303001"
+    },
+    {
+      "const_name": "FireTalents",
+      "label": "Fire",
+      "talents_string": "23000503110003-0055030012303331053120301351"
+    },
+    {
+      "const_name": "Phase3FireTalents",
+      "label": "Fire Phase 3",
+      "talents_string": "23002303310003-0055030012303330053120300351"
+    },
+    {
+      "const_name": "FrostfireTalents",
+      "label": "Frostfire",
+      "talents_string": "-2305032012303331053120311351-023303031"
+    },
+    {
+      "const_name": "FrostTalents",
+      "label": "Frost",
+      "talents_string": "23000503110003--0533030310233100030152231351"
+    }
+  ]
+}

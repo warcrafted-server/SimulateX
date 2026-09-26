@@ -1,0 +1,184 @@
+{
+  "spec": "hunter",
+  "gear_presets": [
+    {
+      "const_name": "MM_PRERAID_PRESET",
+      "label": "MM PreRaid Preset",
+      "gear_file": "preraid_mm",
+      "talent_trees": [
+        0,
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "MM_P1_PRESET",
+      "label": "MM P1 Preset",
+      "gear_file": "p1_mm",
+      "talent_trees": [
+        0,
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "MM_P2_PRESET",
+      "label": "MM P2 Preset",
+      "gear_file": "p2_mm",
+      "talent_trees": [
+        0,
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "MM_P3_PRESET",
+      "label": "MM P3 Preset",
+      "gear_file": "p3_mm",
+      "talent_trees": [
+        0,
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "MM_P4_PRESET",
+      "label": "MM P4 Preset",
+      "gear_file": "p4_mm",
+      "talent_trees": [
+        0,
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "MM_P5_PRESET",
+      "label": "MM P5 Preset",
+      "gear_file": "p5_mm",
+      "talent_trees": [
+        0,
+        1
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "SV_PRERAID_PRESET",
+      "label": "SV PreRaid Preset",
+      "gear_file": "preraid_sv",
+      "talent_trees": [
+        2
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "SV_P1_PRESET",
+      "label": "SV P1 Preset",
+      "gear_file": "p1_sv",
+      "talent_trees": [
+        2
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "SV_P2_PRESET",
+      "label": "SV P2 Preset",
+      "gear_file": "p2_sv",
+      "talent_trees": [
+        2
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "SV_P3_PRESET",
+      "label": "SV P3 Preset",
+      "gear_file": "p3_sv",
+      "talent_trees": [
+        2
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "SV_P4_PRESET",
+      "label": "SV P4 Preset",
+      "gear_file": "p4_sv",
+      "talent_trees": [
+        2
+      ],
+      "faction": null
+    },
+    {
+      "const_name": "SV_P5_PRESET",
+      "label": "SV P5 Preset",
+      "gear_file": "p5_sv",
+      "talent_trees": [
+        2
+      ],
+      "faction": null
+    }
+  ],
+  "apl_presets": [
+    {
+      "const_name": "ROTATION_PRESET_BM",
+      "label": "BM",
+      "apl_file": "bm",
+      "talent_trees": [
+        0
+      ]
+    },
+    {
+      "const_name": "ROTATION_PRESET_MM",
+      "label": "MM",
+      "apl_file": "mm",
+      "talent_trees": [
+        1
+      ]
+    },
+    {
+      "const_name": "ROTATION_PRESET_MM_ADVANCED",
+      "label": "MM (Advanced)",
+      "apl_file": "mm_advanced",
+      "talent_trees": [
+        1
+      ]
+    },
+    {
+      "const_name": "ROTATION_PRESET_SV",
+      "label": "SV",
+      "apl_file": "sv",
+      "talent_trees": [
+        2
+      ]
+    },
+    {
+      "const_name": "ROTATION_PRESET_SV_ADVANCED",
+      "label": "SV (Advanced)",
+      "apl_file": "sv_advanced",
+      "talent_trees": [
+        2
+      ]
+    },
+    {
+      "const_name": "ROTATION_PRESET_AOE",
+      "label": "AOE",
+      "apl_file": "aoe",
+      "talent_trees": []
+    }
+  ],
+  "talent_sets": [
+    {
+      "const_name": "BeastMasteryTalents",
+      "label": "Beast Mastery",
+      "talents_string": "51200201505112243120531251-025305101"
+    },
+    {
+      "const_name": "MarksmanTalents",
+      "label": "Marksman",
+      "talents_string": "502-025335101030013233135031051-5000032"
+    },
+    {
+      "const_name": "SurvivalTalents",
+      "label": "Survival",
+      "talents_string": "-005305101-5000032500033330531135301331"
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "spec": "feral_tank_druid",
+  "builds": [
+    {
+      "gear_file": "p1",
+      "label": "P1",
+      "phase": "p1",
+      "subspec": null,
+      "faction": null,
+      "talent_set": "StandardTalents",
+      "talent_rule": "unico_o_toda_la_spec",
+      "apl": "ROTATION_DEFAULT",
+      "apl_rule": "unico_o_toda_la_spec",
+      "status": "ok",
+      "motivo": null
+    },
+    {
+      "gear_file": "p2",
+      "label": "P2",
+      "phase": "p2",
+      "subspec": null,
+      "faction": null,
+      "talent_set": "StandardTalents",
+      "talent_rule": "unico_o_toda_la_spec",
+      "apl": "ROTATION_DEFAULT",
+      "apl_rule": "unico_o_toda_la_spec",
+      "status": "ok",
+      "motivo": null
+    },
+    {
+      "gear_file": "p3",
+      "label": "P3",
+      "phase": "p3",
+      "subspec": null,
+      "faction": null,
+      "talent_set": "StandardTalents",
+      "talent_rule": "unico_o_toda_la_spec",
+      "apl": "ROTATION_DEFAULT",
+      "apl_rule": "unico_o_toda_la_spec",
+      "status": "ok",
+      "motivo": null
+    },
+    {
+      "gear_file": "p4",
+      "label": "P4",
+      "phase": "p4",
+      "subspec": null,
+      "faction": null,
+      "talent_set": "StandardTalents",
+      "talent_rule": "unico_o_toda_la_spec",
+      "apl": "ROTATION_DEFAULT",
+      "apl_rule": "unico_o_toda_la_spec",
+      "status": "ok",
+      "motivo": null
+    }
+  ]
+}

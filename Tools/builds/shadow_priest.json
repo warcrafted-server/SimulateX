@@ -1,0 +1,72 @@
+{
+  "spec": "shadow_priest",
+  "gear_presets": [
+    {
+      "const_name": "PRERAID_PRESET",
+      "label": "Preraid Preset",
+      "gear_file": "preraid",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P1_PRESET",
+      "label": "P1 Preset",
+      "gear_file": "p1",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P2_PRESET",
+      "label": "P2 Preset",
+      "gear_file": "p2",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P3_PRESET",
+      "label": "P3 Preset",
+      "gear_file": "p3",
+      "talent_trees": [],
+      "faction": null
+    },
+    {
+      "const_name": "P4_PRESET",
+      "label": "P4 Preset",
+      "gear_file": "p4",
+      "talent_trees": [],
+      "faction": null
+    }
+  ],
+  "apl_presets": [
+    {
+      "const_name": "ROTATION_PRESET_DEFAULT",
+      "label": "Default",
+      "apl_file": "default",
+      "talent_trees": []
+    },
+    {
+      "const_name": "ROTATION_PRESET_AOE24",
+      "label": "AOE (2 to 4 targets)",
+      "apl_file": "aoe_2_4",
+      "talent_trees": []
+    },
+    {
+      "const_name": "ROTATION_PRESET_AOE4PLUS",
+      "label": "AOE (4+ targets)",
+      "apl_file": "aoe_4_plus",
+      "talent_trees": []
+    }
+  ],
+  "talent_sets": [
+    {
+      "const_name": "StandardTalents",
+      "label": "Standard",
+      "talents_string": "05032031--325023051223010323151301351"
+    },
+    {
+      "const_name": "EnlightenmentTalents",
+      "label": "Enlightenment",
+      "talents_string": "05032031303005022--3250230012230101231513011"
+    }
+  ]
+}
