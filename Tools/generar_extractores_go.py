@@ -49,6 +49,10 @@ IMPORT_BLOCK_RE = re.compile(r"^import \(\n(.*?)\n\)\n", re.DOTALL | re.MULTILIN
 INIT_BLOCK_RE = re.compile(r"func init\(\) \{.*?\n\}\n", re.DOTALL)
 PACKAGE_LINE_RE = re.compile(r"^package \w+\n")
 
+GEARSET_FIELD_RE = re.compile(r"GearSet:\s*core\.GetGearSet\(([^,]+),\s*([^)]+)\)")
+ROTATION_FIELD_RE = re.compile(r"Rotation:\s*core\.GetAplRotation\(([^,]+),\s*([^)]+)\)")
+TALENTS_FIELD_RE = re.compile(r"Talents:\s*(\w+),")
+
 
 def extract_first_config_block(test_source: str) -> str:
     match = CONFIG_BLOCK_RE.search(test_source)
@@ -57,11 +61,25 @@ def extract_first_config_block(test_source: str) -> str:
     return match.group(1)
 
 
+def parameterize_config_block(config_block: str) -> str:
+    """Sustituye los literales de gear/rotación/talentos del preset por
+    defecto por variables que se leen de argumentos de línea de comandos, para
+    poder generar cada build de la matriz sin recompilar el binario por build."""
+    config_block = GEARSET_FIELD_RE.sub(
+        "GearSet: core.GetGearSet(gearDir, gearFile)", config_block, count=1
+    )
+    config_block = ROTATION_FIELD_RE.sub(
+        "Rotation: core.GetAplRotation(aplDir, aplFile)", config_block, count=1
+    )
+    config_block = TALENTS_FIELD_RE.sub("Talents: talentsOverride,", config_block, count=1)
+    return config_block
+
+
 PACKAGE_NAME_RE = re.compile(r"^package (\w+)\n")
 
 
 def generate_main_go(spec: str, test_source: str, rel_ui_prefix: str) -> str:
-    config_block = extract_first_config_block(test_source)
+    config_block = parameterize_config_block(extract_first_config_block(test_source))
     package_match = PACKAGE_NAME_RE.search(test_source)
     package_name = package_match.group(1) if package_match else "main"
 
@@ -69,34 +87,95 @@ def generate_main_go(spec: str, test_source: str, rel_ui_prefix: str) -> str:
     imports = import_match.group(1) if import_match else ""
 
     # Se genera como fichero _test.go del MISMO paquete (no un binario `main`
-    # aparte): así los identificadores del preset (talentos, consumibles,
-    # opciones de spec) se resuelven directamente, sin reimportar el paquete
-    # ni reconstruir sus valores a mano. No repite el init()/Register* del
-    # _test.go original: ya se registra una vez al compilar el paquete junto
-    # con ese fichero, y repetirlo haría fallar el registro por duplicado.
+    # aparte): así los identificadores del preset (consumibles, opciones de
+    # spec, glifos) se resuelven directamente, sin reimportar el paquete ni
+    # reconstruir sus valores a mano. Gear/rotación/talentos SÍ se parametrizan
+    # (parameterize_config_block) porque cambian por cada build de la matriz;
+    # el resto del preset (raza, consumibles...) se mantiene fijo, tal como lo
+    # define wowsims para esa spec. No repite el init()/Register* del _test.go
+    # original: ya se registra una vez al compilar el paquete junto con ese
+    # fichero, y repetirlo haría fallar el registro por duplicado.
+    # Los parámetros de la build (gear/rotación/talentos) se leen de variables
+    # de entorno, no de flags: el fichero se ejecuta con `go test -run`, y los
+    # flags custom chocan con los propios flags de `go test`.
     return f'''package {package_name}
 
 import (
 {imports}
 \t"fmt"
 \t"os"
+\t"strconv"
 
 \t"google.golang.org/protobuf/encoding/protojson"
 )
 
+func envOr(key, fallback string) string {{
+\tif v := os.Getenv(key); v != "" {{
+\t\treturn v
+\t}}
+\treturn fallback
+}}
+
 func TestGenExtractor(t *testing.T) {{
-\tgenerator := core.FullCharacterTestSuiteGenerator(core.CharacterSuiteConfig{{{config_block}}})
-\t// El último test de la suite generada es siempre "Average": el RaidSimRequest
-\t// base (gearset+talentos+rotación del preset, sin variaciones) con opciones de
-\t// simulación completas (más iteraciones), justo lo que se necesita como sim base.
-\t_, _, _, rsr := generator.GetTest(generator.NumTests() - 1)
+\tgearDir := os.Getenv("SIMX_GEAR_DIR")
+\tgearFile := os.Getenv("SIMX_GEAR_FILE")
+\taplDir := os.Getenv("SIMX_APL_DIR")
+\taplFile := os.Getenv("SIMX_APL_FILE")
+\ttalentsOverride := os.Getenv("SIMX_TALENTS")
+\toutFile := envOr("SIMX_OUT_FILE", "input.json")
+\titerations, _ := strconv.Atoi(envOr("SIMX_ITERATIONS", "2000"))
+
+\tconfig := core.CharacterSuiteConfig{{{config_block}}}
+
+\t// Construcción directa del RaidSimRequest "Average" (el mismo que produce
+\t// FullCharacterTestSuiteGenerator como su último subtest), sin pasar por el
+\t// generador de suite completo: éste evalúa también el subtest "AllItems"
+\t// (cientos de objetos candidatos vía ItemFilter) al calcular NumTests(),
+\t// coste innecesario y frágil solo para obtener el RaidSimRequest base.
+\tdefaultPlayer := core.WithSpec(
+\t\t&proto.Player{{
+\t\t\tClass:         config.Class,
+\t\t\tRace:          config.Race,
+\t\t\tEquipment:     config.GearSet.GearSet,
+\t\t\tConsumes:      config.Consumes,
+\t\t\tBuffs:         core.FullIndividualBuffs,
+\t\t\tTalentsString: config.Talents,
+\t\t\tGlyphs:        config.Glyphs,
+\t\t\tProfession1:   proto.Profession_Engineering,
+\t\t\tRotation:      config.Rotation.Rotation,
+\t\t\tCooldowns:     config.Cooldowns,
+
+\t\t\tInFrontOfTarget:    config.InFrontOfTarget,
+\t\t\tDistanceFromTarget: 30,
+\t\t\tReactionTimeMs:      150,
+\t\t\tChannelClipDelayMs:  50,
+\t\t}},
+\t\tconfig.SpecOptions.SpecOptions)
+
+\tdefaultRaid := core.SinglePlayerRaidProto(defaultPlayer, core.FullPartyBuffs, core.FullRaidBuffs, core.FullDebuffs)
+\tif config.IsTank {{
+\t\tdefaultRaid.Tanks = append(defaultRaid.Tanks, &proto.UnitReference{{Type: proto.UnitReference_Player, Index: 0}})
+\t}}
+\tif config.IsHealer {{
+\t\tdefaultRaid.TargetDummies = 1
+\t}}
+
+\trsr := &proto.RaidSimRequest{{
+\t\tRaid:      defaultRaid,
+\t\tEncounter: core.MakeSingleTargetEncounter(5),
+\t\tSimOptions: &proto.SimOptions{{
+\t\t\tIterations: int32(iterations),
+\t\t\tIsTest:     true,
+\t\t\tRandomSeed: 101,
+\t\t}},
+\t}}
 
 \tdata, err := protojson.MarshalOptions{{EmitUnpopulated: true, Indent: "  "}}.Marshal(rsr)
 \tif err != nil {{
 \t\tfmt.Fprintln(os.Stderr, "error marshaling:", err)
 \t\tos.Exit(1)
 \t}}
-\tif err := os.WriteFile("input.json", data, 0644); err != nil {{
+\tif err := os.WriteFile(outFile, data, 0644); err != nil {{
 \t\tfmt.Fprintln(os.Stderr, "error writing file:", err)
 \t\tos.Exit(1)
 \t}}

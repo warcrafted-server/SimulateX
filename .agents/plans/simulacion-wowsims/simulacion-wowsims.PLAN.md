@@ -192,6 +192,22 @@ mide con el primer lote real antes de confirmar que no hace falta recortar.
    de extremo a extremo antes de lanzarlo para las 10 clases completas.
 6. Integrar la lectura de estos datos en `SimulateX.lua` (hook de tooltip).
 
+## Limitación descubierta: base de datos de objetos incompleta para algunos gearsets
+
+La base de datos de objetos incluida en el repo (`assets/database/db.bin`)
+puede no contener todos los ítems que referencian los propios gearsets del
+mismo repo — confirmado con el gearset `preraid` de Sacerdote Smite (ítem
+43792, `panic: No item with id`). Parece más frecuente en gearsets `preraid`
+(equipo más antiguo/heirloom). No es un fallo de este pipeline: es un
+desajuste interno del propio proyecto wowsims entre su base de datos y sus
+presets de gearset.
+
+**Implicación de diseño para `simular_builds.py`:** debe tratar el fallo de
+una build individual (proceso `wowsimcli` que termina con panic/código de
+error) como un dato ausente para esa build concreta, seguir con el resto del
+lote, y registrar qué builds fallaron y por qué — nunca debe abortar el
+proceso completo por el fallo de una sola build.
+
 ## Limitación descubierta: 3 specs de sanador sin rotación real en wowsims
 
 Al validar las 20 specs generadas (ver sección de pasos de ejecución), 17

@@ -32,3 +32,14 @@ Addon/
 1. Descarga el contenido de la carpeta `Addon/`.
 2. Copia la carpeta interna `SimulateX` dentro del directorio de tu juego: `World of Warcraft/Interface/AddOns/`.
 3. Asegúrate de tener los addons activos en la pantalla de selección de personaje e inicia el juego.
+
+## Créditos y Licencia
+
+Las estadísticas de rendimiento (DPS/HPS) que utiliza este addon se generan mediante
+simulaciones offline realizadas con el motor de código abierto
+[**WowSims**](https://github.com/wowsims/wotlk) (licencia MIT). SimulateX no
+redistribuye su código fuente; únicamente utiliza sus resultados de simulación
+como fuente de datos para el addon.
+
+Este proyecto se distribuye bajo la licencia **GPL-3.0**. Consulta el archivo
+[LICENSE](LICENSE) para más detalles.

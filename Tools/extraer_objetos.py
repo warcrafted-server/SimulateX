@@ -32,18 +32,33 @@ def save_item_xml(item_id: int, data: bytes) -> pathlib.Path:
 
 
 def main() -> None:
+    import json
+
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--item-id", type=int, action="append", dest="item_ids", required=True,
+    parser.add_argument("--item-id", type=int, action="append", dest="item_ids",
                          help="ID de objeto a extraer (repetible: --item-id 1 --item-id 2)")
+    parser.add_argument("--ids-file", type=pathlib.Path,
+                         help="Fichero JSON con una lista de IDs a extraer")
     parser.add_argument("--delay", type=float, default=0.5,
                          help="Segundos de espera entre peticiones (por defecto 0.5)")
+    parser.add_argument("--skip-existing", action="store_true",
+                         help="No volver a descargar IDs que ya tengan fichero en Data/items/")
     args = parser.parse_args()
 
-    for index, item_id in enumerate(args.item_ids):
+    item_ids = list(args.item_ids or [])
+    if args.ids_file:
+        item_ids.extend(json.loads(args.ids_file.read_text(encoding="utf-8")))
+    if not item_ids:
+        parser.error("hay que indicar --item-id o --ids-file")
+
+    if args.skip_existing:
+        item_ids = [i for i in item_ids if not (DATA_DIR / f"{i}.xml").exists()]
+
+    for index, item_id in enumerate(item_ids):
         data = fetch_item_xml(item_id)
         path = save_item_xml(item_id, data)
-        print(f"[{item_id}] guardado en {path}")
-        if index < len(args.item_ids) - 1:
+        print(f"[{item_id}] guardado en {path} ({index + 1}/{len(item_ids)})")
+        if index < len(item_ids) - 1:
             time.sleep(args.delay)
 
 
