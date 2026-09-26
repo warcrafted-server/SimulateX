@@ -68,6 +68,7 @@ def format_lua_table(builds: dict) -> str:
         lines.append(f'  ["{lua_escape(build_id)}"] = {{')
         lines.append(f'    role = "{build["role"]}",')
         lines.append(f'    phase = {build["phase"]},')
+        lines.append(f'    specLabel = "{lua_escape(build["spec_label"])}",')
         if build["talent_tree"] is not None:
             lines.append(f'    talentTree = {build["talent_tree"]},')
         lines.append(f'    baseDps = {build["base_dps"]},')
@@ -100,9 +101,11 @@ def main() -> None:
 
         spec_talents_path = BUILDS_DIR / f"{spec}.json"
         talent_sets = {}
+        talent_labels = {}
         if spec_talents_path.exists():
             spec_data = json.loads(spec_talents_path.read_text(encoding="utf-8"))
             talent_sets = {t["const_name"]: t["talents_string"] for t in spec_data["talent_sets"]}
+            talent_labels = {t["const_name"]: t["label"] for t in spec_data["talent_sets"]}
 
         mapeo_path = BUILDS_DIR / "_mapeo" / f"{spec}.json"
         talent_set_by_gear = {}
@@ -119,11 +122,13 @@ def main() -> None:
             talent_name = talent_set_by_gear.get(result["build_id"])
             talents_string = talent_sets.get(talent_name, "")
             talent_tree = dominant_talent_tree(talents_string) if talents_string else None
+            spec_label = talent_labels.get(talent_name) or spec.replace("_", " ").title()
 
             build_id = f"{spec}_{result['build_id']}"
             builds_by_class.setdefault(game_class, {})[build_id] = {
                 "role": role,
                 "talent_tree": talent_tree,
+                "spec_label": spec_label,
                 "phase": phase_number(result["build_id"]),
                 "base_dps": result["base_dps"],
                 "base_hps": result["base_hps"],

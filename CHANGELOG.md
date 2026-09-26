@@ -2,6 +2,12 @@
 
 Todos los cambios notables de este proyecto serán documentados en este archivo.
 
+## v0.2.0 - 2026-09-27
+### Añadido
+- Tooltip multi-spec: en vez de una sola línea, muestra el delta de cada sub-spec real de la clase (ej. Beast Mastery/Marksman/Survival en Cazador), con puntos y porcentaje de cambio (`%+.1f%%`), marcando con `*` la spec activa detectada por talentos.
+### Pendiente (siguiente parte de v0.2)
+- Icono de flecha (verde = spec activa, naranja = otra spec de la clase) sobre el icono del objeto en bolsas, botín y recompensa de misión.
+
 ## - 2026-09-26
 ### Añadido
 - Esqueleto inicial del addon en `Addon/SimulateX/` (`SimulateX.toc`, `SimulateX.lua`, `SimulateX_DB.lua`).

@@ -15,15 +15,10 @@ local CLASS_DATA_VARS = {
     DRUID = "SimulateX_Data_Druid",
 }
 
--- Determina, de entre las builds disponibles para la clase del jugador, cuál
--- coincide con su árbol de talentos dominante (más puntos invertidos). Si el
--- usuario ha forzado una build manualmente (SimulateX_DB.forcedBuild), esa
--- tiene prioridad sobre la detección automática.
-local function GetActiveBuildId(classData)
-    if SimulateX_DB.forcedBuild and classData.builds[SimulateX_DB.forcedBuild] then
-        return SimulateX_DB.forcedBuild
-    end
-
+-- Árbol de talentos dominante del jugador (0/1/2), o nil si no se puede
+-- determinar. Es la señal para saber cuál de las sub-specs mostradas es la
+-- "activa" (se resalta distinto de las demás en el tooltip).
+local function GetActiveTalentTree()
     local bestTree, bestPoints = nil, -1
     for tabIndex = 1, 3 do
         local _, _, pointsSpent = GetTalentTabInfo(tabIndex)
@@ -31,43 +26,65 @@ local function GetActiveBuildId(classData)
             bestTree, bestPoints = tabIndex - 1, pointsSpent
         end
     end
-    if not bestTree then
-        return nil
-    end
-
-    local chosenBuildId, chosenPhase = nil, -1
-    for buildId, build in pairs(classData.builds) do
-        if build.talentTree == bestTree and (build.phase or -1) > chosenPhase then
-            chosenBuildId, chosenPhase = buildId, build.phase or -1
-        end
-    end
-    return chosenBuildId
+    return bestTree
 end
 
-local function GetItemDelta(itemId)
-    local classFileName = select(2, UnitClass("player"))
-    local dataVarName = CLASS_DATA_VARS[classFileName]
-    if not dataVarName then
-        return nil
+-- Agrupa las builds de la clase por árbol de talentos (sub-spec) y devuelve,
+-- de cada grupo, la de fase de contenido más alta disponible: una entrada por
+-- sub-spec real de la clase (ej. Beast Mastery/Marksman/Survival en Cazador),
+-- no solo la detectada como activa. Si el usuario forzó una build manual
+-- (SimulateX_DB.forcedBuild), esa sustituye a la de su mismo árbol.
+local function GetBestBuildPerSpec(classData)
+    local bestBySpec = {}
+    for buildId, build in pairs(classData.builds) do
+        local key = build.talentTree or build.specLabel
+        local current = bestBySpec[key]
+        if not current or (build.phase or -1) > (current.build.phase or -1) then
+            bestBySpec[key] = { buildId = buildId, build = build }
+        end
     end
 
-    local classData = _G[dataVarName]
+    if SimulateX_DB.forcedBuild and classData.builds[SimulateX_DB.forcedBuild] then
+        local forced = classData.builds[SimulateX_DB.forcedBuild]
+        local key = forced.talentTree or forced.specLabel
+        bestBySpec[key] = { buildId = SimulateX_DB.forcedBuild, build = forced }
+    end
+
+    return bestBySpec
+end
+
+local function GetItemDeltasBySpec(itemId)
+    local classFileName = select(2, UnitClass("player"))
+    local dataVarName = CLASS_DATA_VARS[classFileName]
+    local classData = dataVarName and _G[dataVarName]
     if not classData then
         return nil
     end
 
-    local buildId = GetActiveBuildId(classData)
-    if not buildId then
-        return nil
+    local activeTree = GetActiveTalentTree()
+    local bestBySpec = GetBestBuildPerSpec(classData)
+
+    local results = {}
+    for _, entry in pairs(bestBySpec) do
+        local itemData = entry.build.items[itemId]
+        if itemData and (itemData.dps ~= 0 or itemData.hps ~= 0) then
+            table.insert(results, {
+                specLabel = entry.build.specLabel,
+                role = entry.build.role,
+                isActive = (entry.build.talentTree == activeTree),
+                dps = itemData.dps,
+                hps = itemData.hps,
+                baseDps = entry.build.baseDps,
+                baseHps = entry.build.baseHps,
+            })
+        end
     end
 
-    local build = classData.builds[buildId]
-    local itemData = build.items[itemId]
-    if not itemData then
-        return nil
-    end
-
-    return itemData, build.role
+    table.sort(results, function(a, b)
+        if a.isActive ~= b.isActive then return a.isActive end
+        return a.specLabel < b.specLabel
+    end)
+    return results
 end
 
 local EQUIP_LOC_TO_SLOT = {
@@ -138,15 +155,25 @@ local function OnTooltipSetItem(tooltip)
         return
     end
 
-    local itemData, role = GetItemDelta(itemId)
-    if not itemData then
+    local deltasBySpec = GetItemDeltasBySpec(itemId)
+    if not deltasBySpec or #deltasBySpec == 0 then
         return
     end
 
-    if role == "heal" and itemData.hps ~= 0 then
-        tooltip:AddLine(string.format("SimulateX: %+.0f HPS", itemData.hps), 0.2, 1, 0.2)
-    elseif itemData.dps ~= 0 then
-        tooltip:AddLine(string.format("SimulateX: %+.0f DPS", itemData.dps), 0.2, 1, 0.2)
+    for _, entry in ipairs(deltasBySpec) do
+        local value, base, unit
+        if entry.role == "heal" then
+            value, base, unit = entry.hps, entry.baseHps, "HPS"
+        else
+            value, base, unit = entry.dps, entry.baseDps, "DPS"
+        end
+
+        local percent = (base and base ~= 0) and (value / base * 100) or 0
+        local marker = entry.isActive and "*" or ""
+        local r, g, b = 0.2, 1, 0.2
+        if value < 0 then r, g, b = 1, 0.3, 0.3 end
+
+        tooltip:AddLine(string.format("%s%s: %+.0f %s (%+.1f%%)", marker, entry.specLabel, value, unit, percent), r, g, b)
     end
 end
 
