@@ -3,7 +3,10 @@
 CLAUDE.md
 
 # === Datos extraídos/generados (crudos, no el código que los produce) ===
-Data/
+# Solo la carpeta de datos en la raíz del repo: Addon/SimulateX/Data/ es el
+# producto final (ficheros Lua) que el addon necesita para funcionar, y sí se
+# versiona.
+/Data/
 *.csv
 *.db
 *.sqlite

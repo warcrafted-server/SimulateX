@@ -6,4 +6,16 @@
 ## SavedVariables: SimulateX_DB
 
 SimulateX_DB.lua
+
+Data\SimulateX_Data_Warrior.lua
+Data\SimulateX_Data_Paladin.lua
+Data\SimulateX_Data_Hunter.lua
+Data\SimulateX_Data_Rogue.lua
+Data\SimulateX_Data_Priest.lua
+Data\SimulateX_Data_Deathknight.lua
+Data\SimulateX_Data_Shaman.lua
+Data\SimulateX_Data_Mage.lua
+Data\SimulateX_Data_Warlock.lua
+Data\SimulateX_Data_Druid.lua
+
 SimulateX.lua
