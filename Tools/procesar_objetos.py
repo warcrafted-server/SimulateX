@@ -27,6 +27,7 @@ ITEM_LEVEL_RE = re.compile(r"<level>(\d+)</level>")
 CLASS_LINK_RE = re.compile(r'href="\?class=(\d+)"')
 NAME_RE = re.compile(r"<name><!\[CDATA\[([^\]]*)\]\]></name>")
 QUALITY_RE = re.compile(r'<quality id="(\d+)">')
+ITEM_CLASS_RE = re.compile(r'<class id="(\d+)">')
 SUBCLASS_RE = re.compile(r'<subclass id="(\d+)">')
 
 # Reliquias (inventorySlot 28): el tooltip no lista "Clases: ..." porque la
@@ -36,6 +37,18 @@ RELIC_SUBCLASS_TO_CLASS = {
     8: "Druid",         # Ídolos
     9: "Shaman",        # Tótems
     10: "Deathknight",  # Sigilos
+}
+
+# Armadura (class=4): el tipo (tela/cuero/malla/placas) restringe qué clases
+# pueden equiparla de forma efectiva, aunque el tooltip no siempre lo liste
+# como "Clases: ...". No es una regla dura del juego (cualquiera PUEDE
+# equiparse cualquier tipo), pero ponerse un tipo "no propio" pierde toda su
+# armadura base y ninguna build de referencia lo haría nunca.
+ARMOR_SUBCLASS_TO_CLASSES = {
+    1: ["Priest", "Mage", "Warlock"],          # Tela
+    2: ["Rogue", "Druid"],                     # Cuero
+    3: ["Hunter", "Shaman"],                   # Malla (nivel 80: Cazador ya usa malla, no cuero)
+    4: ["Warrior", "Paladin", "Deathknight"],  # Placas
 }
 
 
@@ -48,13 +61,22 @@ def parse_item_xml(item_id: int, xml_text: str) -> dict:
     allowed_classes = [AOWOW_CLASS_ID_TO_NAME[c] for c in class_ids if c in AOWOW_CLASS_ID_TO_NAME]
 
     inventory_slot = int(slot_match.group(1)) if slot_match else None
+    item_class_match = ITEM_CLASS_RE.search(xml_text)
+    item_class_id = int(item_class_match.group(1)) if item_class_match else None
+    subclass_match = SUBCLASS_RE.search(xml_text)
+    subclass_id = int(subclass_match.group(1)) if subclass_match else None
+
     if inventory_slot == 28 and not allowed_classes:
         # Reliquia (Libram/Ídolo/Tótem/Sigilo): restricción de clase implícita
         # al subtipo, nunca aparece como texto "Clases: ..." en el tooltip.
-        subclass_match = SUBCLASS_RE.search(xml_text)
-        subclass_id = int(subclass_match.group(1)) if subclass_match else None
         if subclass_id in RELIC_SUBCLASS_TO_CLASS:
             allowed_classes = [RELIC_SUBCLASS_TO_CLASS[subclass_id]]
+    elif item_class_id == 4 and not allowed_classes and subclass_id in ARMOR_SUBCLASS_TO_CLASSES:
+        # Armadura de tela/cuero/malla/placas: aunque el juego no lo impide,
+        # ninguna build de referencia equiparía un tipo ajeno a su clase (se
+        # pierde toda la armadura base). No aplica a escudos (subclass 6):
+        # el slot y la clase de arma ya restringen quién puede llevarlos.
+        allowed_classes = ARMOR_SUBCLASS_TO_CLASSES[subclass_id]
 
     return {
         "id": item_id,

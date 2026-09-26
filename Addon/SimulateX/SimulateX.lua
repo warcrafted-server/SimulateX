@@ -70,6 +70,52 @@ local function GetItemDelta(itemId)
     return itemData, build.role
 end
 
+local EQUIP_LOC_TO_SLOT = {
+    INVTYPE_HEAD = "HeadSlot", INVTYPE_NECK = "NeckSlot", INVTYPE_SHOULDER = "ShoulderSlot",
+    INVTYPE_CLOAK = "BackSlot", INVTYPE_CHEST = "ChestSlot", INVTYPE_ROBE = "ChestSlot",
+    INVTYPE_WRIST = "WristSlot", INVTYPE_HAND = "HandsSlot", INVTYPE_WAIST = "WaistSlot",
+    INVTYPE_LEGS = "LegsSlot", INVTYPE_FEET = "FeetSlot", INVTYPE_FINGER = "Finger0Slot",
+    INVTYPE_TRINKET = "Trinket0Slot", INVTYPE_WEAPON = "MainHandSlot",
+    INVTYPE_2HWEAPON = "MainHandSlot", INVTYPE_WEAPONMAINHAND = "MainHandSlot",
+    INVTYPE_WEAPONOFFHAND = "SecondaryHandSlot", INVTYPE_SHIELD = "SecondaryHandSlot",
+    INVTYPE_HOLDABLE = "SecondaryHandSlot", INVTYPE_RANGED = "RangedSlot",
+    INVTYPE_RANGEDRIGHT = "RangedSlot", INVTYPE_THROWN = "RangedSlot",
+}
+
+-- Compara el score de un objeto de nivel bajo contra el que ya lleva puesto
+-- el jugador en su slot equivalente. Es una estimación por prioridad de
+-- estadísticas (ver Tools/calcular_score_bajo_nivel.py), no una simulación de
+-- combate: para nivel 80 sí hay dato preciso, para 1-79 no existe forma de
+-- simular con esta precisión, así que se avisa explícitamente en el tooltip.
+local function GetLowLevelComparison(itemId, itemLink)
+    local classFileName = select(2, UnitClass("player"))
+    local dataVarName = CLASS_DATA_VARS[classFileName]
+    local classData = dataVarName and _G[dataVarName]
+    if not classData or not classData.lowLevelScores then
+        return nil
+    end
+
+    local itemScore = classData.lowLevelScores[itemId]
+    if not itemScore then
+        return nil
+    end
+
+    local _, _, _, _, _, _, _, _, equipLoc = GetItemInfo(itemLink)
+    local slot = equipLoc and EQUIP_LOC_TO_SLOT[equipLoc]
+    if not slot then
+        return itemScore.score, nil
+    end
+
+    local equippedLink = GetInventoryItemLink("player", GetInventorySlotInfo(slot))
+    if not equippedLink then
+        return itemScore.score, nil
+    end
+    local equippedId = tonumber(equippedLink:match("item:(%d+)"))
+    local equippedScore = equippedId and classData.lowLevelScores[equippedId]
+
+    return itemScore.score, equippedScore and equippedScore.score or nil
+end
+
 local function OnTooltipSetItem(tooltip)
     local _, link = tooltip:GetItem()
     if not link then
@@ -77,6 +123,18 @@ local function OnTooltipSetItem(tooltip)
     end
     local itemId = tonumber(link:match("item:(%d+)"))
     if not itemId then
+        return
+    end
+
+    if UnitLevel("player") < 80 then
+        local score, equippedScore = GetLowLevelComparison(itemId, link)
+        if score then
+            if equippedScore then
+                tooltip:AddLine(string.format("SimulateX (estimado): %+.0f frente a equipado", score - equippedScore), 0.6, 0.8, 1)
+            else
+                tooltip:AddLine(string.format("SimulateX (estimado): %.0f puntos", score), 0.6, 0.8, 1)
+            end
+        end
         return
     end
 

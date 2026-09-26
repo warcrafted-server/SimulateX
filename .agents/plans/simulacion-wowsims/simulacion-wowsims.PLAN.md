@@ -122,6 +122,17 @@ mide con el primer lote real antes de confirmar que no hace falta recortar.
   producto final que necesita el addon para funcionar en el cliente de otro jugador
   que descargue el addon desde GitHub.
 
+## Nota sobre el lote preliminar (2026-09-26)
+
+Primer lote de datos generado con el catálogo de objetos aún incompleto
+(descarga en curso durante la simulación) y pocas iteraciones (200, no las
+2000 de wowsims por defecto) para tener el addon funcionando de extremo a
+extremo rápido. Cubre solo hunter/mage/warrior. **Pendiente**: relanzar
+`simular_builds.py` para las 20 specs con el catálogo de objetos completo
+(1071 ids) y con iteraciones altas (2000+) para el dato final de producción;
+el preliminar es válido para probar el addon, no para publicarlo como
+definitivo.
+
 ## Pasos de ejecución
 
 1. **(Hecho)** Compilar `wowsimcli`: clonado `wowsims/wotlk` en `Tools/wowsimcli-src/`
@@ -232,11 +243,25 @@ contenido de raid P1-P5). No existe ningún dato de simulación para niveles 1-7
 GearScore.** Se investigó y confirmó que ningún addon de comparación de equipo
 (Pawn, GearScore, AtlasLoot, Cymry) usa simulación de combate fuera de end-game;
 todos degeneran a `ilvl × modificador de slot × multiplicador de rareza` +
-prioridad de estadística principal por clase/spec (fuente: guías de leveleo de
-Icy Veins para WotLK Classic). SimulateX debe hacer lo mismo para 1-79, y
-señalizarlo claramente en la UI como estimación (no simulación), a diferencia del
-dato preciso de nivel 80. Detalle de implementación pendiente, no bloquea el
-pipeline de nivel 80 que ya tiene datos reales.
+prioridad de estadística principal por clase/spec.
+
+**(Hecho, implementado para feral_druid)**: en vez de scrapear db.warcrafted.com
+para descubrir objetos de nivel bajo (AoWoW no expone un listado/búsqueda vía
+export XML/JSON, solo consulta por ID conocido), se usa acceso de solo lectura
+(usuario MySQL con permiso `SELECT` únicamente sobre `acore_world`, credenciales
+nunca escritas en el repo, solo como variables de entorno en el momento de
+ejecutar) a la tabla `item_template` del propio servidor. Da datos ya
+estructurados (stats en columnas, no HTML a parsear): `Tools/extraer_objetos_bd.py`
+extrae objetos por rango de `RequiredLevel`, `Tools/calcular_score_bajo_nivel.py`
+calcula el score ponderado por spec, aplicando el mismo filtro de compatibilidad
+armadura↔clase que en nivel 80 (ver limitación de armadura más abajo).
+Extraídos 15308 objetos de nivel 1-79; 7963 compatibles con Feral Druida.
+
+El addon muestra el resultado de nivel bajo como diferencia frente al objeto ya
+equipado en el mismo slot (`GetInventoryItemLink`), marcado explícitamente como
+"(estimado)" en el tooltip, para no aparentar la misma precisión que el dato de
+nivel 80. Pendiente extender a las 19 specs restantes (la fórmula es genérica,
+solo falta añadir sus pesos de estadística a `STAT_WEIGHTS_BY_SPEC`).
 
 ## PvP — investigado, enfoque distinto al de PvE
 

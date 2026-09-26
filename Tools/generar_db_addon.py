@@ -51,6 +51,17 @@ def lua_escape(value: str) -> str:
     return value.replace("\\", "\\\\").replace('"', '\\"')
 
 
+SPEC_TO_GAME_CLASS_LOWLEVEL = {"feral_druid": "Druid"}
+
+
+def format_lowlevel_scores_lua(scores: dict) -> str:
+    lines = ["local lowLevelScores = {"]
+    for item_id, data in scores.items():
+        lines.append(f'  [{item_id}] = {{ score = {data["score"]}, requiredLevel = {data["required_level"]} }},')
+    lines.append("}")
+    return "\n".join(lines)
+
+
 def format_lua_table(builds: dict) -> str:
     lines = ["local builds = {"]
     for build_id, build in builds.items():
@@ -119,13 +130,28 @@ def main() -> None:
                 "items": result["items"],
             }
 
-    for game_class, builds in builds_by_class.items():
+    lowlevel_by_class = {}
+    for spec, game_class in SPEC_TO_GAME_CLASS_LOWLEVEL.items():
+        scores_path = TOOLS_DIR.parent / "Data" / f"scores_bajo_nivel_{spec}.json"
+        if scores_path.exists():
+            lowlevel_by_class[game_class] = json.loads(scores_path.read_text(encoding="utf-8"))
+
+    for game_class in set(builds_by_class) | set(lowlevel_by_class):
+        builds = builds_by_class.get(game_class, {})
+        lowlevel = lowlevel_by_class.get(game_class, {})
+
+        parts = [format_lua_table(builds)]
+        table_fields = ["builds = builds"]
+        if lowlevel:
+            parts.append(format_lowlevel_scores_lua(lowlevel))
+            table_fields.append("lowLevelScores = lowLevelScores")
+
         lua_var = f"SimulateX_Data_{game_class}"
-        content = f"{format_lua_table(builds)}\n\n{lua_var} = {{ builds = builds }}\n"
+        content = "\n\n".join(parts) + f"\n\n{lua_var} = {{ {', '.join(table_fields)} }}\n"
         out_path = OUT_DIR / f"SimulateX_Data_{game_class}.lua"
         out_path.write_text(content, encoding="utf-8")
         n_items = sum(len(b["items"]) for b in builds.values())
-        print(f"[{game_class}] {len(builds)} builds, {n_items} entradas de objeto -> {out_path}")
+        print(f"[{game_class}] {len(builds)} builds ({n_items} entradas), {len(lowlevel)} objetos nivel bajo -> {out_path}")
 
 
 if __name__ == "__main__":

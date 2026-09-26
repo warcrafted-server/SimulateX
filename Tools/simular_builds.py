@@ -115,7 +115,20 @@ def swap_item_in_gear(gear_path: pathlib.Path, item_slot: int, new_item_id: int,
     out_path.write_text(json.dumps(data), encoding="utf-8")
 
 
-def load_candidate_items(spec: str, limit: int = None) -> list:
+ITEM_LEVEL_MARGIN = 20  # objetos fuera de este margen respecto al gearset base no son una comparación realista
+
+
+def gear_item_level_range(base_input_path: pathlib.Path, items_by_id: dict) -> tuple:
+    data = load_json(base_input_path)
+    equipped_ids = [it.get("id") for it in data["raid"]["parties"][0]["players"][0]["equipment"]["items"] if it.get("id")]
+    levels = [items_by_id[str(i)]["item_level"] for i in equipped_ids
+              if str(i) in items_by_id and items_by_id[str(i)]["item_level"]]
+    if not levels:
+        return (0, 999)
+    return (min(levels) - ITEM_LEVEL_MARGIN, max(levels) + ITEM_LEVEL_MARGIN)
+
+
+def load_candidate_items(spec: str, limit: int = None, item_level_range: tuple = None) -> list:
     items_path = DATA_DIR / "items_procesados.json"
     if not items_path.exists():
         return []
@@ -129,6 +142,9 @@ def load_candidate_items(spec: str, limit: int = None) -> list:
         slot = resolve_item_slot(item["inventory_slot"], occupied_slots=set())
         if slot is None:
             continue
+        if item_level_range and item["item_level"]:
+            if not (item_level_range[0] <= item["item_level"] <= item_level_range[1]):
+                continue
         candidates.append({**item, "id": int(item_id_str), "resolved_slot": slot})
     if limit:
         candidates = candidates[:limit]
@@ -150,7 +166,9 @@ def simulate_build(spec: str, build: dict, talents_string: str, work_dir: pathli
 
     base_metrics = extract_metrics(base_result)
 
-    candidates = load_candidate_items(spec, limit=build.get("_limit_items"))
+    items_by_id = load_json(DATA_DIR / "items_procesados.json") if (DATA_DIR / "items_procesados.json").exists() else {}
+    ilvl_range = gear_item_level_range(base_input, items_by_id)
+    candidates = load_candidate_items(spec, limit=build.get("_limit_items"), item_level_range=ilvl_range)
     item_deltas = {}
     for item in candidates:
         swapped_input = work_dir / f"{build_id}_{item['id']}.json"
