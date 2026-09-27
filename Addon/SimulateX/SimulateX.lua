@@ -216,12 +216,45 @@ local function GetWeightsAtLevel(build, level, classGameName)
     return scaled
 end
 
--- Puntuación = Σ peso × stat + huecos × valor de hueco (socketValue/
--- metaSocketValue de la build). Ignora la bonificación de ranura (igual que
--- el paso 1 al simular: Pawn por defecto tampoco la cuenta).
-local function ScoreItem(itemLink, weights, build)
+-- Hueco de equipo -> mano cuyo peso de DPS de arma se aplica (build.weaponDps).
+local SLOT_TO_HAND = { MainHandSlot = "mainHand", SecondaryHandSlot = "offHand", RangedSlot = "ranged" }
+
+local RANGED_EQUIP_LOCS = { INVTYPE_RANGED = true, INVTYPE_RANGEDRIGHT = true, INVTYPE_THROWN = true }
+
+local function GetDefaultHand(itemLink)
+    local equipLoc = select(9, GetItemInfo(itemLink))
+    if RANGED_EQUIP_LOCS[equipLoc] then
+        return "ranged"
+    end
+    if equipLoc == "INVTYPE_WEAPONOFFHAND" then
+        return "offHand"
+    end
+    return "mainHand"
+end
+
+-- Feral: el DPS del arma solo aporta PA feral, que el core calcula como
+-- int(dps × 14) − 767 y nunca negativo, así que por debajo de ~54.8 DPS no
+-- vale nada. El peso de wowsims es lineal (no recorta), de ahí el ajuste.
+local function ScoreWeaponDps(dps, build, hand)
+    local weight = build.weaponDps and build.weaponDps[hand]
+    if not weight or not dps then
+        return 0
+    end
+    local feral = build.feralWeaponAp
+    if feral then
+        local feralAp = math.max(0, math.floor(dps * feral.perDps) - feral.base)
+        return weight / feral.perDps * feralAp
+    end
+    return weight * dps
+end
+
+-- Puntuación = Σ peso × stat + DPS de arma + huecos × valor de hueco
+-- (socketValue/metaSocketValue de la build). Ignora la bonificación de ranura
+-- (igual que el paso 1 al simular: Pawn por defecto tampoco la cuenta).
+-- hand: mano donde iría el arma; sin ella se deduce del tipo de objeto.
+local function ScoreItem(itemLink, weights, build, hand)
     local stats = GetItemStats(itemLink) or {}
-    local score = 0
+    local score = ScoreWeaponDps(stats.ITEM_MOD_DAMAGE_PER_SECOND_SHORT, build, hand or GetDefaultHand(itemLink))
 
     for _, key in ipairs(DIRECT_WEIGHT_KEYS) do
         local weight = weights[key]
@@ -382,7 +415,7 @@ end
 -- Puntúa candidato y equipado con la MISMA fuente de datos (decisión 5: una
 -- comparación nunca mezcla exacto y EP): exacto para ambos solo si los dos
 -- tienen entrada en items; si a cualquiera le falta, EP para ambos.
-local function ComparePair(candLink, candId, equippedLink, equippedId, build, weights, metricName)
+local function ComparePair(candLink, candId, equippedLink, equippedId, build, weights, metricName, hand)
     local candExact = candId and GetExactDelta(build, candId, metricName)
     local equippedExact = equippedId and GetExactDelta(build, equippedId, metricName)
 
@@ -390,21 +423,21 @@ local function ComparePair(candLink, candId, equippedLink, equippedId, build, we
         return candExact - equippedExact
     end
 
-    local candScore = candLink and ScoreItem(candLink, weights, build) or 0
-    local equippedScore = equippedLink and ScoreItem(equippedLink, weights, build) or 0
+    local candScore = candLink and ScoreItem(candLink, weights, build, hand) or 0
+    local equippedScore = equippedLink and ScoreItem(equippedLink, weights, build, hand) or 0
     return candScore - equippedScore
 end
 
 -- Puntuación de un solo objeto (slot vacío, o suma de dos slots ya
 -- equipados): sin comparación, así que no aplica la regla de "no mezclar".
-local function GetScore(itemLink, itemId, build, weights, metricName)
+local function GetScore(itemLink, itemId, build, weights, metricName, hand)
     if itemId then
         local exact = GetExactDelta(build, itemId, metricName)
         if exact then
             return exact
         end
     end
-    return ScoreItem(itemLink, weights, build)
+    return ScoreItem(itemLink, weights, build, hand)
 end
 
 -- Ganancia vs equipado (positiva = mejora). metricName es "dps", "hps",
@@ -427,11 +460,11 @@ local function CompareAgainstEquipped(itemLink, itemId, equipLoc, build, weights
         local mhEquipLoc = mhLink and select(9, GetItemInfo(mhLink))
 
         if mhEquipLoc == "INVTYPE_2HWEAPON" then
-            return ComparePair(itemLink, itemId, mhLink, mhId, build, weights, metricName)
+            return ComparePair(itemLink, itemId, mhLink, mhId, build, weights, metricName, "mainHand")
         end
 
         local ohLink, ohId = GetEquippedItemId("SecondaryHandSlot")
-        local gainMh = ComparePair(itemLink, itemId, mhLink, mhId, build, weights, metricName)
+        local gainMh = ComparePair(itemLink, itemId, mhLink, mhId, build, weights, metricName, "mainHand")
 
         -- Mano izquierda: si hay dato exacto de dpsOH para AMBOS lados se usa
         -- (decisión 5), si no EP (que no distingue de mano, mismo score).
@@ -441,7 +474,7 @@ local function CompareAgainstEquipped(itemLink, itemId, equipLoc, build, weights
         if candOhExact and equippedOhExact then
             gainOh = candOhExact - equippedOhExact
         else
-            gainOh = ComparePair(itemLink, itemId, ohLink, ohId, build, weights, metricName)
+            gainOh = ComparePair(itemLink, itemId, ohLink, ohId, build, weights, metricName, "offHand")
         end
 
         return math.max(gainMh, gainOh)
@@ -464,16 +497,17 @@ local function CompareAgainstEquipped(itemLink, itemId, equipLoc, build, weights
                 return candExact - (mhExact or 0) - (ohExact or 0)
             end
 
-            local candScore = ScoreItem(itemLink, weights, build)
-            local equippedScore = (equippedLink and ScoreItem(equippedLink, weights, build) or 0)
-                + (ohLink and ScoreItem(ohLink, weights, build) or 0)
+            local candScore = ScoreItem(itemLink, weights, build, "mainHand")
+            local equippedScore = (equippedLink and ScoreItem(equippedLink, weights, build, "mainHand") or 0)
+                + (ohLink and ScoreItem(ohLink, weights, build, "offHand") or 0)
             return candScore - equippedScore
         end
 
+        local hand = SLOT_TO_HAND[slotName]
         if not equippedLink then
-            return GetScore(itemLink, itemId, build, weights, metricName)  -- slot vacío: puntuación completa
+            return GetScore(itemLink, itemId, build, weights, metricName, hand)  -- slot vacío: puntuación completa
         end
-        return ComparePair(itemLink, itemId, equippedLink, equippedId, build, weights, metricName)
+        return ComparePair(itemLink, itemId, equippedLink, equippedId, build, weights, metricName, hand)
     end
 
     -- Anillos/abalorios: contra el peor de los dos equipados.
@@ -508,7 +542,7 @@ local function GetEquippedTotalScore(weights, build)
     for _, slotName in ipairs(EQUIPPED_SLOTS) do
         local link = select(1, GetEquippedItemId(slotName))
         if link then
-            total = total + ScoreItem(link, weights, build)
+            total = total + ScoreItem(link, weights, build, SLOT_TO_HAND[slotName])
         end
     end
     return total
@@ -823,37 +857,56 @@ end
     la flecha de mejora sobre bolsas/botín/recompensa de misión.
 ------------------------------------------------------------------------]]
 
--- Superpone (o retira) la textura de flecha de mejora sobre un botón de
--- objeto (icono de bolsa, botín o recompensa de misión). Reutiliza siempre la
--- misma textura hija por botón en vez de crear una nueva cada vez que se
--- actualiza su contenido.
+-- Flecha del botón de subir planta del mapa del mundo: 3.3.5a no tiene flecha
+-- de mejora nativa (eso es de retail).
+local UPGRADE_ARROW_TEXTURE = "Interface\\Buttons\\Arrow-Up-Up"
+
+-- Marco hijo con nivel superior al botón para que la flecha quede por encima
+-- de su borde (NormalTexture); la silueta negra algo mayor hace de contorno.
+local function CreateUpgradeIcon(button)
+    local holder = CreateFrame("Frame", nil, button)
+    holder:SetFrameLevel(button:GetFrameLevel() + 2)
+    holder:SetPoint("BOTTOMLEFT", button, "BOTTOMLEFT", 0, 0)
+
+    local shadow = holder:CreateTexture(nil, "ARTWORK")
+    shadow:SetTexture(UPGRADE_ARROW_TEXTURE)
+    shadow:SetVertexColor(0, 0, 0, 0.9)
+    shadow:SetPoint("TOPLEFT", holder, "TOPLEFT", -2, 2)
+    shadow:SetPoint("BOTTOMRIGHT", holder, "BOTTOMRIGHT", 2, -2)
+
+    local arrow = holder:CreateTexture(nil, "OVERLAY")
+    arrow:SetTexture(UPGRADE_ARROW_TEXTURE)
+    arrow:SetDesaturated(true)  -- sin soporte de shader queda dorada teñida, sigue viéndose
+    arrow:SetAllPoints(holder)
+    holder.arrow = arrow
+
+    return holder
+end
+
+-- Superpone (o retira) la flecha de mejora sobre un botón de objeto (bolsa,
+-- botín, recompensa de misión, banco, vendedor). Un solo marco por botón,
+-- reutilizado en cada actualización.
 local function UpdateUpgradeIcon(button, itemLink)
     if not button then
         return
     end
     if not button.simulateXIcon then
-        local icon = button:CreateTexture(nil, "OVERLAY")
-        -- 3.3.5a no tiene una flecha de mejora nativa de una pieza (ese
-        -- sistema es de retail); se reutiliza la flecha de orden de columna
-        -- de la Casa de Subastas, monocroma y pensada para recolorear.
-        icon:SetTexture("Interface\\Buttons\\UI-SortArrow")
-        icon:SetRotation(math.pi)  -- apunta hacia arriba en vez de hacia abajo
-        icon:SetPoint("BOTTOMLEFT", button, "BOTTOMLEFT", 1, 1)
-        button.simulateXIcon = icon
+        button.simulateXIcon = CreateUpgradeIcon(button)
     end
 
+    local icon = button.simulateXIcon
     local marker = itemLink and GetUpgradeMarker(itemLink)
 
     if marker == "active" then
-        button.simulateXIcon:SetVertexColor(0.2, 1, 0.2)
-        button.simulateXIcon:SetSize(14, 14)
-        button.simulateXIcon:Show()
+        icon.arrow:SetVertexColor(0.1, 1, 0.1)
+        icon:SetSize(20, 20)
+        icon:Show()
     elseif marker == "other" then
-        button.simulateXIcon:SetVertexColor(1, 0.6, 0.1)
-        button.simulateXIcon:SetSize(10, 10)
-        button.simulateXIcon:Show()
+        icon.arrow:SetVertexColor(1, 0.55, 0)
+        icon:SetSize(15, 15)
+        icon:Show()
     else
-        button.simulateXIcon:Hide()
+        icon:Hide()
     end
 end
 
@@ -1024,6 +1077,18 @@ local function PrintDebugInfo(itemLink)
     print("  GetItemStats: " .. (#statKeys > 0 and table.concat(statKeys, ", ") or "(sin estadísticas)"))
     for _, key in ipairs(statKeys) do
         print(string.format("    %s = %s", key, tostring(stats[key])))
+    end
+
+    local weaponDps = stats.ITEM_MOD_DAMAGE_PER_SECOND_SHORT
+    local classData = _G[CLASS_DATA_VARS[select(2, UnitClass("player"))] or ""]
+    if weaponDps and classData then
+        local hand = GetDefaultHand(itemLink)
+        for _, entry in pairs(GetBestBuildPerSpec(classData)) do
+            local build = entry.build
+            if build.weaponDps and build.weaponDps[hand] then
+                print(string.format("  DPS de arma (%s) en %s: %.2f pts", hand, entry.buildId, ScoreWeaponDps(weaponDps, build, hand)))
+            end
+        end
     end
 
     local evaluations = GetItemEvaluations(itemLink)

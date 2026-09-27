@@ -47,11 +47,22 @@ RATING_TO_STATS = {
     "ITEM_MOD_HASTE_RATING_SHORT": [14, 9],      # celeridad: MeleeHaste + SpellHaste (ranged usa MeleeHaste en wowsims)
 }
 
-# Constante de forms.go (druid/forms.go): PA feral por punto de DPS de arma
-# por encima de este umbral. No es un Stat de wowsims (no existe
-# FeralAttackPower en el proto): se calcula aparte y su EP es el de PA.
-FERAL_AP_DPS_THRESHOLD = 54.8
+# PseudoStat de wowsims (índice del enum, proto/common.proto) -> mano a la que
+# se aplica el peso de ITEM_MOD_DAMAGE_PER_SECOND_SHORT en el addon.
+# GetItemStats da una sola clave de DPS para cualquier arma; el addon elige
+# el peso según el hueco donde iría el arma.
+PSEUDO_STAT_TO_HAND = {0: "mainHand", 1: "offHand", 2: "ranged"}
+
+# PA feral desde el DPS del arma, tal como lo aplica AzerothCore
+# (ItemTemplate::getFeralBonus): int(dps * 14) - 767, recortado a 0. wowsims
+# (druid/forms.go) usa floor((dps - 54.8) * 14) sin recortar, así que su peso
+# de DPS de arma para feral es lineal y el addon tiene que aplicar el umbral.
 FERAL_AP_PER_DPS = 14
+FERAL_AP_BASE = 767
+
+# Specs cuyo DPS de arma solo cuenta vía PA feral (en forma felina/osuna el
+# daño del arma no se usa).
+FERAL_WEAPON_AP_SPECS = {"feral_druid", "feral_tank_druid"}
 
 
 def combine_rating_weight(weights_by_stat_index: dict, item_mod_key: str) -> float | None:
@@ -66,12 +77,11 @@ def combine_rating_weight(weights_by_stat_index: dict, item_mod_key: str) -> flo
     return total if total else None
 
 
-def feral_attack_power(dps_arma: float) -> float:
-    """PA feral aportado por el DPS de un arma, fórmula exacta de
-    druid/forms.go: fap = floor((dps - 54.8) * 14). Solo se aplica cuando el
-    arma va en la mano principal de una build feral (cat/bear)."""
-    import math
-    return math.floor((dps_arma - FERAL_AP_DPS_THRESHOLD) * FERAL_AP_PER_DPS)
+def weapon_dps_weights(raw_pseudo_stats: list) -> dict:
+    """Pesos de DPS de arma por mano ({"mainHand": w, ...}) a partir de
+    dps.weights.pseudoStats de TestGenStatWeights; omite los que valen 0."""
+    return {hand: round(raw_pseudo_stats[idx], 4) for idx, hand in PSEUDO_STAT_TO_HAND.items()
+            if idx < len(raw_pseudo_stats) and raw_pseudo_stats[idx]}
 
 
 def gem_ep_value(gem_stats: list, weights_by_stat_index: dict) -> float:

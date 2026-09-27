@@ -22,6 +22,9 @@ SimulateX_Data_Druid = {
       ITEM_MOD_HIT_RATING_SHORT = 1.0289,
       ITEM_MOD_HASTE_RATING_SHORT = 1.0255,
     },
+    weaponDps = {
+      mainHand = 10.1303,
+    },
     weightsKind = "sim",
     critComponent = {
       melee = 1.2603,
@@ -1843,6 +1846,10 @@ SimulateX_Data_Druid = {
         dtps = 0.0,
       },
     },
+    feralWeaponAp = {
+      base = 767,
+      perDps = 14,
+    },
   },
   ["feral_druid_p2"] = {
     spec = "feral_druid",
@@ -1866,6 +1873,9 @@ SimulateX_Data_Druid = {
       ITEM_MOD_CRIT_RATING_SHORT = 1.3727,
       ITEM_MOD_HIT_RATING_SHORT = 2.1237,
       ITEM_MOD_HASTE_RATING_SHORT = 1.1345,
+    },
+    weaponDps = {
+      mainHand = 12.16,
     },
     weightsKind = "sim",
     critComponent = {
@@ -4174,6 +4184,10 @@ SimulateX_Data_Druid = {
         dtps = 0.0,
       },
     },
+    feralWeaponAp = {
+      base = 767,
+      perDps = 14,
+    },
   },
   ["feral_druid_p3"] = {
     spec = "feral_druid",
@@ -4196,6 +4210,9 @@ SimulateX_Data_Druid = {
       ITEM_MOD_CRIT_RATING_SHORT = 1.3671,
       ITEM_MOD_HIT_RATING_SHORT = 2.4097,
       ITEM_MOD_HASTE_RATING_SHORT = 1.4611,
+    },
+    weaponDps = {
+      mainHand = 13.3682,
     },
     weightsKind = "sim",
     critComponent = {
@@ -6498,6 +6515,10 @@ SimulateX_Data_Druid = {
         dtps = 0.0,
       },
     },
+    feralWeaponAp = {
+      base = 767,
+      perDps = 14,
+    },
   },
   ["feral_druid_p4"] = {
     spec = "feral_druid",
@@ -6521,6 +6542,9 @@ SimulateX_Data_Druid = {
       ITEM_MOD_CRIT_RATING_SHORT = 1.3518,
       ITEM_MOD_HIT_RATING_SHORT = 3.6746,
       ITEM_MOD_HASTE_RATING_SHORT = 1.9484,
+    },
+    weaponDps = {
+      mainHand = 16.1515,
     },
     weightsKind = "sim",
     critComponent = {
@@ -7791,6 +7815,10 @@ SimulateX_Data_Druid = {
         dtps = 0.0,
       },
     },
+    feralWeaponAp = {
+      base = 767,
+      perDps = 14,
+    },
   },
   ["feral_druid_preraid"] = {
     spec = "feral_druid",
@@ -7812,6 +7840,9 @@ SimulateX_Data_Druid = {
       ITEM_MOD_ATTACK_POWER_SHORT = 0.5188,
       ITEM_MOD_CRIT_RATING_SHORT = 1.0638,
       ITEM_MOD_HASTE_RATING_SHORT = 0.6735,
+    },
+    weaponDps = {
+      mainHand = 8.7163,
     },
     weightsKind = "sim",
     critComponent = {
@@ -12417,6 +12448,10 @@ SimulateX_Data_Druid = {
         tps = 123.0,
         dtps = 0,
       },
+    },
+    feralWeaponAp = {
+      base = 767,
+      perDps = 14,
     },
   },
 }

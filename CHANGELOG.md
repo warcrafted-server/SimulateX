@@ -7,7 +7,10 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 - Panel de configuración en Interfaz > AddOns (`/simulatexconfig` como alternativa): activar/desactivar el modo estimado de nivel 1-79, y elegir qué sub-especializaciones de la clase se muestran en el tooltip.
 
 ## Sin publicar
+### Cambiado
+- Flecha de mejora más visible: textura `Interface\Buttons\Arrow-Up-Up` desaturada y teñida (verde 20 px para la spec activa, naranja 15 px para otra spec), con silueta negra de contorno y por encima del borde del botón.
 ### Corregido
+- El DPS de arma no contaba en la puntuación EP: dos armas con DPS muy distinto salían "≈ igual". Ahora se usan los pesos de DPS de arma de wowsims (`pseudoStats`: mano principal, mano izquierda o a distancia según el hueco). En Feral el DPS de arma solo aporta PA feral, que el servidor calcula como `int(dps × 14) − 767` sin bajar de 0, así que por debajo de ~54.8 DPS el arma no suma nada.
 - La extracción de objetos de nivel 1-79 (`extraer_objetos_bd.py`) excluía por error todos los objetos con `RequiredLevel = 0` en `item_template` (frecuente en objetos de misión/mundo antiguos, ej. Bastón del purificador, Cinturón acuario). Regenerados los datos de Druida: 13569 objetos puntuados (antes 7963).
 - La generación de simulación de nivel 80 fallaba para holy_paladin y restoration_druid: `generar_extractores_go.py` dejaba variables sin usar en el código Go generado cuando la spec no usa rotación por APL, y Go no compila con eso. No era una limitación de wowsims (como se documentó por error antes), sino un bug propio del generador.
 

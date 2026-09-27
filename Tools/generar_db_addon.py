@@ -14,7 +14,10 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from extraer_ep_stats import extract_ep_config
-from mapeo_stats import STAT_TO_ITEM_MOD, RATING_TO_STATS, combine_rating_weight, gem_ep_value
+from mapeo_stats import (
+    STAT_TO_ITEM_MOD, RATING_TO_STATS, FERAL_AP_BASE, FERAL_AP_PER_DPS, FERAL_WEAPON_AP_SPECS,
+    combine_rating_weight, gem_ep_value, weapon_dps_weights,
+)
 from simular_builds import (
     build_env, run_go_extractor, run_go_stat_weights, load_json, ITEMS_BD_PATH, WOWSIMS_DB_PATH,
     base_gear_gem_pool, base_gear_items, load_gem_colors, WOWSIMS_SRC,
@@ -121,8 +124,9 @@ def compute_socket_values(gear_items: list, items_by_id: dict, gem_colors: dict,
     return round(socket_value, 2), round(meta_socket_value, 2)
 
 
-def build_entry(spec: str, build_id: str, sim_result: dict, weights_index: dict, weights_kind: str,
-                 gear_items: list, items_by_id: dict, gem_colors: dict, talents_string: str) -> dict:
+def build_entry(spec: str, build_id: str, sim_result: dict, weights_index: dict, weapon_dps: dict,
+                weights_kind: str, gear_items: list, items_by_id: dict, gem_colors: dict,
+                talents_string: str) -> dict:
     game_class, role, spec_label = SPEC_INFO[spec]
     avg_item_level = compute_avg_item_level(gear_items, items_by_id)
     socket_value, meta_socket_value = compute_socket_values(gear_items, items_by_id, gem_colors, weights_index)
@@ -143,7 +147,7 @@ def build_entry(spec: str, build_id: str, sim_result: dict, weights_index: dict,
             entry["dpsOH"] = deltas["dpsOH"]
         items[int(item_id)] = entry
 
-    return {
+    entry = {
         "spec": spec,
         "specLabel": spec_label,
         "role": role,
@@ -157,12 +161,16 @@ def build_entry(spec: str, build_id: str, sim_result: dict, weights_index: dict,
             "dtps": sim_result.get("base_dtps", 0.0),
         },
         "weights": build_item_mod_weights(weights_index),
+        "weaponDps": weapon_dps,
         "weightsKind": weights_kind,
         "critComponent": crit_component,
         "socketValue": socket_value,
         "metaSocketValue": meta_socket_value,
         "items": items,
     }
+    if spec in FERAL_WEAPON_AP_SPECS and weapon_dps:
+        entry["feralWeaponAp"] = {"base": FERAL_AP_BASE, "perDps": FERAL_AP_PER_DPS}
+    return entry
 
 
 def lua_value(v) -> str:
@@ -270,6 +278,7 @@ def main() -> None:
                 if ep_config["kind"] == "preset":
                     weights_index = {STAT_NAME_TO_INDEX[name]: value for name, value in ep_config["ep_weights"].items()
                                       if name in STAT_NAME_TO_INDEX}
+                    weapon_dps = {}
                     weights_kind = "preset"
                 else:
                     raw_weights = compute_stat_weights(spec, build_with_apl, talents_string, work_dir)
@@ -277,10 +286,11 @@ def main() -> None:
                         print(f"[{spec}/{sim_file.stem}] fallo generando pesos (TestGenStatWeights), se omite")
                         continue
                     weights_index = weights_by_stat_index(raw_weights)
+                    weapon_dps = weapon_dps_weights(raw_weights.get("pseudoStats", []))
                     weights_kind = "sim"
 
-                entry = build_entry(spec, sim_result["build_id"], sim_result, weights_index, weights_kind,
-                                     gear_items, items_by_id, gem_colors, talents_string)
+                entry = build_entry(spec, sim_result["build_id"], sim_result, weights_index, weapon_dps,
+                                    weights_kind, gear_items, items_by_id, gem_colors, talents_string)
                 build_key = f"{spec}_{sim_result['build_id']}"
                 entries_by_class.setdefault(game_class, {})[build_key] = entry
                 print(f"[{spec}/{sim_result['build_id']}] consolidado ({len(entry['items'])} objetos, "
