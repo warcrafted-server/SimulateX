@@ -9,9 +9,9 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 ## Sin publicar
 ### Cambiado
 - Marca de mejora más visible: brillo de color alrededor del icono (`UI-ActionButton-Border`, verde para la spec activa, naranja para otra spec) y flecha `Interface\Buttons\Arrow-Up-Up` teñida con contorno negro, por encima del borde del botón.
-- `/simulatex debug` muestra cuántas líneas tiene el tooltip escaneado y cuáles salen en rojo.
+- `/simulatex debug` muestra si la clase tiene competencia con el tipo de objeto y si está en su lista de clases.
 ### Corregido
-- La comprobación de usabilidad no escaneaba nada: el tooltip oculto perdía su dueño y no se rellenaba, así que todo contaba como usable (p. ej. escudos para druida). Ahora se asigna el dueño en cada escaneo y también se reconoce el rojo puesto con código de color.
+- Con el addon activo el juego dejaba de pintar en rojo lo no usable (p. ej. "Escudo" para druida), y el addon, que decidía la usabilidad leyendo ese rojo en un tooltip oculto, lo daba todo por usable. La causa era construir ese tooltip oculto mientras el cliente mostraba el tuyo. Ahora el addon no construye ningún tooltip: la usabilidad sale de la nueva tabla `SimulateX_ItemTypes.lua` (tipo de objeto y clases permitidas, generada con `Tools/generar_tipos_objeto.py`), de las competencias de cada clase (malla y placas a partir de nivel 40 donde toca) y del nivel mínimo de `GetItemInfo`.
 - Una mano izquierda (escudo, sostener, arma de mano izquierda) con una 2M equipada se comparaba como hueco vacío; ahora se compara contra la 2M.
 - El DPS de arma no contaba en la puntuación EP: dos armas con DPS muy distinto salían "≈ igual". Ahora se usan los pesos de DPS de arma de wowsims (`pseudoStats`: mano principal, mano izquierda o a distancia según el hueco). En Feral el DPS de arma solo aporta PA feral, que el servidor calcula como `int(dps × 14) − 767` sin bajar de 0, así que por debajo de ~54.8 DPS el arma no suma nada.
 - La extracción de objetos de nivel 1-79 (`extraer_objetos_bd.py`) excluía por error todos los objetos con `RequiredLevel = 0` en `item_template` (frecuente en objetos de misión/mundo antiguos, ej. Bastón del purificador, Cinturón acuario). Regenerados los datos de Druida: 13569 objetos puntuados (antes 7963).

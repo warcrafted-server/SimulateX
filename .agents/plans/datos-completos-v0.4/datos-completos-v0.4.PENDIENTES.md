@@ -17,6 +17,7 @@ Plan: `datos-completos-v0.4.PLAN.md` (mismo directorio). Auditoría de errores E
   4. `python3 simular_builds.py --spec X [--limit-items N --iterations N]` → `Data/sims/<spec>/<build>.json` (catálogo completo = horas)
   5. `SIMX_DBC_DIR=... python3 generar_tablas_nivel.py` → `Addon/.../SimulateX_Levels.lua`
   6. `python3 generar_db_addon.py --spec X` → `Addon/.../SimulateX_Data_<Clase>.lua` (~20 min feral: 5 builds × TestGenStatWeights 5000 it.)
+  7. `python3 generar_tipos_objeto.py` → `Addon/.../SimulateX_ItemTypes.lua` (tras regenerar `items_bd.json`)
 - Procesos largos: `nohup ... &` en background da "completed" al instante (solo el desacople);
   vigilar el fin real con Monitor + `while pgrep -f ...; do sleep 10; done`.
 
@@ -33,7 +34,17 @@ depredadores). EP vs delta simulado en 2M a 80: pendiente 1.02, r 0.97 (antes 4.
 `UI-ActionButton-Border` (ADD) + flecha sin desaturar; usabilidad nunca detectaba rojo (tooltip
 oculto sin dueño → 0 líneas) → `SetOwner` por escaneo, no cachear con 0 líneas; mano izquierda
 con 2M equipada → se compara contra la 2M. Sin cambio (correcto): DPS de arma < 54.8 vale 0 para
-Feral, así que espada (+1 fue) > bastón (agu/esp) y roble = fresno. Posible mejora a valorar: a
+Feral, así que espada (+1 fue) > bastón (agu/esp) y roble = fresno.
+
+**Tras la 2ª prueba (commit `6c45465`):** con SimulateX activo el cliente no pinta el rojo de
+"no usable" ni en el tooltip visible ni en el oculto (debug: 9 líneas, ninguna roja); sin el
+addon sí. Causa: construir el tooltip oculto (`SetOwner`/`SetHyperlink`) dentro de
+`OnTooltipSetItem` y en las actualizaciones de bolsas. Decisión 7 sustituida: el addon no
+construye tooltips. Usabilidad = `SimulateX_ItemTypes` (id → clase×100+subclase) +
+`SimulateX_ItemClasses` (AllowableClass restringido), ambos de `generar_tipos_objeto.py`, +
+`CLASS_PROFICIENCIES` en `SimulateX.lua` (malla/placas a 40) + nivel mínimo de `GetItemInfo`. No
+cubre armas no entrenadas (p. ej. guerrero sin armas de asta). Pendiente de confirmar en juego que
+el rojo nativo vuelve. Posible mejora a valorar: a
 nivel < 80 el % es sobre el EP del equipo, no sobre el DPS real, e infla las cifras.
 
 ### F1 — DPS de arma ignorado en la puntuación (confirmado en juego)

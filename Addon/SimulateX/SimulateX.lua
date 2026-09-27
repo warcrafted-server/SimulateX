@@ -47,107 +47,84 @@ local function GetActiveTalentTree()
 end
 
 --[[----------------------------------------------------------------------
-    USABILIDAD: tooltip oculto para leer lo que el juego pinta en rojo
-    (tipo de armadura/arma incompatible, "Clases:", habilidad no aprendida).
-    Independiente del idioma y del nivel: el requisito de nivel mínimo se
-    trata aparte (dato sí, flecha no), no cuenta como "no usable".
+    USABILIDAD: se decide con datos de item_template (Data/SimulateX_ItemTypes.lua)
+    y GetItemInfo, nunca construyendo un tooltip: hacerlo mientras el cliente
+    muestra otro le quita el rojo de "no usable" al tooltip que ve el jugador.
+    El requisito de nivel mínimo se trata aparte (dato sí, flecha no), no
+    cuenta como "no usable". No cubre armas que la clase puede usar pero aún
+    no ha entrenado.
 ------------------------------------------------------------------------]]
 
-local scanTooltip = CreateFrame("GameTooltip", "SimulateXScanTooltip", nil, "GameTooltipTemplate")
+-- Qué tipos puede equiparse cada clase (códigos de SimulateX_ItemTypes:
+-- clase × 100 + subclase de item_template). El valor es el nivel mínimo: la
+-- malla (cazador, chamán) y las placas (guerrero, paladín) se aprenden a 40.
+local ANY_CLASS_WEAPONS = { [214] = 1, [220] = 1 }  -- armas varias, cañas de pescar
+local CLASS_PROFICIENCIES = {
+    WARRIOR = { [401] = 1, [402] = 1, [403] = 1, [404] = 40, [406] = 1,
+        [200] = 1, [201] = 1, [202] = 1, [203] = 1, [204] = 1, [205] = 1, [206] = 1, [207] = 1,
+        [208] = 1, [210] = 1, [213] = 1, [215] = 1, [216] = 1, [218] = 1 },
+    PALADIN = { [401] = 1, [402] = 1, [403] = 1, [404] = 40, [406] = 1, [407] = 1,
+        [200] = 1, [201] = 1, [204] = 1, [205] = 1, [206] = 1, [207] = 1, [208] = 1 },
+    HUNTER = { [401] = 1, [402] = 1, [403] = 40,
+        [200] = 1, [201] = 1, [202] = 1, [203] = 1, [206] = 1, [207] = 1, [208] = 1, [210] = 1,
+        [213] = 1, [215] = 1, [216] = 1, [218] = 1 },
+    ROGUE = { [401] = 1, [402] = 1,
+        [200] = 1, [202] = 1, [203] = 1, [204] = 1, [207] = 1, [213] = 1, [215] = 1, [216] = 1, [218] = 1 },
+    PRIEST = { [401] = 1, [204] = 1, [210] = 1, [215] = 1, [219] = 1 },
+    DEATHKNIGHT = { [401] = 1, [402] = 1, [403] = 1, [404] = 1, [410] = 1,
+        [200] = 1, [201] = 1, [204] = 1, [205] = 1, [206] = 1, [207] = 1, [208] = 1 },
+    SHAMAN = { [401] = 1, [402] = 1, [403] = 40, [406] = 1, [409] = 1,
+        [200] = 1, [201] = 1, [204] = 1, [205] = 1, [210] = 1, [213] = 1, [215] = 1 },
+    MAGE = { [401] = 1, [207] = 1, [210] = 1, [215] = 1, [219] = 1 },
+    WARLOCK = { [401] = 1, [207] = 1, [210] = 1, [215] = 1, [219] = 1 },
+    DRUID = { [401] = 1, [402] = 1, [408] = 1, [204] = 1, [205] = 1, [206] = 1, [210] = 1, [213] = 1, [215] = 1 },
+}
 
-local RED = RED_FONT_COLOR
-local RED_TOLERANCE = 0.05
--- Color con el que el motor pinta las líneas no usables (RED_FONT_COLOR_CODE).
-local RED_COLOR_CODE = "|cffff2020"
+-- Bit de cada clase en item_template.AllowableClass (2^(id de clase − 1)).
+local CLASS_MASK_BITS = {
+    WARRIOR = 1, PALADIN = 2, HUNTER = 4, ROGUE = 8, PRIEST = 16, DEATHKNIGHT = 32,
+    SHAMAN = 64, MAGE = 128, WARLOCK = 256, DRUID = 1024,
+}
 
-local function IsRedLine(fontString, text)
-    if text:find(RED_COLOR_CODE, 1, true) then
+local function GetItemIdFromLink(itemLink)
+    return tonumber(itemLink:match("item:(%d+)"))
+end
+
+-- nil si el objeto no está en la tabla de tipos (anillos, capas, ...).
+local function IsProficient(itemLink)
+    local itemId = GetItemIdFromLink(itemLink)
+    local typeCode = itemId and SimulateX_ItemTypes and SimulateX_ItemTypes[itemId]
+    if not typeCode then
+        return nil
+    end
+    if ANY_CLASS_WEAPONS[typeCode] then
         return true
     end
-    local r, g, b = fontString:GetTextColor()
-    return r and math.abs(r - RED.r) < RED_TOLERANCE
-        and math.abs(g - RED.g) < RED_TOLERANCE
-        and math.abs(b - RED.b) < RED_TOLERANCE
+    local proficiencies = CLASS_PROFICIENCIES[select(2, UnitClass("player"))]
+    local minLevel = proficiencies and proficiencies[typeCode]
+    return minLevel ~= nil and UnitLevel("player") >= minLevel
 end
 
-local function StripColorCodes(text)
-    return (text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""))
+-- Línea "Clases:" del tooltip: false si el objeto está restringido a otras clases.
+local function IsAllowedClass(itemLink)
+    local itemId = GetItemIdFromLink(itemLink)
+    local mask = itemId and SimulateX_ItemClasses and SimulateX_ItemClasses[itemId]
+    if not mask then
+        return true
+    end
+    local bit = CLASS_MASK_BITS[select(2, UnitClass("player"))]
+    return bit ~= nil and mask % (bit * 2) >= bit
 end
 
--- Patrón para reconocer la línea de nivel mínimo a partir de la propia
--- constante localizada del cliente (ITEM_MIN_LEVEL = "Requiere nivel %d" en
--- esES): un objeto bloqueado SOLO por esa línea sigue siendo "usable" a
--- efectos de tipo de armadura/arma/clase, solo que aún no se puede llevar a
--- este nivel (eso se trata aparte, ver EsBloqueadoPorNivel).
-local ITEM_MIN_LEVEL_PATTERN = ITEM_MIN_LEVEL and ("^" .. ITEM_MIN_LEVEL:gsub("%%d", "%%d+") .. "$")
-
--- link -> { hasLevelBlock, hasOtherBlock, numLines, redTexts }. Un solo
--- escaneo del tooltip oculto por link cubre tanto IsItemUsable como
--- IsBlockedByLevelOnly: cada evaluación de build (una por spec de la clase,
--- hasta 10+ por tooltip) llamaba a las dos por separado, reescaneando el
--- tooltip cada vez.
-local scanCache = {}
-
-local function ScanRedLines(itemLink)
-    local cached = scanCache[itemLink]
-    if cached then
-        return cached[1], cached[2], cached[3], cached[4]
-    end
-
-    -- el tooltip pierde el dueño al ocultarse y sin dueño SetHyperlink no
-    -- rellena ninguna línea: hay que ponerlo antes de cada escaneo
-    scanTooltip:SetOwner(WorldFrame, "ANCHOR_NONE")
-    scanTooltip:ClearLines()
-    scanTooltip:SetHyperlink(itemLink)
-
-    local hasLevelBlock, hasOtherBlock = false, false
-    local numLines = scanTooltip:NumLines()
-    local redTexts = {}
-    for i = 1, numLines do
-        local leftLine = _G["SimulateXScanTooltipTextLeft" .. i]
-        local rightLine = _G["SimulateXScanTooltipTextRight" .. i]
-        for _, fontString in ipairs({ leftLine, rightLine }) do
-            local text = fontString and fontString:GetText()
-            if text and IsRedLine(fontString, text) then
-                text = StripColorCodes(text)
-                table.insert(redTexts, text)
-                if ITEM_MIN_LEVEL_PATTERN and text:match(ITEM_MIN_LEVEL_PATTERN) then
-                    hasLevelBlock = true
-                else
-                    hasOtherBlock = true
-                end
-            end
-        end
-    end
-
-    -- sin líneas el objeto aún no está en la caché del cliente: no se guarda
-    -- para reintentarlo en el siguiente tooltip
-    if numLines > 0 then
-        scanCache[itemLink] = { hasLevelBlock, hasOtherBlock, numLines, redTexts }
-    end
-    return hasLevelBlock, hasOtherBlock, numLines, redTexts
-end
-
--- true si el tooltip del objeto no tiene ninguna línea roja aparte, como
--- mucho, de la de nivel mínimo. Caché por link: dos objetos con el mismo id
--- pero sufijo aleatorio distinto tienen link distinto, así que no se
--- confunden entre sí.
 local function IsItemUsable(itemLink)
-    local _, hasOtherBlock = ScanRedLines(itemLink)
-    return not hasOtherBlock
+    return IsProficient(itemLink) ~= false and IsAllowedClass(itemLink)
 end
 
--- true si la ÚNICA razón de bloqueo es el nivel del personaje (línea roja de
--- ITEM_MIN_LEVEL presente y ninguna otra línea roja): el objeto es un dato
--- válido para mostrar (aparecerá al subir de nivel) pero no debe llevar
--- flecha de mejora todavía.
+-- true si la clase puede llevarlo pero aún no tiene el nivel: el dato se
+-- muestra (aparecerá al subir de nivel), la flecha no.
 local function IsBlockedByLevelOnly(itemLink)
-    local hasLevelBlock, hasOtherBlock = ScanRedLines(itemLink)
-    return hasLevelBlock and not hasOtherBlock
-end
-
-local function ClearUsabilityCache()
-    scanCache = {}
+    local minLevel = select(5, GetItemInfo(itemLink))
+    return IsItemUsable(itemLink) and minLevel ~= nil and minLevel > UnitLevel("player")
 end
 
 --[[----------------------------------------------------------------------
@@ -1071,8 +1048,8 @@ end
 
 --[[----------------------------------------------------------------------
     REFRESCO: PLAYER_EQUIPMENT_CHANGED, PLAYER_LEVEL_UP, PLAYER_TALENT_UPDATE
-    vacían la caché de usabilidad y redibujan las ventanas abiertas (el
-    equipo/nivel/talentos cambiados invalidan las comparaciones ya hechas).
+    redibujan las ventanas abiertas (el equipo/nivel/talentos cambiados
+    invalidan las comparaciones ya hechas).
 ------------------------------------------------------------------------]]
 
 local function OnEvent(self, event, ...)
@@ -1096,10 +1073,7 @@ local function OnEvent(self, event, ...)
             hooksecurefunc("MerchantFrame_UpdateMerchantInfo", UpdateMerchantFrameIcons)
         end
     elseif event == "PLAYER_EQUIPMENT_CHANGED" or event == "PLAYER_LEVEL_UP" or event == "PLAYER_TALENT_UPDATE" then
-        ClearUsabilityCache()
         RefreshOpenContainers()
-    elseif event == "SKILL_LINES_CHANGED" then
-        ClearUsabilityCache()
     end
 end
 
@@ -1107,7 +1081,6 @@ SimulateX:RegisterEvent("ADDON_LOADED")
 SimulateX:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
 SimulateX:RegisterEvent("PLAYER_LEVEL_UP")
 SimulateX:RegisterEvent("PLAYER_TALENT_UPDATE")
-SimulateX:RegisterEvent("SKILL_LINES_CHANGED")
 SimulateX:SetScript("OnEvent", OnEvent)
 
 --[[----------------------------------------------------------------------
@@ -1125,10 +1098,9 @@ local function PrintDebugInfo(itemLink)
 
     print("SimulateX debug: " .. itemLink)
     print("  Usable: " .. tostring(IsItemUsable(itemLink)))
+    print("  Competencia de clase: " .. (IsProficient(itemLink) == nil and "objeto fuera de la tabla" or tostring(IsProficient(itemLink))))
     print("  Bloqueado solo por nivel: " .. tostring(IsBlockedByLevelOnly(itemLink)))
-    local _, _, numLines, redTexts = ScanRedLines(itemLink)
-    print(string.format("  Tooltip escaneado: %d líneas, rojas: %s", numLines,
-        #redTexts > 0 and table.concat(redTexts, " | ") or "ninguna"))
+    print("  Clase permitida: " .. tostring(IsAllowedClass(itemLink)))
 
     local stats = GetItemStats(itemLink) or {}
     local statKeys = {}
@@ -1182,7 +1154,6 @@ SlashCmdList["SIMULATEX"] = function(msg)
             forcedLevelOverride = nil
             print("SimulateX: nivel forzado desactivado, se usa el nivel real del personaje.")
         end
-        ClearUsabilityCache()
         RefreshOpenContainers()
     elseif msg == "" then
         SimulateX_DB.forcedBuild = nil
