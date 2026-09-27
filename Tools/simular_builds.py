@@ -112,6 +112,24 @@ def run_go_extractor(spec: str, env_overrides: dict) -> bool:
     return result.returncode == 0
 
 
+STAT_WEIGHTS_TIMEOUT_S = 900  # 5000 iteraciones (paso 3) puede tardar varios minutos; debe ser > el -timeout de go test
+
+
+def run_go_stat_weights(spec: str, env_overrides: dict) -> bool:
+    import os
+    package = SPEC_GO_PACKAGES[spec]
+    env = {**os.environ, **env_overrides}
+    try:
+        result = subprocess.run(
+            ["go", "test", "-tags", "with_db", "-timeout", f"{STAT_WEIGHTS_TIMEOUT_S - 60}s",
+             "-run", "TestGenStatWeights", f"./sim/{package}/..."],
+            cwd=WOWSIMS_SRC, env=env, capture_output=True, text=True, timeout=STAT_WEIGHTS_TIMEOUT_S,
+        )
+    except subprocess.TimeoutExpired:
+        return False
+    return result.returncode == 0
+
+
 def run_wowsimcli(input_path: pathlib.Path, output_path: pathlib.Path) -> dict | None:
     try:
         result = subprocess.run(

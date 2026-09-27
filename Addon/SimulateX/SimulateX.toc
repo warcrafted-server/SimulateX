@@ -7,6 +7,7 @@
 
 SimulateX_DB.lua
 
+Data\SimulateX_Levels.lua
 Data\SimulateX_Data_Warrior.lua
 Data\SimulateX_Data_Paladin.lua
 Data\SimulateX_Data_Hunter.lua
