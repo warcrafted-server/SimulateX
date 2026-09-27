@@ -2,11 +2,15 @@
 
 Todos los cambios notables de este proyecto serán documentados en este archivo.
 
+## v0.2.1 - 2026-09-27
+### Añadido
+- Icono overlay de mejora (flecha verde = mejora en la spec activa, naranja = mejora en otra sub-spec de la clase) sobre el icono del objeto en bolsas, botín y recompensa de misión.
+### Corregido
+- Se perdía el coloreado nativo del juego (ej. "Malla" en rojo cuando la clase no puede vestirla) en la ventana de recompensa de misión: `tooltip:GetItem()` es conocido por fallar en tooltips poblados con `SetQuestItem`/`SetQuestLogItem`; ahora se detecta ese origen y se usa la API de misión en su lugar.
+
 ## v0.2.0 - 2026-09-27
 ### Añadido
 - Tooltip multi-spec: en vez de una sola línea, muestra el delta de cada sub-spec real de la clase (ej. Beast Mastery/Marksman/Survival en Cazador), con puntos y porcentaje de cambio (`%+.1f%%`), marcando con `*` la spec activa detectada por talentos.
-### Pendiente (siguiente parte de v0.2)
-- Icono de flecha (verde = spec activa, naranja = otra spec de la clase) sobre el icono del objeto en bolsas, botín y recompensa de misión.
 
 ## - 2026-09-26
 ### Añadido

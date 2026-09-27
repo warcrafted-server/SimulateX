@@ -122,6 +122,26 @@ mide con el primer lote real antes de confirmar que no hace falta recortar.
   producto final que necesita el addon para funcionar en el cliente de otro jugador
   que descargue el addon desde GitHub.
 
+## Estado del lote completo de simulación (actualizar tras cada reinicio del servidor)
+
+Lanzado en background con `nohup /tmp/simular_resto.sh > /tmp/simular_resto.log 2>&1 &`
+(script no versionado, se genera con el bucle `for spec in ...`, ver
+`Tools/simular_builds.py --spec <spec> --iterations 300`). Morirá con
+cualquier reinicio del servidor — no hay forma de que sobreviva a un reinicio
+real, solo hay que relanzarlo después.
+
+Para retomar tras un reinicio: comprobar qué specs ya tienen resultados en
+`Data/sims/<spec>/` (si tiene tantos ficheros .json como builds "ok" en
+`Tools/builds/_mapeo/<spec>.json`, esa spec está completa) y relanzar el
+bucle solo para las que falten. `simular_builds.py` no tiene lógica de
+"reanudar"/saltar builds ya hechas dentro de una misma spec — si una spec
+quedó a medias, hay que borrar su carpeta en `Data/sims/<spec>/` y volver a
+lanzarla entera para esa spec.
+
+Nota: algunas specs (ej. balance_druid) generan el triple de builds de lo
+esperado por "variantes" de rotación sin filtro claro (ver sección de
+ambigüedad de builds) — tardan proporcionalmente más, es esperado.
+
 ## Nota sobre el lote preliminar (2026-09-26)
 
 Primer lote de datos generado con el catálogo de objetos aún incompleto

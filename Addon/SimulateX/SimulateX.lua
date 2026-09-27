@@ -87,6 +87,71 @@ local function GetItemDeltasBySpec(itemId)
     return results
 end
 
+-- "active" si el objeto mejora en la spec activa/detectada del jugador,
+-- "other" si mejora en alguna otra sub-spec de su misma clase (aunque no en
+-- la activa), nil si no mejora en ninguna o no hay datos. Solo nivel 80: para
+-- niveles bajos no hay builds por spec, solo el score genérico estimado.
+local function GetUpgradeMarker(itemId)
+    if UnitLevel("player") < 80 then
+        return nil
+    end
+    local deltasBySpec = GetItemDeltasBySpec(itemId)
+    if not deltasBySpec then
+        return nil
+    end
+
+    local hasActiveUpgrade, hasOtherUpgrade = false, false
+    for _, entry in ipairs(deltasBySpec) do
+        local value = (entry.role == "heal") and entry.hps or entry.dps
+        if value > 0 then
+            if entry.isActive then
+                hasActiveUpgrade = true
+            else
+                hasOtherUpgrade = true
+            end
+        end
+    end
+
+    if hasActiveUpgrade then return "active" end
+    if hasOtherUpgrade then return "other" end
+    return nil
+end
+
+-- Superpone (o retira) la textura de flecha de mejora sobre un botón de
+-- objeto (icono de bolsa, botín o recompensa de misión). Reutiliza siempre la
+-- misma textura hija por botón en vez de crear una nueva cada vez que se
+-- actualiza su contenido.
+local function UpdateUpgradeIcon(button, itemLink)
+    if not button then
+        return
+    end
+    if not button.simulateXIcon then
+        local icon = button:CreateTexture(nil, "OVERLAY")
+        -- 3.3.5a no tiene una flecha de mejora nativa de una pieza (ese
+        -- sistema es de retail); se reutiliza la flecha de orden de columna
+        -- de la Casa de Subastas, monocroma y pensada para recolorear.
+        icon:SetTexture("Interface\\Buttons\\UI-SortArrow")
+        icon:SetRotation(math.pi)  -- apunta hacia arriba en vez de hacia abajo
+        icon:SetPoint("BOTTOMLEFT", button, "BOTTOMLEFT", 1, 1)
+        button.simulateXIcon = icon
+    end
+
+    local itemId = itemLink and tonumber(itemLink:match("item:(%d+)"))
+    local marker = itemId and GetUpgradeMarker(itemId)
+
+    if marker == "active" then
+        button.simulateXIcon:SetVertexColor(0.2, 1, 0.2)
+        button.simulateXIcon:SetSize(14, 14)
+        button.simulateXIcon:Show()
+    elseif marker == "other" then
+        button.simulateXIcon:SetVertexColor(1, 0.6, 0.1)
+        button.simulateXIcon:SetSize(10, 10)
+        button.simulateXIcon:Show()
+    else
+        button.simulateXIcon:Hide()
+    end
+end
+
 local EQUIP_LOC_TO_SLOT = {
     INVTYPE_HEAD = "HeadSlot", INVTYPE_NECK = "NeckSlot", INVTYPE_SHOULDER = "ShoulderSlot",
     INVTYPE_CLOAK = "BackSlot", INVTYPE_CHEST = "ChestSlot", INVTYPE_ROBE = "ChestSlot",
@@ -197,10 +262,73 @@ local function OnTooltipSetItem(tooltip)
     tooltip:Show()
 end
 
+-- Bolsas: cada ContainerFrame%dItem%d representa un icono de objeto. Se
+-- engancha ContainerFrame_Update (llamada cada vez que se abre una bolsa o
+-- cambia su contenido) para actualizar el overlay de todos sus botones.
+local function UpdateContainerFrameIcons(frame)
+    if not frame or not frame.GetID then
+        return
+    end
+    local bagId = frame:GetID()
+    for i = 1, (frame.size or 0) do
+        local button = _G[frame:GetName() .. "Item" .. i]
+        if button then
+            local slot = button:GetID()
+            local link = GetContainerItemLink(bagId, slot)
+            UpdateUpgradeIcon(button, link)
+        end
+    end
+end
+
+-- Botín: LootFrame_UpdateButton(index) actualiza un botón LootButton%d
+-- concreto cada vez que se llama, no todos a la vez (verificado contra el
+-- FrameXML fuente de 3.3.5a) — el hook recibe ese mismo índice.
+local function UpdateLootFrameIcon(index)
+    local button = _G["LootButton" .. index]
+    if button and button.slot then
+        local link = GetLootSlotLink(button.slot)
+        UpdateUpgradeIcon(button, link)
+    end
+end
+
+-- Recompensa de misión: los botones se llaman QuestInfoItem%d dentro de
+-- QuestInfoRewardsFrame. `.type` indica la categoría ("choice"/"reward", no
+-- el tipo de objeto) y `.rewardType` si es "item" o "spell" (glifos/talentos
+-- también pueden ser recompensa, no solo objetos) — verificado contra el
+-- FrameXML fuente, que usa GetQuestLogChoiceInfo/GetQuestItemInfo/
+-- GetQuestLogRewardInfo (sin link); el link se obtiene aparte con la API
+-- global GetQuestLogItemLink/GetQuestItemLink.
+local function UpdateQuestInfoIcons()
+    if not QuestInfoRewardsFrame then
+        return
+    end
+    for _, button in ipairs({ QuestInfoRewardsFrame:GetChildren() }) do
+        if button.rewardType == "item" and button.type then
+            local link
+            if QuestInfoFrame and QuestInfoFrame.questLog then
+                link = GetQuestLogItemLink(button.type, button:GetID())
+            else
+                link = GetQuestItemLink(button.type, button:GetID())
+            end
+            UpdateUpgradeIcon(button, link)
+        end
+    end
+end
+
 local function OnEvent(self, event, ...)
     if event == "ADDON_LOADED" and ... == ADDON_NAME then
         SimulateX_DB = SimulateX_DB or {}
         GameTooltip:HookScript("OnTooltipSetItem", OnTooltipSetItem)
+
+        if ContainerFrame_Update then
+            hooksecurefunc("ContainerFrame_Update", UpdateContainerFrameIcons)
+        end
+        if LootFrame_UpdateButton then
+            hooksecurefunc("LootFrame_UpdateButton", UpdateLootFrameIcon)
+        end
+        if QuestInfo_ShowRewards then
+            hooksecurefunc("QuestInfo_ShowRewards", UpdateQuestInfoIcons)
+        end
     end
 end
 
