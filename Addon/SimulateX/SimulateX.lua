@@ -1163,7 +1163,29 @@ local function UpdateMerchantFrameIcons()
     end
 end
 
--- Redibuja los overlays de todas las bolsas/banco/vendedor abiertos: usado
+-- Casa de subastas: cada pestaña (buscar, mis pujas, mis subastas) repuebla
+-- sus propios botones a la vez, igual que el vendedor — verificado contra
+-- Blizzard_AuctionUI.lua del FrameXML fuente. GetAuctionItemInfo puede
+-- devolver nil aunque el botón esté visible (bug conocido de Blizzard).
+local AUCTION_TABS = {
+    { prefix = "BrowseButton", count = 8, query = "list" },
+    { prefix = "BidButton", count = 9, query = "bidder" },
+    { prefix = "AuctionsButton", count = 9, query = "owner" },
+}
+
+local function UpdateAuctionFrameIcons()
+    for _, tab in ipairs(AUCTION_TABS) do
+        for i = 1, tab.count do
+            local button = _G[tab.prefix .. i]
+            if button and button:IsVisible() then
+                local name = GetAuctionItemInfo(tab.query, button:GetID())
+                UpdateUpgradeIcon(button, name and GetAuctionItemLink(tab.query, button:GetID()))
+            end
+        end
+    end
+end
+
+-- Redibuja los overlays de todas las bolsas/banco/vendedor/subasta abiertos: usado
 -- tras vaciar la caché (equipo cambiado, subida de nivel, cambio de
 -- talentos) para que el overlay refleje el estado nuevo sin esperar a la
 -- próxima actualización nativa de esas ventanas.
@@ -1181,6 +1203,9 @@ local function RefreshOpenContainers()
     end
     if MerchantFrame and MerchantFrame:IsVisible() then
         UpdateMerchantFrameIcons()
+    end
+    if AuctionFrame and AuctionFrame:IsVisible() then
+        UpdateAuctionFrameIcons()
     end
 end
 
@@ -1209,6 +1234,15 @@ local function OnEvent(self, event, ...)
         end
         if MerchantFrame_UpdateMerchantInfo then
             hooksecurefunc("MerchantFrame_UpdateMerchantInfo", UpdateMerchantFrameIcons)
+        end
+        if AuctionFrameBrowse_Update then
+            hooksecurefunc("AuctionFrameBrowse_Update", UpdateAuctionFrameIcons)
+        end
+        if AuctionFrameBid_Update then
+            hooksecurefunc("AuctionFrameBid_Update", UpdateAuctionFrameIcons)
+        end
+        if AuctionFrameAuctions_Update then
+            hooksecurefunc("AuctionFrameAuctions_Update", UpdateAuctionFrameIcons)
         end
     elseif event == "PLAYER_EQUIPMENT_CHANGED" or event == "PLAYER_LEVEL_UP" or event == "PLAYER_TALENT_UPDATE" then
         RefreshOpenContainers()

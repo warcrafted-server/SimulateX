@@ -7,6 +7,8 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 - Panel de configuración en Interfaz > AddOns (`/simulatexconfig` como alternativa): activar/desactivar el modo estimado de nivel 1-79, y elegir qué sub-especializaciones de la clase se muestran en el tooltip.
 
 ## Sin publicar
+### Añadido
+- Flecha de mejora también en la Casa de Subastas (buscar, mis pujas, mis subastas).
 ### Cambiado
 - Marca de mejora más visible: brillo de color alrededor del icono (`UI-ActionButton-Border`, verde para la spec activa, naranja para otra spec) y flecha `Interface\Buttons\Arrow-Up-Up` teñida con contorno negro, por encima del borde del botón.
 - `/simulatex debug` muestra si la clase tiene competencia con el tipo de objeto y si está en su lista de clases.
