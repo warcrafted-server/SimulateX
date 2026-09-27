@@ -239,19 +239,31 @@ error) como un dato ausente para esa build concreta, seguir con el resto del
 lote, y registrar qué builds fallaron y por qué — nunca debe abortar el
 proceso completo por el fallo de una sola build.
 
-## Limitación descubierta: 3 specs de sanador sin rotación real en wowsims
+## Bug corregido: 2 specs de sanador fallaban en compilación Go (no era limitación de wowsims)
 
-Al validar las 20 specs generadas (ver sección de pasos de ejecución), 17
-producen DPS/HPS reales. Las 3 restantes — **holy_paladin, restoration_druid,
-restoration_shaman** — dan 0.0 porque su `DefaultRotation` en el propio código
-fuente de wowsims es un placeholder vacío (`{"priorityList": [{"action":
-{"autocastOtherCooldowns": {}}}]}`, sin ninguna acción de sanación real), a
-diferencia de `healing_priest` que sí tiene un APL de sanación completo vía
-fichero `.apl.json`. No es un fallo de extracción: es una limitación real y
-actual del propio proyecto wowsims/wotlk (esas 3 specs de sanador no tienen su
-lógica de rotación de sanación implementada todavía). Quedan sin datos de HPS
-reales por ahora; se podría revisar en el futuro si el proyecto los añade
-aguas arriba, o abordarlo como línea de trabajo separada si hace falta.
+Se había concluido antes que **holy_paladin, restoration_druid,
+restoration_shaman** daban 0.0 por un placeholder vacío de `DefaultRotation`
+en wowsims — conclusión incorrecta, nunca se llegó a ejecutar la simulación
+real. El fallo real (confirmado 2026-09-27) era de compilación Go en
+`generar_extractores_go.py`: cuando el `_test.go` original de la spec no usa
+el patrón `Rotation: core.GetAplRotation(aplDir, aplFile)` (holy_paladin y
+restoration_druid usan `core.RotationCombo{...}` en su lugar), `ROTATION_FIELD_RE`
+no matcheaba y las variables `aplDir`/`aplFile` quedaban declaradas sin usar
+en el `zzz_gen_extractor_test.go` generado — Go no compila con variables
+declaradas y no usadas, así que `go test` fallaba antes de generar ningún
+`RaidSimRequest` (de ahí el log `ERROR: fallo generando RaidSimRequest base
+(0 objetos)`, no un 0.0 de DPS/HPS real).
+
+**Fix aplicado:** en `generar_extractores_go.py`, tras leer `aplDir`/`aplFile`
+de las variables de entorno, se añade `_, _ = aplDir, aplFile` para
+descartarlas explícitamente cuando la spec no las use vía `GetAplRotation`.
+Regenerados los 21 ficheros con `python3 Tools/generar_extractores_go.py`.
+Confirmado que `restoration_druid` compila tras el fix.
+
+**Pendiente:** relanzar `holy_paladin` y `restoration_druid` en el lote (sus
+resultados previos en `Data/sims/<spec>/` son del bug, hay que borrarlos y
+volver a simular). Comprobar si `restoration_shaman` tiene el mismo patrón
+antes de asumir que está resuelto también para esa spec.
 
 ## Nivel 80 vs niveles bajos — alcance de wowsims
 

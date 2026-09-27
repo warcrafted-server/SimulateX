@@ -2,6 +2,11 @@
 
 Todos los cambios notables de este proyecto serán documentados en este archivo.
 
+## Sin publicar
+### Corregido
+- La extracción de objetos de nivel 1-79 (`extraer_objetos_bd.py`) excluía por error todos los objetos con `RequiredLevel = 0` en `item_template` (frecuente en objetos de misión/mundo antiguos, ej. Bastón del purificador, Cinturón acuario). Regenerados los datos de Druida: 13569 objetos puntuados (antes 7963).
+- La generación de simulación de nivel 80 fallaba para holy_paladin y restoration_druid: `generar_extractores_go.py` dejaba variables sin usar en el código Go generado cuando la spec no usa rotación por APL, y Go no compila con eso. No era una limitación de wowsims (como se documentó por error antes), sino un bug propio del generador.
+
 ## v0.2.1 - 2026-09-27
 ### Añadido
 - Icono overlay de mejora (flecha verde = mejora en la spec activa, naranja = mejora en otra sub-spec de la clase) sobre el icono del objeto en bolsas, botín y recompensa de misión.

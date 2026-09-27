@@ -121,6 +121,7 @@ func TestGenExtractor(t *testing.T) {{
 \tgearFile := os.Getenv("SIMX_GEAR_FILE")
 \taplDir := os.Getenv("SIMX_APL_DIR")
 \taplFile := os.Getenv("SIMX_APL_FILE")
+\t_, _ = aplDir, aplFile // no usadas si la spec no tiene Rotation vía GetAplRotation (ver ROTATION_FIELD_RE)
 \ttalentsOverride := os.Getenv("SIMX_TALENTS")
 \toutFile := envOr("SIMX_OUT_FILE", "input.json")
 \titerations, _ := strconv.Atoi(envOr("SIMX_ITERATIONS", "2000"))
