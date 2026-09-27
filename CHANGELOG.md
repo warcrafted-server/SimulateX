@@ -8,11 +8,12 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 
 ## Sin publicar
 ### Añadido
-- Flecha de mejora también en la Casa de Subastas (buscar, mis pujas, mis subastas).
+- Flecha de mejora también en la Casa de Subastas (buscar, mis pujas, mis subastas) y en el correo (bandeja y carta abierta).
 ### Cambiado
-- Marca de mejora más visible: brillo de color alrededor del icono (`UI-ActionButton-Border`, verde para la spec activa, naranja para otra spec) y flecha `Interface\Buttons\Arrow-Up-Up` teñida con contorno negro, por encima del borde del botón.
+- Marca de mejora más visible: brillo alrededor del icono (`UI-ActionButton-Border`) del color de calidad del objeto, para no confundir un objeto azul o morado con uno verde; la flecha sigue siendo verde para la spec activa y naranja para otra spec y flecha `Interface\Buttons\Arrow-Up-Up` teñida con contorno negro, por encima del borde del botón.
 - `/simulatex debug` muestra si la clase tiene competencia con el tipo de objeto y si está en su lista de clases.
 ### Corregido
+- La flecha de la Casa de Subastas no salía nunca: la interfaz de subasta se carga al abrirla por primera vez y el enganche se hacía antes. Además no tenía en cuenta el desplazamiento de la lista.
 - Con el addon activo el juego dejaba de pintar en rojo lo no usable (p. ej. "Escudo" para druida). El addon ya no llama a `GetItemStats` ni construye tooltips: las estadísticas de cada objeto salen de la nueva tabla `SimulateX_ItemStats.lua` (item_template y DBC del servidor, generada con `Tools/generar_estadisticas_objeto.py`), incluidos sufijos y propiedades aleatorias ("del oso") y reliquias que escalan con el nivel. La usabilidad sale de `SimulateX_ItemTypes.lua` (tipo de objeto y clases permitidas, `Tools/generar_tipos_objeto.py`), de las competencias de cada clase (malla y placas a partir de nivel 40 donde toca) y del nivel mínimo de `GetItemInfo`.
 - Un objeto con varios huecos de gema del mismo color contaba como uno solo en la puntuación.
 - Una mano izquierda (escudo, sostener, arma de mano izquierda) con una 2M equipada se comparaba como hueco vacío; ahora se compara contra la 2M.

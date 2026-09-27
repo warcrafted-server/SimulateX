@@ -1067,13 +1067,17 @@ local function UpdateUpgradeIcon(button, itemLink)
     local icon = button.simulateXIcon
     local marker = itemLink and GetUpgradeMarker(itemLink)
 
+    -- el brillo lleva el color de calidad del objeto, la flecha el de la spec
+    if marker then
+        local quality = select(3, GetItemInfo(itemLink))
+        local r, g, b = GetItemQualityColor(quality or 1)
+        icon.glow:SetVertexColor(r, g, b, marker == "active" and 1 or 0.7)
+    end
     if marker == "active" then
-        icon.glow:SetVertexColor(0, 1, 0, 1)
         icon.arrow:SetVertexColor(0.3, 1, 0.3)
         icon.arrowFrame:SetSize(22, 22)
         icon:Show()
     elseif marker == "other" then
-        icon.glow:SetVertexColor(1, 0.5, 0, 0.7)
         icon.arrow:SetVertexColor(1, 0.6, 0.2)
         icon.arrowFrame:SetSize(16, 16)
         icon:Show()
@@ -1164,23 +1168,68 @@ local function UpdateMerchantFrameIcons()
 end
 
 -- Casa de subastas: cada pestaña (buscar, mis pujas, mis subastas) repuebla
--- sus propios botones a la vez, igual que el vendedor — verificado contra
--- Blizzard_AuctionUI.lua del FrameXML fuente. GetAuctionItemInfo puede
--- devolver nil aunque el botón esté visible (bug conocido de Blizzard).
+-- todas sus filas a la vez; la fila i muestra la subasta offset + i del
+-- scroll. La flecha va en el botón del icono ("<fila>Item"), no en la fila.
 local AUCTION_TABS = {
-    { prefix = "BrowseButton", count = 8, query = "list" },
-    { prefix = "BidButton", count = 9, query = "bidder" },
-    { prefix = "AuctionsButton", count = 9, query = "owner" },
+    { prefix = "BrowseButton", count = 8, query = "list", scroll = "BrowseScrollFrame" },
+    { prefix = "BidButton", count = 9, query = "bidder", scroll = "BidScrollFrame" },
+    { prefix = "AuctionsButton", count = 9, query = "owner", scroll = "AuctionsScrollFrame" },
 }
 
 local function UpdateAuctionFrameIcons()
     for _, tab in ipairs(AUCTION_TABS) do
+        local scrollFrame = _G[tab.scroll]
+        local offset = scrollFrame and FauxScrollFrame_GetOffset(scrollFrame) or 0
         for i = 1, tab.count do
-            local button = _G[tab.prefix .. i]
-            if button and button:IsVisible() then
-                local name = GetAuctionItemInfo(tab.query, button:GetID())
-                UpdateUpgradeIcon(button, name and GetAuctionItemLink(tab.query, button:GetID()))
+            local row = _G[tab.prefix .. i]
+            local itemButton = _G[tab.prefix .. i .. "Item"]
+            if row and itemButton then
+                local link = row:IsShown() and GetAuctionItemLink(tab.query, offset + i)
+                UpdateUpgradeIcon(itemButton, link)
             end
+        end
+    end
+end
+
+-- Blizzard_AuctionUI se carga al abrir la subasta por primera vez.
+local auctionHooked = false
+local function HookAuctionFrame()
+    if auctionHooked or not AuctionFrameBrowse_Update then
+        return
+    end
+    auctionHooked = true
+    hooksecurefunc("AuctionFrameBrowse_Update", UpdateAuctionFrameIcons)
+    hooksecurefunc("AuctionFrameBid_Update", UpdateAuctionFrameIcons)
+    hooksecurefunc("AuctionFrameAuctions_Update", UpdateAuctionFrameIcons)
+end
+
+-- Correo: bandeja (primer adjunto de cada carta; flecha si mejora alguno) y
+-- carta abierta (un botón por adjunto).
+local function GetMailUpgradeLink(mailIndex, itemCount)
+    for attachIndex = 1, math.min(itemCount or 0, ATTACHMENTS_MAX_RECEIVE or 16) do
+        local link = GetInboxItemLink(mailIndex, attachIndex)
+        if link and GetUpgradeMarker(link) then
+            return link
+        end
+    end
+end
+
+local function UpdateInboxIcons()
+    for i = 1, INBOXITEMS_TO_DISPLAY or 7 do
+        local button = _G["MailItem" .. i .. "Button"]
+        if button then
+            local link = button:IsShown() and button.index and GetMailUpgradeLink(button.index, button.itemCount)
+            UpdateUpgradeIcon(button, link or nil)
+        end
+    end
+end
+
+local function UpdateOpenMailIcons()
+    for i = 1, ATTACHMENTS_MAX_RECEIVE or 16 do
+        local button = _G["OpenMailAttachmentButton" .. i]
+        if button then
+            local link = button:IsShown() and InboxFrame.openMailID and GetInboxItemLink(InboxFrame.openMailID, i)
+            UpdateUpgradeIcon(button, link or nil)
         end
     end
 end
@@ -1206,6 +1255,12 @@ local function RefreshOpenContainers()
     end
     if AuctionFrame and AuctionFrame:IsVisible() then
         UpdateAuctionFrameIcons()
+    end
+    if InboxFrame and InboxFrame:IsVisible() then
+        UpdateInboxIcons()
+    end
+    if OpenMailFrame and OpenMailFrame:IsVisible() then
+        UpdateOpenMailIcons()
     end
 end
 
@@ -1235,15 +1290,15 @@ local function OnEvent(self, event, ...)
         if MerchantFrame_UpdateMerchantInfo then
             hooksecurefunc("MerchantFrame_UpdateMerchantInfo", UpdateMerchantFrameIcons)
         end
-        if AuctionFrameBrowse_Update then
-            hooksecurefunc("AuctionFrameBrowse_Update", UpdateAuctionFrameIcons)
+        if InboxFrame_Update then
+            hooksecurefunc("InboxFrame_Update", UpdateInboxIcons)
         end
-        if AuctionFrameBid_Update then
-            hooksecurefunc("AuctionFrameBid_Update", UpdateAuctionFrameIcons)
+        if OpenMail_Update then
+            hooksecurefunc("OpenMail_Update", UpdateOpenMailIcons)
         end
-        if AuctionFrameAuctions_Update then
-            hooksecurefunc("AuctionFrameAuctions_Update", UpdateAuctionFrameIcons)
-        end
+        HookAuctionFrame()  -- por si otro addon ya cargó la subasta
+    elseif event == "ADDON_LOADED" and ... == "Blizzard_AuctionUI" then
+        HookAuctionFrame()
     elseif event == "PLAYER_EQUIPMENT_CHANGED" or event == "PLAYER_LEVEL_UP" or event == "PLAYER_TALENT_UPDATE" then
         RefreshOpenContainers()
     end
