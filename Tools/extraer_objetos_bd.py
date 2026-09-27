@@ -33,7 +33,7 @@ SELECT entry, name, class, subclass, InventoryType, AllowableClass,
        stat_type3, stat_value3, stat_type4, stat_value4,
        stat_type5, stat_value5, stat_type6, stat_value6
 FROM item_template
-WHERE RequiredLevel BETWEEN {min_level} AND {max_level}
+WHERE (RequiredLevel = 0 OR RequiredLevel BETWEEN {min_level} AND {max_level})
   AND InventoryType != 0
 ORDER BY entry;
 """
