@@ -29,6 +29,13 @@ en specs ferales (fórmula del core `ItemTemplate::getFeralBonus`, recorta a 0);
 depredadores). EP vs delta simulado en 2M a 80: pendiente 1.02, r 0.97 (antes 4.04). F3: textura
 `Interface\Buttons\Arrow-Up-Up` desaturada y teñida, 20/15 px, silueta negra, marco hijo por encima.
 
+**Tras la 1ª prueba en juego (commit `ee03215`):** flecha poco visible → brillo
+`UI-ActionButton-Border` (ADD) + flecha sin desaturar; usabilidad nunca detectaba rojo (tooltip
+oculto sin dueño → 0 líneas) → `SetOwner` por escaneo, no cachear con 0 líneas; mano izquierda
+con 2M equipada → se compara contra la 2M. Sin cambio (correcto): DPS de arma < 54.8 vale 0 para
+Feral, así que espada (+1 fue) > bastón (agu/esp) y roble = fresno. Posible mejora a valorar: a
+nivel < 80 el % es sobre el EP del equipo, no sobre el DPS real, e infla las cifras.
+
 ### F1 — DPS de arma ignorado en la puntuación (confirmado en juego)
 `/simulatex debug` sobre un arma devuelve `ITEM_MOD_DAMAGE_PER_SECOND_SHORT = 10.999…`
 (float). Ninguna parte lo usa: `SimulateX.lua` no lo tiene en `DIRECT_WEIGHT_KEYS`/

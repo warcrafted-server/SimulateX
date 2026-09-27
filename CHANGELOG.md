@@ -8,8 +8,11 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 
 ## Sin publicar
 ### Cambiado
-- Flecha de mejora más visible: textura `Interface\Buttons\Arrow-Up-Up` desaturada y teñida (verde 20 px para la spec activa, naranja 15 px para otra spec), con silueta negra de contorno y por encima del borde del botón.
+- Marca de mejora más visible: brillo de color alrededor del icono (`UI-ActionButton-Border`, verde para la spec activa, naranja para otra spec) y flecha `Interface\Buttons\Arrow-Up-Up` teñida con contorno negro, por encima del borde del botón.
+- `/simulatex debug` muestra cuántas líneas tiene el tooltip escaneado y cuáles salen en rojo.
 ### Corregido
+- La comprobación de usabilidad no escaneaba nada: el tooltip oculto perdía su dueño y no se rellenaba, así que todo contaba como usable (p. ej. escudos para druida). Ahora se asigna el dueño en cada escaneo y también se reconoce el rojo puesto con código de color.
+- Una mano izquierda (escudo, sostener, arma de mano izquierda) con una 2M equipada se comparaba como hueco vacío; ahora se compara contra la 2M.
 - El DPS de arma no contaba en la puntuación EP: dos armas con DPS muy distinto salían "≈ igual". Ahora se usan los pesos de DPS de arma de wowsims (`pseudoStats`: mano principal, mano izquierda o a distancia según el hueco). En Feral el DPS de arma solo aporta PA feral, que el servidor calcula como `int(dps × 14) − 767` sin bajar de 0, así que por debajo de ~54.8 DPS el arma no suma nada.
 - La extracción de objetos de nivel 1-79 (`extraer_objetos_bd.py`) excluía por error todos los objetos con `RequiredLevel = 0` en `item_template` (frecuente en objetos de misión/mundo antiguos, ej. Bastón del purificador, Cinturón acuario). Regenerados los datos de Druida: 13569 objetos puntuados (antes 7963).
 - La generación de simulación de nivel 80 fallaba para holy_paladin y restoration_druid: `generar_extractores_go.py` dejaba variables sin usar en el código Go generado cuando la spec no usa rotación por APL, y Go no compila con eso. No era una limitación de wowsims (como se documentó por error antes), sino un bug propio del generador.

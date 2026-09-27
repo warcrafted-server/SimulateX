@@ -54,15 +54,24 @@ end
 ------------------------------------------------------------------------]]
 
 local scanTooltip = CreateFrame("GameTooltip", "SimulateXScanTooltip", nil, "GameTooltipTemplate")
-scanTooltip:SetOwner(WorldFrame, "ANCHOR_NONE")
 
 local RED = RED_FONT_COLOR
 local RED_TOLERANCE = 0.05
+-- Color con el que el motor pinta las líneas no usables (RED_FONT_COLOR_CODE).
+local RED_COLOR_CODE = "|cffff2020"
 
-local function IsRedLine(r, g, b)
+local function IsRedLine(fontString, text)
+    if text:find(RED_COLOR_CODE, 1, true) then
+        return true
+    end
+    local r, g, b = fontString:GetTextColor()
     return r and math.abs(r - RED.r) < RED_TOLERANCE
         and math.abs(g - RED.g) < RED_TOLERANCE
         and math.abs(b - RED.b) < RED_TOLERANCE
+end
+
+local function StripColorCodes(text)
+    return (text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""))
 end
 
 -- Patrón para reconocer la línea de nivel mínimo a partir de la propia
@@ -72,42 +81,51 @@ end
 -- este nivel (eso se trata aparte, ver EsBloqueadoPorNivel).
 local ITEM_MIN_LEVEL_PATTERN = ITEM_MIN_LEVEL and ("^" .. ITEM_MIN_LEVEL:gsub("%%d", "%%d+") .. "$")
 
--- link -> { hasLevelBlock, hasOtherBlock }. Un solo escaneo del tooltip
--- oculto por link cubre tanto IsItemUsable como IsBlockedByLevelOnly: cada
--- evaluación de build (una por spec de la clase, hasta 10+ por tooltip)
--- llamaba a las dos por separado, reescaneando el tooltip cada vez.
+-- link -> { hasLevelBlock, hasOtherBlock, numLines, redTexts }. Un solo
+-- escaneo del tooltip oculto por link cubre tanto IsItemUsable como
+-- IsBlockedByLevelOnly: cada evaluación de build (una por spec de la clase,
+-- hasta 10+ por tooltip) llamaba a las dos por separado, reescaneando el
+-- tooltip cada vez.
 local scanCache = {}
 
 local function ScanRedLines(itemLink)
     local cached = scanCache[itemLink]
     if cached then
-        return cached[1], cached[2]
+        return cached[1], cached[2], cached[3], cached[4]
     end
 
+    -- el tooltip pierde el dueño al ocultarse y sin dueño SetHyperlink no
+    -- rellena ninguna línea: hay que ponerlo antes de cada escaneo
+    scanTooltip:SetOwner(WorldFrame, "ANCHOR_NONE")
     scanTooltip:ClearLines()
     scanTooltip:SetHyperlink(itemLink)
 
     local hasLevelBlock, hasOtherBlock = false, false
-    for i = 1, scanTooltip:NumLines() do
+    local numLines = scanTooltip:NumLines()
+    local redTexts = {}
+    for i = 1, numLines do
         local leftLine = _G["SimulateXScanTooltipTextLeft" .. i]
         local rightLine = _G["SimulateXScanTooltipTextRight" .. i]
         for _, fontString in ipairs({ leftLine, rightLine }) do
-            if fontString then
-                local text = fontString:GetText()
-                local r, g, b = fontString:GetTextColor()
-                if text and IsRedLine(r, g, b) then
-                    if ITEM_MIN_LEVEL_PATTERN and text:match(ITEM_MIN_LEVEL_PATTERN) then
-                        hasLevelBlock = true
-                    else
-                        hasOtherBlock = true
-                    end
+            local text = fontString and fontString:GetText()
+            if text and IsRedLine(fontString, text) then
+                text = StripColorCodes(text)
+                table.insert(redTexts, text)
+                if ITEM_MIN_LEVEL_PATTERN and text:match(ITEM_MIN_LEVEL_PATTERN) then
+                    hasLevelBlock = true
+                else
+                    hasOtherBlock = true
                 end
             end
         end
     end
 
-    scanCache[itemLink] = { hasLevelBlock, hasOtherBlock }
-    return hasLevelBlock, hasOtherBlock
+    -- sin líneas el objeto aún no está en la caché del cliente: no se guarda
+    -- para reintentarlo en el siguiente tooltip
+    if numLines > 0 then
+        scanCache[itemLink] = { hasLevelBlock, hasOtherBlock, numLines, redTexts }
+    end
+    return hasLevelBlock, hasOtherBlock, numLines, redTexts
 end
 
 -- true si el tooltip del objeto no tiene ninguna línea roja aparte, como
@@ -391,6 +409,8 @@ local INVTYPE_TO_SLOTS = {
     INVTYPE_RANGED = { "RangedSlot" }, INVTYPE_RANGEDRIGHT = { "RangedSlot" }, INVTYPE_THROWN = { "RangedSlot" },
 }
 
+local OFFHAND_ONLY_EQUIP_LOCS = { INVTYPE_SHIELD = true, INVTYPE_HOLDABLE = true, INVTYPE_WEAPONOFFHAND = true }
+
 local function GetEquippedItemId(slotName)
     local slotId = GetInventorySlotInfo(slotName)
     local link = GetInventoryItemLink("player", slotId)
@@ -478,6 +498,20 @@ local function CompareAgainstEquipped(itemLink, itemId, equipLoc, build, weights
         end
 
         return math.max(gainMh, gainOh)
+    end
+
+    -- Mano izquierda con una 2M puesta: para llevarla hay que quitarse la 2M,
+    -- así que se compara contra ella y no como hueco vacío.
+    if OFFHAND_ONLY_EQUIP_LOCS[equipLoc] then
+        local mhLink, mhId = GetEquippedItemId("MainHandSlot")
+        if mhLink and select(9, GetItemInfo(mhLink)) == "INVTYPE_2HWEAPON" then
+            local candExact = itemId and GetExactDelta(build, itemId, metricName)
+            local mhExact = mhId and GetExactDelta(build, mhId, metricName)
+            if candExact and mhExact then
+                return candExact - mhExact
+            end
+            return ScoreItem(itemLink, weights, build, "offHand") - ScoreItem(mhLink, weights, build, "mainHand")
+        end
     end
 
     if #slots == 1 then
@@ -605,6 +639,13 @@ local function GetComparisonLabel(equipLoc, build, weights, metricName)
             return (GetItemInfo(mhLink)) .. " / " .. (GetItemInfo(ohLink))
         end
         return mhLink and GetItemInfo(mhLink) or (ohLink and GetItemInfo(ohLink))
+    end
+
+    if OFFHAND_ONLY_EQUIP_LOCS[equipLoc] then
+        local mhLink = select(1, GetEquippedItemId("MainHandSlot"))
+        if mhLink and select(9, GetItemInfo(mhLink)) == "INVTYPE_2HWEAPON" then
+            return GetItemInfo(mhLink)
+        end
     end
 
     if equipLoc == "INVTYPE_2HWEAPON" then
@@ -857,27 +898,41 @@ end
     la flecha de mejora sobre bolsas/botín/recompensa de misión.
 ------------------------------------------------------------------------]]
 
--- Flecha del botón de subir planta del mapa del mundo: 3.3.5a no tiene flecha
--- de mejora nativa (eso es de retail).
+-- Flecha del botón de subir planta del mapa del mundo (3.3.5a no tiene flecha
+-- de mejora nativa) y brillo de objeto equipado de la barra de acción.
 local UPGRADE_ARROW_TEXTURE = "Interface\\Buttons\\Arrow-Up-Up"
+local UPGRADE_GLOW_TEXTURE = "Interface\\Buttons\\UI-ActionButton-Border"
 
--- Marco hijo con nivel superior al botón para que la flecha quede por encima
--- de su borde (NormalTexture); la silueta negra algo mayor hace de contorno.
+-- Marco hijo con nivel superior al botón para quedar por encima de su borde
+-- (NormalTexture). Se ancla al icono: en recompensas de misión el botón es
+-- mucho más ancho que el icono.
 local function CreateUpgradeIcon(button)
+    local anchor = _G[(button:GetName() or "") .. "IconTexture"] or button
     local holder = CreateFrame("Frame", nil, button)
     holder:SetFrameLevel(button:GetFrameLevel() + 2)
-    holder:SetPoint("BOTTOMLEFT", button, "BOTTOMLEFT", 0, 0)
+    holder:SetAllPoints(anchor)
 
-    local shadow = holder:CreateTexture(nil, "ARTWORK")
+    -- el borde ocupa el centro de la textura: 62 px para un icono de 36
+    local glow = holder:CreateTexture(nil, "BACKGROUND")
+    glow:SetTexture(UPGRADE_GLOW_TEXTURE)
+    glow:SetBlendMode("ADD")
+    glow:SetPoint("TOPLEFT", holder, "TOPLEFT", -13, 13)
+    glow:SetPoint("BOTTOMRIGHT", holder, "BOTTOMRIGHT", 13, -13)
+    holder.glow = glow
+
+    local arrowFrame = CreateFrame("Frame", nil, holder)
+    arrowFrame:SetPoint("BOTTOMLEFT", holder, "BOTTOMLEFT", -3, -3)
+    holder.arrowFrame = arrowFrame
+
+    local shadow = arrowFrame:CreateTexture(nil, "ARTWORK")
     shadow:SetTexture(UPGRADE_ARROW_TEXTURE)
-    shadow:SetVertexColor(0, 0, 0, 0.9)
-    shadow:SetPoint("TOPLEFT", holder, "TOPLEFT", -2, 2)
-    shadow:SetPoint("BOTTOMRIGHT", holder, "BOTTOMRIGHT", 2, -2)
+    shadow:SetVertexColor(0, 0, 0, 1)
+    shadow:SetPoint("TOPLEFT", arrowFrame, "TOPLEFT", -2, 2)
+    shadow:SetPoint("BOTTOMRIGHT", arrowFrame, "BOTTOMRIGHT", 2, -2)
 
-    local arrow = holder:CreateTexture(nil, "OVERLAY")
+    local arrow = arrowFrame:CreateTexture(nil, "OVERLAY")
     arrow:SetTexture(UPGRADE_ARROW_TEXTURE)
-    arrow:SetDesaturated(true)  -- sin soporte de shader queda dorada teñida, sigue viéndose
-    arrow:SetAllPoints(holder)
+    arrow:SetAllPoints(arrowFrame)
     holder.arrow = arrow
 
     return holder
@@ -898,12 +953,14 @@ local function UpdateUpgradeIcon(button, itemLink)
     local marker = itemLink and GetUpgradeMarker(itemLink)
 
     if marker == "active" then
-        icon.arrow:SetVertexColor(0.1, 1, 0.1)
-        icon:SetSize(20, 20)
+        icon.glow:SetVertexColor(0, 1, 0, 1)
+        icon.arrow:SetVertexColor(0.3, 1, 0.3)
+        icon.arrowFrame:SetSize(22, 22)
         icon:Show()
     elseif marker == "other" then
-        icon.arrow:SetVertexColor(1, 0.55, 0)
-        icon:SetSize(15, 15)
+        icon.glow:SetVertexColor(1, 0.5, 0, 0.7)
+        icon.arrow:SetVertexColor(1, 0.6, 0.2)
+        icon.arrowFrame:SetSize(16, 16)
         icon:Show()
     else
         icon:Hide()
@@ -1069,6 +1126,9 @@ local function PrintDebugInfo(itemLink)
     print("SimulateX debug: " .. itemLink)
     print("  Usable: " .. tostring(IsItemUsable(itemLink)))
     print("  Bloqueado solo por nivel: " .. tostring(IsBlockedByLevelOnly(itemLink)))
+    local _, _, numLines, redTexts = ScanRedLines(itemLink)
+    print(string.format("  Tooltip escaneado: %d líneas, rojas: %s", numLines,
+        #redTexts > 0 and table.concat(redTexts, " | ") or "ninguna"))
 
     local stats = GetItemStats(itemLink) or {}
     local statKeys = {}
