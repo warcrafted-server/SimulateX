@@ -9,13 +9,18 @@ title:SetText("SimulateX")
 
 local subtitle = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
 subtitle:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
-subtitle:SetWidth(500)
+subtitle:SetPoint("RIGHT", panel, "RIGHT", -16, 0)
+subtitle:SetHeight(28)
 subtitle:SetJustifyH("LEFT")
+subtitle:SetJustifyV("TOP")
 subtitle:SetText("Elige qué sub-especializaciones de tu clase se muestran en el tooltip y si quieres el modo estimado en niveles 1-79.")
 
 local lowLevelCheck = CreateFrame("CheckButton", "SimulateXOptionsLowLevelCheck", panel, "UICheckButtonTemplate")
 lowLevelCheck:SetPoint("TOPLEFT", subtitle, "BOTTOMLEFT", -2, -20)
-_G[lowLevelCheck:GetName() .. "Text"]:SetText("Mostrar estimación en niveles 1-79 (aproximación, no es una simulación real)")
+local lowLevelText = _G[lowLevelCheck:GetName() .. "Text"]
+lowLevelText:SetText("Mostrar estimación en niveles 1-79 (aproximación, no es una simulación real)")
+lowLevelText:SetWidth(380)
+lowLevelText:SetJustifyH("LEFT")
 
 lowLevelCheck:SetScript("OnClick", function(self)
     SimulateX_DB.lowLevelEstimateDisabled = not self:GetChecked()
