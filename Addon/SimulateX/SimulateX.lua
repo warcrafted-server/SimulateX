@@ -2,7 +2,7 @@ local ADDON_NAME = ...
 
 local SimulateX = CreateFrame("Frame", "SimulateXFrame")
 
-local CLASS_DATA_VARS = {
+SimulateX_ClassDataVars = {
     WARRIOR = "SimulateX_Data_Warrior",
     PALADIN = "SimulateX_Data_Paladin",
     HUNTER = "SimulateX_Data_Hunter",
@@ -14,6 +14,7 @@ local CLASS_DATA_VARS = {
     WARLOCK = "SimulateX_Data_Warlock",
     DRUID = "SimulateX_Data_Druid",
 }
+local CLASS_DATA_VARS = SimulateX_ClassDataVars
 
 -- Árbol de talentos dominante del jugador (0/1/2), o nil si no se puede
 -- determinar. Es la señal para saber cuál de las sub-specs mostradas es la
@@ -67,7 +68,9 @@ local function GetItemDeltasBySpec(itemId)
     local results = {}
     for _, entry in pairs(bestBySpec) do
         local itemData = entry.build.items[itemId]
-        if itemData and (itemData.dps ~= 0 or itemData.hps ~= 0) then
+        local specEnabled = SimulateX_DB.disabledSpecs == nil
+            or not SimulateX_DB.disabledSpecs[entry.build.specLabel]
+        if specEnabled and itemData and (itemData.dps ~= 0 or itemData.hps ~= 0) then
             table.insert(results, {
                 specLabel = entry.build.specLabel,
                 role = entry.build.role,
@@ -227,6 +230,9 @@ local function OnTooltipSetItem(tooltip)
     end
 
     if UnitLevel("player") < 80 then
+        if SimulateX_DB.lowLevelEstimateDisabled then
+            return
+        end
         local score, equippedScore = GetLowLevelComparison(itemId, link)
         if score then
             if equippedScore then

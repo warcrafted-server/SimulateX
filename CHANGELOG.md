@@ -2,6 +2,10 @@
 
 Todos los cambios notables de este proyecto serán documentados en este archivo.
 
+## v0.3.0 - 2026-09-27
+### Añadido
+- Panel de configuración en Interfaz > AddOns (`/simulatexconfig` como alternativa): activar/desactivar el modo estimado de nivel 1-79, y elegir qué sub-especializaciones de la clase se muestran en el tooltip.
+
 ## Sin publicar
 ### Corregido
 - La extracción de objetos de nivel 1-79 (`extraer_objetos_bd.py`) excluía por error todos los objetos con `RequiredLevel = 0` en `item_template` (frecuente en objetos de misión/mundo antiguos, ej. Bastón del purificador, Cinturón acuario). Regenerados los datos de Druida: 13569 objetos puntuados (antes 7963).

@@ -260,10 +260,17 @@ descartarlas explícitamente cuando la spec no las use vía `GetAplRotation`.
 Regenerados los 21 ficheros con `python3 Tools/generar_extractores_go.py`.
 Confirmado que `restoration_druid` compila tras el fix.
 
-**Pendiente:** relanzar `holy_paladin` y `restoration_druid` en el lote (sus
-resultados previos en `Data/sims/<spec>/` son del bug, hay que borrarlos y
-volver a simular). Comprobar si `restoration_shaman` tiene el mismo patrón
-antes de asumir que está resuelto también para esa spec.
+**(Hecho 2026-09-27, tras reinicio del servidor)** `restoration_druid` ya
+está simulada completa con el fix (5/5 fases OK). `holy_paladin` se borró
+(sus datos previos eran del bug) y se relanzó junto al resto de specs
+pendientes en `/tmp/simular_resto2.sh` (no versionado, mismo patrón que el
+lote anterior): holy_paladin, healing_priest, shadow_priest, smite_priest,
+elemental_shaman, enhancement_shaman, restoration_shaman, hunter, mage,
+rogue, warlock, warrior, protection_warrior, deathknight, tank_deathknight.
+Pendiente comprobar si `restoration_shaman` tiene el mismo patrón de bug
+(usa `core.RotationCombo{}` en vez de `GetAplRotation`) — el fix ya está
+aplicado de forma general en `generar_extractores_go.py`, así que si el
+patrón es el mismo debería resolverse solo al llegarle el turno en el lote.
 
 ## Nivel 80 vs niveles bajos — alcance de wowsims
 
