@@ -18,6 +18,7 @@ Plan: `datos-completos-v0.4.PLAN.md` (mismo directorio). Auditoría de errores E
   5. `SIMX_DBC_DIR=... python3 generar_tablas_nivel.py` → `Addon/.../SimulateX_Levels.lua`
   6. `python3 generar_db_addon.py --spec X` → `Addon/.../SimulateX_Data_<Clase>.lua` (~20 min feral: 5 builds × TestGenStatWeights 5000 it.)
   7. `python3 generar_tipos_objeto.py` → `Addon/.../SimulateX_ItemTypes.lua` (tras regenerar `items_bd.json`)
+  8. `SIMX_DBC_DIR=... python3 generar_estadisticas_objeto.py` → `Addon/.../SimulateX_ItemStats.lua` (tras regenerar `items_bd.json`)
 - Procesos largos: `nohup ... &` en background da "completed" al instante (solo el desacople);
   vigilar el fin real con Monitor + `while pgrep -f ...; do sleep 10; done`.
 
@@ -43,8 +44,14 @@ addon sí. Causa: construir el tooltip oculto (`SetOwner`/`SetHyperlink`) dentro
 construye tooltips. Usabilidad = `SimulateX_ItemTypes` (id → clase×100+subclase) +
 `SimulateX_ItemClasses` (AllowableClass restringido), ambos de `generar_tipos_objeto.py`, +
 `CLASS_PROFICIENCIES` en `SimulateX.lua` (malla/placas a 40) + nivel mínimo de `GetItemInfo`. No
-cubre armas no entrenadas (p. ej. guerrero sin armas de asta). Pendiente de confirmar en juego que
-el rojo nativo vuelve. Posible mejora a valorar: a
+cubre armas no entrenadas (p. ej. guerrero sin armas de asta). Tras la 3ª prueba (commit `961acae`) el rojo
+seguía perdiéndose. Hipótesis: `GetItemStats` (única API que usa SimulateX y no los demás addons
+de tooltip; que haga falta borrar Cache apunta a la caché de objetos del cliente). El usuario no
+quiso hacer la prueba aislada. Decisión 1 cambiada: sin `GetItemStats`; estadísticas desde
+`SimulateX_ItemStats.lua` (`generar_estadisticas_objeto.py`: item_template + DBC
+RandPropPoints/SpellItemEnchantment/ItemRandomProperties/ItemRandomSuffix/ScalingStat*,
+fórmulas del core). APIs de cliente que quedan: `GetItemInfo`, `tooltip:GetItem()` (las usan
+también sus otros addons). Pendiente de confirmar en juego. Posible mejora a valorar: a
 nivel < 80 el % es sobre el EP del equipo, no sobre el DPS real, e infla las cifras.
 
 ### F1 — DPS de arma ignorado en la puntuación (confirmado en juego)

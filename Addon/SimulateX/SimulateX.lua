@@ -128,10 +128,11 @@ local function IsBlockedByLevelOnly(itemLink)
 end
 
 --[[----------------------------------------------------------------------
-    PUNTUACIÓN: EP en tiempo real con GetItemStats(link, tabla) (decisión de
-    diseño 1). Sustituye a lowLevelScores: cubre cualquier objeto en
-    cualquier nivel, incluidos sufijos aleatorios, sin depender de un
-    catálogo pre-simulado.
+    PUNTUACIÓN: EP en tiempo real (decisión de diseño 1) con las
+    estadísticas de Data/SimulateX_ItemStats.lua (item_template y DBC del
+    servidor), incluidos sufijos aleatorios y reliquias. No se usa
+    GetItemStats: con el addon activo el cliente deja de pintar en rojo lo
+    que no se puede usar.
 
     Escalado por nivel (paso 6 del plan): w(L) = w80 × índicePor1%(80) /
     índicePor1%(L) para los combat ratings; agilidad/intelecto se reescalan
@@ -139,12 +140,149 @@ end
     escala distinto del crítico "de rating" (ver critComponent, paso 5).
 ------------------------------------------------------------------------]]
 
--- ITEM_MOD_* cuyo valor en GetItemStats ya corresponde 1:1 a un peso de la
--- build (weights de SimulateX_Data_<Clase>.lua): se multiplica directo.
--- Crítico/golpe/celeridad NO están aquí porque su peso en la build ya es la
--- suma combinada (Tools/mapeo_stats.py::combine_rating_weight), y se lee con
--- la misma clave ITEM_MOD_*_RATING_SHORT sin distinguir melee/spell aquí:
--- GetItemStats tampoco distingue, solo hay un rating de crítico por objeto.
+-- Tipo de estadística de item_template -> clave ITEM_MOD_* (las mismas que
+-- daba GetItemStats, que son las de los pesos de SimulateX_Data_<Clase>.lua).
+local STAT_TYPE_KEYS = {
+    [0] = "MANA", [1] = "HEALTH", [3] = "AGILITY", [4] = "STRENGTH", [5] = "INTELLECT",
+    [6] = "SPIRIT", [7] = "STAMINA", [12] = "DEFENSE_SKILL_RATING", [13] = "DODGE_RATING",
+    [14] = "PARRY_RATING", [15] = "BLOCK_RATING", [16] = "HIT_MELEE_RATING",
+    [17] = "HIT_RANGED_RATING", [18] = "HIT_SPELL_RATING", [19] = "CRIT_MELEE_RATING",
+    [20] = "CRIT_RANGED_RATING", [21] = "CRIT_SPELL_RATING", [28] = "HASTE_MELEE_RATING",
+    [29] = "HASTE_RANGED_RATING", [30] = "HASTE_SPELL_RATING", [31] = "HIT_RATING",
+    [32] = "CRIT_RATING", [35] = "RESILIENCE_RATING", [36] = "HASTE_RATING",
+    [37] = "EXPERTISE_RATING", [38] = "ATTACK_POWER", [39] = "RANGED_ATTACK_POWER",
+    [40] = "FERAL_ATTACK_POWER", [41] = "SPELL_HEALING_DONE", [42] = "SPELL_DAMAGE_DONE",
+    [43] = "MANA_REGENERATION", [44] = "ARMOR_PENETRATION_RATING", [45] = "SPELL_POWER",
+    [46] = "HEALTH_REGEN", [47] = "SPELL_PENETRATION", [48] = "BLOCK_VALUE",
+}
+local SOCKET_KEYS = { m = "EMPTY_SOCKET_META", r = "EMPTY_SOCKET_RED", y = "EMPTY_SOCKET_YELLOW", u = "EMPTY_SOCKET_BLUE" }
+
+local function AddStat(stats, statKey, value)
+    local key
+    if statKey == "a" then
+        key = "RESISTANCE0_NAME"
+    elseif statKey == "b" then
+        key = "ITEM_MOD_BLOCK_VALUE_SHORT"
+    elseif statKey == "d" then
+        key = "ITEM_MOD_DAMAGE_PER_SECOND_SHORT"
+    elseif SOCKET_KEYS[statKey] then
+        key = SOCKET_KEYS[statKey]
+    else
+        local statType = tonumber(statKey)
+        key = "ITEM_MOD_" .. (STAT_TYPE_KEYS[statType] or ("STAT" .. statKey)) .. "_SHORT"
+    end
+    stats[key] = (stats[key] or 0) + value
+end
+
+local function ForEachPair(data, callback)
+    for key, value in data:gmatch("(%w+)=([%d%.%-]+)") do
+        callback(key, tonumber(value))
+    end
+end
+
+-- flag de un solo bit (el 3.3.5a no trae operadores de bits en Lua)
+local function HasFlag(mask, flag)
+    return mask % (flag * 2) >= flag
+end
+
+local function PickByFlag(mask, choices)
+    for _, choice in ipairs(choices) do
+        if HasFlag(mask, choice[1]) then
+            return choice[2]
+        end
+    end
+    return 0
+end
+
+-- Reliquias: estadísticas, armadura, DPS y poder con hechizos según el nivel
+-- del jugador (Player::_ApplyItemBonuses del core).
+local function AddScalingStats(stats, distId, mask)
+    local dist = SimulateX_ScalingDist and SimulateX_ScalingDist[distId]
+    if not dist then
+        return
+    end
+    local ssv = SimulateX_ScalingValues[math.min(UnitLevel("player"), dist.maxLevel)]
+    if not ssv then
+        return
+    end
+    local multiplier = PickByFlag(mask, { { 1, ssv.ssd[1] }, { 2, ssv.ssd[2] }, { 4, ssv.ssd[3] },
+        { 8, ssv.ssd2 }, { 16, ssv.ssd[4] }, { 262144, ssv.ssd3 } })
+    for _, stat in ipairs(dist.stats) do
+        AddStat(stats, tostring(stat[1]), math.floor(multiplier * stat[2] / 10000))
+    end
+    local armor = PickByFlag(mask, { { 32, ssv.armor[1] }, { 64, ssv.armor[2] }, { 128, ssv.armor[3] },
+        { 256, ssv.armor[4] }, { 524288, ssv.armor2[1] }, { 1048576, ssv.armor2[2] },
+        { 2097152, ssv.armor2[3] }, { 4194304, ssv.armor2[4] }, { 8388608, ssv.armor2[5] } })
+    if armor > 0 then
+        AddStat(stats, "a", armor)
+    end
+    local dps = PickByFlag(mask, { { 512, ssv.dps[1] }, { 1024, ssv.dps[2] }, { 2048, ssv.dps[3] },
+        { 4096, ssv.dps[4] }, { 8192, ssv.dps[5] }, { 16384, ssv.dps[6] } })
+    if dps > 0 then
+        AddStat(stats, "d", dps)
+    end
+    if HasFlag(mask, 32768) then
+        AddStat(stats, "45", ssv.spellPower)
+    end
+end
+
+-- link -> estadísticas. Las reliquias no se guardan: dependen del nivel.
+local itemStatsCache = {}
+
+-- Link: item:id:encantamiento:gema1:gema2:gema3:gema4:propiedad:factor:nivel.
+-- propiedad > 0 = ItemRandomProperties, < 0 = ItemRandomSuffix con el
+-- factor del link (o el de item_template si el link no lo trae).
+local function GetItemStatsFromData(itemLink)
+    local cached = itemStatsCache[itemLink]
+    if cached then
+        return cached
+    end
+
+    local stats = {}
+    local itemId = tonumber(itemLink:match("item:(%-?%d+)"))
+    local data = itemId and SimulateX_ItemStats and SimulateX_ItemStats[itemId]
+    if data then
+        local fields = {}
+        ForEachPair(data, function(key, value) fields[key] = value end)
+        -- con escalado el core ignora las estadísticas, armadura y daño base
+        local scales = fields.x and fields.v and fields.v > 0
+        for key, value in pairs(fields) do
+            local replacedByScaling = scales and (tonumber(key) or key == "a" or key == "d")
+            if key ~= "f" and key ~= "x" and key ~= "v" and not replacedByScaling then
+                AddStat(stats, key, value)
+            end
+        end
+        if scales then
+            AddScalingStats(stats, fields.x, fields.v)
+        end
+
+        local propertyId, linkFactor = itemLink:match("item:%-?%d+:%-?%d+:%-?%d+:%-?%d+:%-?%d+:%-?%d+:(%-?%d+):(%-?%d+)")
+        propertyId, linkFactor = tonumber(propertyId), tonumber(linkFactor)
+        -- links de inspeccionar: el cliente manda el int16 como uint16
+        if propertyId and propertyId > 32767 and propertyId <= 65535 then
+            propertyId = propertyId - 65536
+        end
+        if propertyId and propertyId > 0 and SimulateX_RandomProps[propertyId] then
+            ForEachPair(SimulateX_RandomProps[propertyId], function(key, value) AddStat(stats, key, value) end)
+        elseif propertyId and propertyId < 0 and SimulateX_RandomSuffixes[-propertyId] then
+            local factor = (linkFactor and linkFactor > 0) and linkFactor or fields.f or 0
+            ForEachPair(SimulateX_RandomSuffixes[-propertyId], function(key, pct)
+                AddStat(stats, key, math.floor(pct * factor / 10000))
+            end)
+        end
+    end
+
+    if not (data and data:find("x=", 1, true)) then
+        itemStatsCache[itemLink] = stats
+    end
+    return stats
+end
+
+-- ITEM_MOD_* que corresponden 1:1 a un peso de la build (weights de
+-- SimulateX_Data_<Clase>.lua): se multiplica directo. Crítico/golpe/
+-- celeridad NO están aquí porque su peso en la build ya es la suma combinada
+-- (Tools/mapeo_stats.py::combine_rating_weight): el objeto trae un solo
+-- rating de crítico, sin distinguir melee/hechizo.
 local SCALABLE_BY_LEVEL = {
     ITEM_MOD_CRIT_RATING_SHORT = "critMelee",       -- índice: mismo para melee/spell (ver paso 4)
     ITEM_MOD_HIT_RATING_SHORT = "hitMelee",
@@ -248,7 +386,7 @@ end
 -- (igual que el paso 1 al simular: Pawn por defecto tampoco la cuenta).
 -- hand: mano donde iría el arma; sin ella se deduce del tipo de objeto.
 local function ScoreItem(itemLink, weights, build, hand)
-    local stats = GetItemStats(itemLink) or {}
+    local stats = GetItemStatsFromData(itemLink)
     local score = ScoreWeaponDps(stats.ITEM_MOD_DAMAGE_PER_SECOND_SHORT, build, hand or GetDefaultHand(itemLink))
 
     for _, key in ipairs(DIRECT_WEIGHT_KEYS) do
@@ -264,12 +402,12 @@ local function ScoreItem(itemLink, weights, build, hand)
         end
     end
 
-    for statKey in pairs(stats) do
+    for statKey, count in pairs(stats) do
         if statKey:match("^EMPTY_SOCKET_") then
             if statKey == "EMPTY_SOCKET_META" then
-                score = score + (build.metaSocketValue or 0)
+                score = score + (build.metaSocketValue or 0) * count
             else
-                score = score + (build.socketValue or 0)
+                score = score + (build.socketValue or 0) * count
             end
         end
     end
@@ -1084,7 +1222,7 @@ SimulateX:RegisterEvent("PLAYER_TALENT_UPDATE")
 SimulateX:SetScript("OnEvent", OnEvent)
 
 --[[----------------------------------------------------------------------
-    DEPURACIÓN: /simulatex debug + link muestra las claves de GetItemStats,
+    DEPURACIÓN: /simulatex debug + link muestra las estadísticas del objeto,
     la usabilidad y la puntuación/comparación por spec para ese objeto.
     /simulatex nivel 80 fuerza la lógica de nivel 80 para probar sin un 80
     (solo dura la sesión, nunca se guarda).
@@ -1102,11 +1240,11 @@ local function PrintDebugInfo(itemLink)
     print("  Bloqueado solo por nivel: " .. tostring(IsBlockedByLevelOnly(itemLink)))
     print("  Clase permitida: " .. tostring(IsAllowedClass(itemLink)))
 
-    local stats = GetItemStats(itemLink) or {}
+    local stats = GetItemStatsFromData(itemLink)
     local statKeys = {}
     for key in pairs(stats) do table.insert(statKeys, key) end
     table.sort(statKeys)
-    print("  GetItemStats: " .. (#statKeys > 0 and table.concat(statKeys, ", ") or "(sin estadísticas)"))
+    print("  Estadísticas: " .. (#statKeys > 0 and table.concat(statKeys, ", ") or "(sin estadísticas)"))
     for _, key in ipairs(statKeys) do
         print(string.format("    %s = %s", key, tostring(stats[key])))
     end
