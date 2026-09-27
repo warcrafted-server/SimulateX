@@ -239,7 +239,13 @@ error) como un dato ausente para esa build concreta, seguir con el resto del
 lote, y registrar qué builds fallaron y por qué — nunca debe abortar el
 proceso completo por el fallo de una sola build.
 
-## Bug corregido: 2 specs de sanador fallaban en compilación Go (no era limitación de wowsims)
+## Specs de sanador: había un bug de compilación Go y además la limitación de wowsims
+
+Actualización posterior (2026-09-27): con el bug de compilación arreglado,
+`restoration_druid` y `holy_paladin` simulan pero dan 0 HPS en todo (rotación
+vacía en wowsims), así que la limitación original también era real. Solución
+en `.agents/plans/datos-completos-v0.4/` (decisión 3: pesos `epWeights` de
+`sim.ts`). Lo de abajo describe solo el bug de compilación.
 
 Se había concluido antes que **holy_paladin, restoration_druid,
 restoration_shaman** daban 0.0 por un placeholder vacío de `DefaultRotation`

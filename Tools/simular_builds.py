@@ -24,7 +24,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from mapeo_slots import resolve_item_slot
+from mapeo_slots import resolve_item_slot, ambiguous_positions
 from specs_metadata import SPEC_GO_PACKAGES, ui_relative_prefix
 
 TOOLS_DIR = pathlib.Path(__file__).resolve().parent
@@ -34,6 +34,7 @@ BUILDS_DIR = TOOLS_DIR / "builds"
 DATA_DIR = TOOLS_DIR.parent / "Data"
 SIMS_OUT_DIR = DATA_DIR / "sims"
 ITEMS_BD_PATH = DATA_DIR / "items_bd.json"
+CATALOGO_80_PATH = DATA_DIR / "catalogo_80.json"
 WOWSIMS_DB_PATH = WOWSIMS_SRC / "assets" / "database" / "db.json"
 
 GO_TEST_TIMEOUT_S = 30
@@ -259,7 +260,7 @@ def simulate_one_swap(base_input: pathlib.Path, item_slot: int, candidate: dict,
 
 
 def simulate_build(spec: str, build: dict, talents_string: str, work_dir: pathlib.Path,
-                    items_by_id: dict, gem_colors: dict, iterations: int) -> dict:
+                    items_by_id: dict, candidate_pool: dict, gem_colors: dict, iterations: int) -> dict:
     build_id = f"{build['gear_file']}"
     base_input = work_dir / f"{build_id}_base.json"
 
@@ -275,7 +276,7 @@ def simulate_build(spec: str, build: dict, talents_string: str, work_dir: pathli
     base_metrics = extract_metrics(base_result)
 
     ilvl_range = gear_item_level_range(base_input, items_by_id)
-    candidates = load_candidate_items(spec, items_by_id, limit=build.get("_limit_items"), item_level_range=ilvl_range)
+    candidates = load_candidate_items(spec, candidate_pool, limit=build.get("_limit_items"), item_level_range=ilvl_range)
 
     gear_items = base_gear_items(base_input)
     offhand_is_one_handed = spec in DUAL_WIELD_SPECS and is_one_handed_weapon(
@@ -284,18 +285,32 @@ def simulate_build(spec: str, build: dict, talents_string: str, work_dir: pathli
     )
 
     item_deltas = {}
+    omitidos = 0
     for item in candidates:
-        # También se simula cada objeto ya equipado en el gearset base con esta
-        # misma regla de gemas/encantamiento: sirve de referencia "equipado" en
-        # el addon y de validación (delta contra sí mismo ≈ 0).
-        metrics = simulate_one_swap(base_input, item["resolved_slot"], item, gem_colors, work_dir, f"{build_id}_{item['id']}")
-        if metrics is None:
+        # Anillos y abalorios pueden ir en dos posiciones físicas (10/11,
+        # 12/13): si el candidato coincide con un objeto que el gearset base
+        # ya lleva en la OTRA posición a la que resolve_item_slot elige por
+        # defecto, comparar solo contra esa posición da un delta falso (E1
+        # ampliado: el objeto base "contra sí mismo" salía en -1.7% al caer en
+        # el slot equivocado). Se simulan ambas posiciones y se usa la mejor.
+        positions = ambiguous_positions(item["inventory_type"]) or [item["resolved_slot"]]
+        primary_metric = "dps" if base_metrics["dps"] else "hps"
+        best_metrics = None
+        for slot in positions:
+            metrics = simulate_one_swap(base_input, slot, item, gem_colors, work_dir, f"{build_id}_{item['id']}_s{slot}")
+            if metrics is None:
+                continue
+            if best_metrics is None or metrics[primary_metric] > best_metrics[primary_metric]:
+                best_metrics = metrics
+
+        if best_metrics is None:
+            omitidos += 1
             continue
         entry = {
-            "dps": round(metrics["dps"] - base_metrics["dps"], 1),
-            "hps": round(metrics["hps"] - base_metrics["hps"], 1),
-            "tps": round(metrics["tps"] - base_metrics["tps"], 1),
-            "dtps": round(metrics["dtps"] - base_metrics["dtps"], 1),
+            "dps": round(best_metrics["dps"] - base_metrics["dps"], 1),
+            "hps": round(best_metrics["hps"] - base_metrics["hps"], 1),
+            "tps": round(best_metrics["tps"] - base_metrics["tps"], 1),
+            "dtps": round(best_metrics["dtps"] - base_metrics["dtps"], 1),
         }
 
         if is_one_handed_weapon(item) and offhand_is_one_handed:
@@ -313,6 +328,8 @@ def simulate_build(spec: str, build: dict, talents_string: str, work_dir: pathli
         "base_tps": round(base_metrics["tps"], 1),
         "base_dtps": round(base_metrics["dtps"], 1),
         "items": item_deltas,
+        "n_candidatos": len(candidates),
+        "n_omitidos": omitidos,
     }
 
 
@@ -332,6 +349,12 @@ def main() -> None:
         raise SystemExit(f"Falta {ITEMS_BD_PATH}. Ejecuta extraer_objetos_bd.py primero.")
     items_by_id = load_json(ITEMS_BD_PATH)
     gem_colors = load_gem_colors()
+
+    # Catálogo de simulación de nivel 80 (paso 2, arregla E7): ya viene
+    # filtrado por clase y por calidad/ilvl mínimos. Si no existe, se cae al
+    # catálogo genérico de nivel bajo (items_by_id), que también sirve pero es
+    # mucho más ruidoso (incluye objetos grises/blancos y de cualquier nivel).
+    catalogo_80_por_clase = load_json(CATALOGO_80_PATH) if CATALOGO_80_PATH.exists() else None
 
     talent_sets_by_spec = {}
     apl_files_by_spec = {}
@@ -359,6 +382,9 @@ def main() -> None:
         spec_out_dir = SIMS_OUT_DIR / spec
         spec_out_dir.mkdir(exist_ok=True)
 
+        game_class = SPEC_TO_GAME_CLASS[spec]
+        candidate_pool = catalogo_80_por_clase[game_class] if catalogo_80_por_clase else items_by_id
+
         with tempfile.TemporaryDirectory(dir=WOWSIMS_SRC / "sim" / SPEC_GO_PACKAGES[spec]) as tmp:
             work_dir = pathlib.Path(tmp)
             for build in builds:
@@ -366,12 +392,14 @@ def main() -> None:
                 apl_file = apl_files_by_spec.get(spec, {}).get(build["apl"]) if build.get("apl") else None
                 build_with_apl = {**build, "apl_file": apl_file, "_limit_items": args.limit_items}
 
-                result = simulate_build(spec, build_with_apl, talents_string, work_dir, items_by_id, gem_colors, args.iterations)
+                result = simulate_build(spec, build_with_apl, talents_string, work_dir, items_by_id, candidate_pool, gem_colors, args.iterations)
                 out_path = spec_out_dir / f"{result['build_id']}.json"
                 out_path.write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
 
                 status_marker = "OK" if result["status"] == "ok" else f"ERROR: {result.get('motivo')}"
                 n_items = len(result.get("items", {}))
+                n_candidatos = result.get("n_candidatos", 0)
+                n_omitidos = result.get("n_omitidos", 0)
 
                 validation_note = ""
                 if result["status"] == "ok":
@@ -389,7 +417,8 @@ def main() -> None:
                                 print(f"[{spec}/{result['build_id']}] AVISO: solo {ratio:.0%} de objetos base dentro de "
                                       f"±0.5% ({len(within)}/{len(base_deltas)}) — revisar antes de seguir")
 
-                print(f"[{spec}/{result['build_id']}] {status_marker} ({n_items} objetos){validation_note}")
+                print(f"[{spec}/{result['build_id']}] {status_marker} "
+                      f"({n_items}/{n_candidatos} objetos, {n_omitidos} omitidos){validation_note}")
 
 
 if __name__ == "__main__":

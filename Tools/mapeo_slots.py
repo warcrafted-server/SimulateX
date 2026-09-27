@@ -60,3 +60,12 @@ def resolve_item_slot(inventory_slot_id: int, occupied_slots: set) -> int | None
                 return slot
         return AMBIGUOUS_SLOTS[inventory_slot_id][0]
     return INVTYPE_TO_ITEM_SLOT.get(inventory_slot_id)
+
+
+def ambiguous_positions(inventory_slot_id: int) -> list[int]:
+    """Todas las posiciones físicas donde puede ir un inventorySlot ambiguo
+    (anillo/trinket/arma de una mano): probar el swap en cada una es necesario
+    para comparar contra el objeto base correcto (un candidato puede coincidir
+    con el objeto ya equipado en la SEGUNDA posición, no en la que resolve_item_slot
+    elegiría por defecto)."""
+    return AMBIGUOUS_SLOTS.get(inventory_slot_id, [])
