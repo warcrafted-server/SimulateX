@@ -133,8 +133,26 @@ local function GetLowLevelComparison(itemId, itemLink)
     return itemScore.score, equippedScore and equippedScore.score or nil
 end
 
-local function OnTooltipSetItem(tooltip)
+-- En tooltips originados desde la ventana de recompensa de misión (poblados
+-- con SetQuestItem/SetQuestLogItem, no SetHyperlink), tooltip:GetItem() es
+-- conocido por devolver vacío y por interferir con el coloreado nativo del
+-- motor (ej. "Malla" en rojo cuando la clase no puede vestirla se pierde).
+-- Se detecta ese origen por el frame dueño del tooltip y se usa la API de
+-- misión en vez de GetItem().
+local function GetTooltipItemLink(tooltip)
+    local owner = tooltip:GetOwner()
+    if owner and owner.rewardType == "item" then
+        if QuestInfoFrame and QuestInfoFrame.questLog then
+            return GetQuestLogItemLink(owner.type, owner:GetID())
+        end
+        return GetQuestItemLink(owner.type, owner:GetID())
+    end
     local _, link = tooltip:GetItem()
+    return link
+end
+
+local function OnTooltipSetItem(tooltip)
+    local link = GetTooltipItemLink(tooltip)
     if not link then
         return
     end
@@ -151,6 +169,7 @@ local function OnTooltipSetItem(tooltip)
             else
                 tooltip:AddLine(string.format("SimulateX (estimado): %.0f puntos", score), 0.6, 0.8, 1)
             end
+            tooltip:Show()
         end
         return
     end
@@ -175,6 +194,7 @@ local function OnTooltipSetItem(tooltip)
 
         tooltip:AddLine(string.format("%s%s: %+.0f %s (%+.1f%%)", marker, entry.specLabel, value, unit, percent), r, g, b)
     end
+    tooltip:Show()
 end
 
 local function OnEvent(self, event, ...)
