@@ -18,7 +18,7 @@ subtitle:SetText("Elige qué sub-especializaciones de tu clase se muestran en el
 local lowLevelCheck = CreateFrame("CheckButton", "SimulateXOptionsLowLevelCheck", panel, "UICheckButtonTemplate")
 lowLevelCheck:SetPoint("TOPLEFT", subtitle, "BOTTOMLEFT", -2, -20)
 local lowLevelText = _G[lowLevelCheck:GetName() .. "Text"]
-lowLevelText:SetText("Mostrar estimación en niveles 1-79 (aproximación, no es una simulación real)")
+lowLevelText:SetText("Mostrar datos estimados en niveles 1-79 (pesos por punto, sin simulación exacta)")
 lowLevelText:SetWidth(380)
 lowLevelText:SetJustifyH("LEFT")
 
@@ -34,11 +34,12 @@ local specCheckboxes = {}
 
 -- Recorre todas las builds de la clase (sin filtrar por spec activa/fase, a
 -- diferencia de GetBestBuildPerSpec) solo para listar cada specLabel único
--- una vez, tal como aparecería en el tooltip.
+-- una vez, tal como aparecería en el tooltip. classData es una tabla plana
+-- { ["spec_fase"] = build, ... }, ver Tools/generar_db_addon.py.
 local function GetAllSpecLabelsForClass(classData)
     local seen = {}
     local labels = {}
-    for _, build in pairs(classData.builds) do
+    for _, build in pairs(classData) do
         if not seen[build.specLabel] then
             seen[build.specLabel] = true
             table.insert(labels, build.specLabel)

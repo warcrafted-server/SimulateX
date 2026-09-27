@@ -1,8 +1,10 @@
 SimulateX_Data_Druid = {
   ["feral_druid_p1"] = {
     spec = "feral_druid",
+    specLabel = "Feral",
     role = "dps",
     phase = "p1",
+    talentTree = 1,
     avgItemLevel = 217.6,
     base = {
       dps = 7764.7,
@@ -1844,8 +1846,10 @@ SimulateX_Data_Druid = {
   },
   ["feral_druid_p2"] = {
     spec = "feral_druid",
+    specLabel = "Feral",
     role = "dps",
     phase = "p2",
+    talentTree = 1,
     avgItemLevel = 229.8,
     base = {
       dps = 10097.8,
@@ -4173,8 +4177,10 @@ SimulateX_Data_Druid = {
   },
   ["feral_druid_p3"] = {
     spec = "feral_druid",
+    specLabel = "Feral",
     role = "dps",
     phase = "p3",
+    talentTree = 1,
     avgItemLevel = 253.2,
     base = {
       dps = 11537.5,
@@ -6495,8 +6501,10 @@ SimulateX_Data_Druid = {
   },
   ["feral_druid_p4"] = {
     spec = "feral_druid",
+    specLabel = "Feral",
     role = "dps",
     phase = "p4",
+    talentTree = 1,
     avgItemLevel = 276.0,
     base = {
       dps = 15892.3,
@@ -7786,8 +7794,10 @@ SimulateX_Data_Druid = {
   },
   ["feral_druid_preraid"] = {
     spec = "feral_druid",
+    specLabel = "Feral",
     role = "dps",
     phase = "preraid",
+    talentTree = 1,
     avgItemLevel = 200.0,
     base = {
       dps = 6256.5,

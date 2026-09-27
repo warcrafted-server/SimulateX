@@ -20,6 +20,7 @@ from simular_builds import (
     base_gear_gem_pool, base_gear_items, load_gem_colors, WOWSIMS_SRC,
 )
 from specs_metadata import SPEC_GO_PACKAGES
+from emparejar_builds import dominant_talent_tree
 
 TOOLS_DIR = pathlib.Path(__file__).resolve().parent
 DATA_DIR = TOOLS_DIR.parent / "Data"
@@ -30,23 +31,23 @@ ADDON_DATA_DIR = TOOLS_DIR.parent / "Addon" / "SimulateX" / "Data"
 ITEM_SLOT_MAIN_HAND = 14
 INVTYPE_2HWEAPON = 17
 
-# Spec de wowsims -> (nombre de clase en el addon, rol). El rol solo distingue
-# "healer" (métrica principal = hps) del resto (dps); tanque también usa dps
-# como base pero su "Amenaza"/"Supervivencia" se calculan en el addon (paso 6)
-# a partir de tps/dtps, no aquí.
+# Spec de wowsims -> (nombre de clase en el addon, rol, etiqueta en español
+# para el tooltip). El rol solo distingue "healer" (métrica principal = hps)
+# del resto (dps); tanque también usa dps como base pero su "Amenaza"/
+# "Supervivencia" se calculan en el addon (paso 6) a partir de tps/dtps.
 SPEC_INFO = {
-    "balance_druid": ("Druid", "dps"), "feral_druid": ("Druid", "dps"),
-    "restoration_druid": ("Druid", "healer"), "feral_tank_druid": ("Druid", "tank"),
-    "holy_paladin": ("Paladin", "healer"), "protection_paladin": ("Paladin", "tank"),
-    "retribution_paladin": ("Paladin", "dps"),
-    "healing_priest": ("Priest", "healer"), "shadow_priest": ("Priest", "dps"),
-    "smite_priest": ("Priest", "dps"),
-    "elemental_shaman": ("Shaman", "dps"), "enhancement_shaman": ("Shaman", "dps"),
-    "restoration_shaman": ("Shaman", "healer"),
-    "hunter": ("Hunter", "dps"), "mage": ("Mage", "dps"), "rogue": ("Rogue", "dps"),
-    "warlock": ("Warlock", "dps"), "warrior": ("Warrior", "dps"),
-    "protection_warrior": ("Warrior", "tank"),
-    "deathknight": ("Deathknight", "dps"), "tank_deathknight": ("Deathknight", "tank"),
+    "balance_druid": ("Druid", "dps", "Equilibrio"), "feral_druid": ("Druid", "dps", "Feral"),
+    "restoration_druid": ("Druid", "healer", "Restauración"), "feral_tank_druid": ("Druid", "tank", "Guardián"),
+    "holy_paladin": ("Paladin", "healer", "Sagrado"), "protection_paladin": ("Paladin", "tank", "Protección"),
+    "retribution_paladin": ("Paladin", "dps", "Reprensión"),
+    "healing_priest": ("Priest", "healer", "Sanación"), "shadow_priest": ("Priest", "dps", "Sombras"),
+    "smite_priest": ("Priest", "dps", "Castigo"),
+    "elemental_shaman": ("Shaman", "dps", "Elemental"), "enhancement_shaman": ("Shaman", "dps", "Mejora"),
+    "restoration_shaman": ("Shaman", "healer", "Restauración"),
+    "hunter": ("Hunter", "dps", "Cazador"), "mage": ("Mage", "dps", "Mago"), "rogue": ("Rogue", "dps", "Pícaro"),
+    "warlock": ("Warlock", "dps", "Brujo"), "warrior": ("Warrior", "dps", "Guerrero"),
+    "protection_warrior": ("Warrior", "tank", "Protección"),
+    "deathknight": ("Deathknight", "dps", "Caballero de la Muerte"), "tank_deathknight": ("Deathknight", "tank", "Tanque"),
 }
 
 STAT_NAME_TO_INDEX = {
@@ -121,8 +122,8 @@ def compute_socket_values(gear_items: list, items_by_id: dict, gem_colors: dict,
 
 
 def build_entry(spec: str, build_id: str, sim_result: dict, weights_index: dict, weights_kind: str,
-                 gear_items: list, items_by_id: dict, gem_colors: dict) -> dict:
-    game_class, role = SPEC_INFO[spec]
+                 gear_items: list, items_by_id: dict, gem_colors: dict, talents_string: str) -> dict:
+    game_class, role, spec_label = SPEC_INFO[spec]
     avg_item_level = compute_avg_item_level(gear_items, items_by_id)
     socket_value, meta_socket_value = compute_socket_values(gear_items, items_by_id, gem_colors, weights_index)
 
@@ -144,8 +145,10 @@ def build_entry(spec: str, build_id: str, sim_result: dict, weights_index: dict,
 
     return {
         "spec": spec,
+        "specLabel": spec_label,
         "role": role,
         "phase": build_id,
+        "talentTree": dominant_talent_tree(talents_string),
         "avgItemLevel": avg_item_level,
         "base": {
             "dps": sim_result.get("base_dps", 0.0),
@@ -224,7 +227,7 @@ def main() -> None:
         if spec not in SPEC_INFO:
             print(f"[{spec}] spec desconocida, se omite")
             continue
-        game_class, _role = SPEC_INFO[spec]
+        game_class, _role, _spec_label = SPEC_INFO[spec]
         spec_sims_dir = SIMS_DIR / spec
         if not spec_sims_dir.exists():
             print(f"[{spec}] sin Data/sims/{spec}/, se omite (pendiente del paso 7)")
@@ -277,7 +280,7 @@ def main() -> None:
                     weights_kind = "sim"
 
                 entry = build_entry(spec, sim_result["build_id"], sim_result, weights_index, weights_kind,
-                                     gear_items, items_by_id, gem_colors)
+                                     gear_items, items_by_id, gem_colors, talents_string)
                 build_key = f"{spec}_{sim_result['build_id']}"
                 entries_by_class.setdefault(game_class, {})[build_key] = entry
                 print(f"[{spec}/{sim_result['build_id']}] consolidado ({len(entry['items'])} objetos, "
