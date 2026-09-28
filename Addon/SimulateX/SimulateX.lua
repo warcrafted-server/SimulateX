@@ -16,6 +16,22 @@ SimulateX_ClassDataVars = {
 }
 local CLASS_DATA_VARS = SimulateX_ClassDataVars
 
+-- v0.7: mismo patrón que SimulateX_ClassDataVars, para la pestaña Talentos
+-- (Tools/generar_db_talentos.py). Una clase sin fichero consolidado
+-- simplemente no tiene entrada aquí.
+SimulateX_TalentDataVars = {
+    WARRIOR = "SimulateX_Talentos_Warrior",
+    PALADIN = "SimulateX_Talentos_Paladin",
+    HUNTER = "SimulateX_Talentos_Hunter",
+    ROGUE = "SimulateX_Talentos_Rogue",
+    PRIEST = "SimulateX_Talentos_Priest",
+    DEATHKNIGHT = "SimulateX_Talentos_Deathknight",
+    SHAMAN = "SimulateX_Talentos_Shaman",
+    MAGE = "SimulateX_Talentos_Mage",
+    WARLOCK = "SimulateX_Talentos_Warlock",
+    DRUID = "SimulateX_Talentos_Druid",
+}
+
 -- Nivel efectivo del jugador: el real, salvo que /simulatex nivel 80 lo haya
 -- forzado para esta sesión (solo para probar la lógica de 80 sin tener un
 -- personaje de ese nivel; nunca se guarda entre sesiones).

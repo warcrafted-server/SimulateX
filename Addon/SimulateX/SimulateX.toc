@@ -21,6 +21,16 @@ Data\SimulateX_Data_Shaman.lua
 Data\SimulateX_Data_Mage.lua
 Data\SimulateX_Data_Warlock.lua
 Data\SimulateX_Data_Druid.lua
+Data\SimulateX_Talentos_Warrior.lua
+Data\SimulateX_Talentos_Paladin.lua
+Data\SimulateX_Talentos_Hunter.lua
+Data\SimulateX_Talentos_Rogue.lua
+Data\SimulateX_Talentos_Priest.lua
+Data\SimulateX_Talentos_Deathknight.lua
+Data\SimulateX_Talentos_Shaman.lua
+Data\SimulateX_Talentos_Mage.lua
+Data\SimulateX_Talentos_Warlock.lua
+Data\SimulateX_Talentos_Druid.lua
 
 SimulateX.lua
 SimulateXOptions.lua

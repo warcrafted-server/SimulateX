@@ -41,12 +41,13 @@ def load_apl_file(spec: str, apl_const_name: str) -> str | None:
 # 3.3.5a). "estandar" es siempre la StandardTalents de wowsims (la misma que
 # usan las simulaciones de gear), para que la comparación tenga una build de
 # referencia validada.
+# Las cadenas de cada variante deben salir de una build real (wowsims
+# StandardTalents, o una distribución consultada en
+# https://db.warcrafted.com/?talent, la base de datos de nuestro propio
+# servidor), nunca de mover dígitos a mano sin verificar cada talento ahí.
+# Una build "57/14" o similar no reparte los puntos sobrantes en cualquier
+# hueco: puede buscar versatilidad, no solo el stat principal.
 TALENT_VARIANTS = {
-    # Solo StandardTalents por ahora (la misma que usan las simulaciones de
-    # gear): sirve para validar el pipeline. Construir variantes reales
-    # (mover puntos entre talentos concretos) exige mapear qué dígito de la
-    # cadena corresponde a qué talento en cada fila del árbol; queda para la
-    # siguiente iteración, no algo a improvisar sin verificarlo en el juego.
     "feral_druid": [
         ("estandar", "-503202132322010053120230310511-205503012"),
     ],

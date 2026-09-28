@@ -4,6 +4,8 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 
 ## Sin publicar
 ### Añadido
+- Pestaña Talentos (v0.7, en marcha): compara el DPS/HPS/Amenaza de varias distribuciones de talentos ya simuladas para tu spec, con el mismo equipo. Las distribuciones a comparar se toman de builds reales, no inventadas.
+- `Tools/simular_talentos.py` y `Tools/generar_db_talentos.py`: mismo pipeline que las simulaciones de equipo (SIMX_TALENTS), pero comparando distribuciones de talentos completas en vez de objetos.
 - Comparador de equipo (v0.6): pon dos objetos, uno en cada hueco (arrastrando o con Mayús+clic), y compáralos entre sí o, si dejas el segundo vacío, contra lo que llevas puesto. Muestra el % de cada especialización y, para la tuya, en qué estadísticas se nota la diferencia. Se abre con `/simulatex comparar`, desde un botón en la hoja de personaje (junto al icono de cerrar), desde un icono en el minimapa, o desde la barra de wcdpanel si la tienes instalada.
 - Comparador rediseñado: una tarjeta por objeto con icono, nombre en el color de su calidad, nivel, tipo, ranura, nivel requerido (en rojo si aún no llegas o no puedes usarlo) y todas sus estadísticas, en verde lo que tiene de más y en rojo lo que tiene de menos que el otro. Avisa si el objeto trae gemas o encantamiento, que no entran en el cálculo. Si dejas B vacío, la tarjeta muestra el objeto que llevas puesto.
 - Comparador: anillos y abalorios se comparan con los dos que llevas a la vez, cada uno en su tarjeta (B y C), y te dice cuál cambiar. Puedes sustituir cualquiera de los dos por otro objeto.
