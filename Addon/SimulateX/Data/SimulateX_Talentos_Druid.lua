@@ -12,6 +12,14 @@ SimulateX_Talentos_Druid = {
         tps = 11397.3,
         dtps = 0,
       },
+      {
+        label = "mas_potp",
+        talents = "-503202132322010053101330310511-205503012",
+        dps = 15962.2,
+        hps = 0,
+        tps = 11397.3,
+        dtps = 0,
+      },
     },
   },
 }

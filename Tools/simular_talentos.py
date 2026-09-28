@@ -18,6 +18,9 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from simular_builds import (
     build_env, run_go_extractor, run_wowsimcli, extract_metrics, load_json, TOOLS_DIR,
 )
+from validar_talentos import validate_build, CLASS_ID_TO_GAME_CLASS
+
+GAME_CLASS_TO_CLASS_ID = {v: k for k, v in CLASS_ID_TO_GAME_CLASS.items()}
 
 DATA_DIR = TOOLS_DIR.parent / "Data"
 OUT_DIR = DATA_DIR / "talentos"
@@ -41,15 +44,20 @@ def load_apl_file(spec: str, apl_const_name: str) -> str | None:
 # 3.3.5a). "estandar" es siempre la StandardTalents de wowsims (la misma que
 # usan las simulaciones de gear), para que la comparación tenga una build de
 # referencia validada.
-# Las cadenas de cada variante deben salir de una build real (wowsims
-# StandardTalents, o una distribución consultada en
-# https://db.warcrafted.com/?talent, la base de datos de nuestro propio
-# servidor), nunca de mover dígitos a mano sin verificar cada talento ahí.
-# Una build "57/14" o similar no reparte los puntos sobrantes en cualquier
-# hueco: puede buscar versatilidad, no solo el stat principal.
+# Cada cadena se valida con validar_talentos.py contra
+# Tools/talentos_referencia/talents_wotlk_335_esES.json (Talent.dbc/
+# TalentTab.dbc reales del servidor, no deducidas del código del motor ni de
+# una web que no se pudo leer). CLASS_ID por clase en validar_talentos.py.
 TALENT_VARIANTS = {
+    # estandar = StandardTalents (la misma de las simulaciones de gear): 71
+    # puntos, todo talento con impacto en DPS ya al máximo salvo Protector de
+    # la manada (2/3). "mas_potp" solo mueve los 2 puntos de Líder de la
+    # manada mejorado (maná, sin uso en DPS puro) a completar Protector de la
+    # manada (3/3, +2% AP más) y 1 punto a Tenacidad primigenia (utilidad
+    # PvP, sin más hueco ofensivo disponible en el árbol).
     "feral_druid": [
         ("estandar", "-503202132322010053120230310511-205503012"),
+        ("mas_potp", "-503202132322010053101330310511-205503012"),
     ],
 }
 
@@ -117,6 +125,17 @@ def main() -> None:
     variants = TALENT_VARIANTS.get(args.spec)
     if not variants:
         raise SystemExit(f"sin variantes de talentos definidas para {args.spec} (ver TALENT_VARIANTS)")
+
+    from generar_db_addon import SPEC_INFO
+    game_class = SPEC_INFO[args.spec][0]
+    class_id = GAME_CLASS_TO_CLASS_ID.get(game_class)
+    if class_id is None:
+        raise SystemExit(f"sin class_id de Talent.dbc para {game_class} (ver CLASS_ID_TO_GAME_CLASS)")
+
+    for label, talents_string in variants:
+        ok, info = validate_build(class_id, talents_string)
+        if not ok:
+            raise SystemExit(f"variante '{label}' inválida contra las DBC reales: {info}")
 
     build = pick_reference_build(args.spec)
     print(f"build de referencia: {build['_build_id']} (gear={build['gear_file']}, apl={build.get('apl')})")

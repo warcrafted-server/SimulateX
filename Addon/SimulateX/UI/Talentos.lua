@@ -8,6 +8,9 @@
 local ROW_HEIGHT = 26
 local rows = {}
 
+-- mismo umbral que el comparador de equipo (SimulateX.lua::NOISE_THRESHOLD_PCT)
+local NOISE_THRESHOLD_PCT = 0.3
+
 local function GetTalentDataForClass()
     local classFileName = select(2, UnitClass("player"))
     local varName = SimulateX_TalentDataVars and SimulateX_TalentDataVars[classFileName]
@@ -63,6 +66,18 @@ local function RenderVariants(page, spec)
         best = math.max(best, variant[metric] or 0)
     end
 
+    local allTied = #specData.variants > 1
+    if allTied then
+        for _, variant in ipairs(specData.variants) do
+            local diff = best > 0 and ((variant[metric] or 0) / best - 1) * 100 or 0
+            if math.abs(diff) >= NOISE_THRESHOLD_PCT then
+                allTied = false
+                break
+            end
+        end
+    end
+    if allTied then page.tiedText:Show() else page.tiedText:Hide() end
+
     local width = page.list:GetWidth()
     for index, variant in ipairs(specData.variants) do
         local row = GetRow(page.list, index)
@@ -77,13 +92,21 @@ local function RenderVariants(page, spec)
         row.bar:ClearAllPoints()
         row.bar:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 8, 2)
         row.bar:SetWidth(math.max(1, (width - 90) * fraction))
+
+        local diff = best > 0 and ((variant[metric] or 0) / best - 1) * 100 or 0
         local isBest = (variant[metric] or 0) >= best
-        row.bar:SetTexture(isBest and 0.3 or 0.6, isBest and 1 or 0.6, isBest and 0.3 or 0.6, 0.7)
-        if isBest then
+        local isNoise = math.abs(diff) < NOISE_THRESHOLD_PCT
+
+        if isNoise then
+            row.bar:SetTexture(0.65, 0.65, 0.65, 0.6)
+            row.percent:SetText(isBest and "referencia" or "≈ igual")
+            row.percent:SetTextColor(0.65, 0.65, 0.65)
+        elseif isBest then
+            row.bar:SetTexture(0.3, 1, 0.3, 0.7)
             row.percent:SetText("mejor")
             row.percent:SetTextColor(0.3, 1, 0.3)
         else
-            local diff = best > 0 and ((variant[metric] or 0) / best - 1) * 100 or 0
+            row.bar:SetTexture(0.6, 0.6, 0.6, 0.7)
             row.percent:SetText(string.format("%.1f %%", diff))
             row.percent:SetTextColor(1, 0.6, 0.3)
         end
@@ -115,6 +138,14 @@ function SimulateX_BuildTalentsPage(parent)
     page.emptyText:SetPoint("RIGHT", 0, 0)
     page.emptyText:SetJustifyH("LEFT")
 
+    page.tiedText = page:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    page.tiedText:SetPoint("TOPLEFT", line, "BOTTOMLEFT", 0, -10)
+    page.tiedText:SetPoint("RIGHT", 0, 0)
+    page.tiedText:SetJustifyH("LEFT")
+    page.tiedText:SetText("Todas rinden igual: los puntos libres de esta build no tienen ningún talento ofensivo mejor donde ponerlos.")
+    page.tiedText:SetTextColor(0.7, 0.7, 0.5)
+    page.tiedText:Hide()
+
     local note = page:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
     note:SetPoint("BOTTOM", page, "BOTTOM", 0, 0)
     note:SetPoint("LEFT", 0, 0)
@@ -123,7 +154,7 @@ function SimulateX_BuildTalentsPage(parent)
     note:SetText("Compara distribuciones ya simuladas, no puntos de talento sueltos: cada fila es un árbol completo.")
 
     page.list = CreateFrame("Frame", nil, page)
-    page.list:SetPoint("TOPLEFT", line, "BOTTOMLEFT", 0, -14)
+    page.list:SetPoint("TOPLEFT", page.tiedText, "BOTTOMLEFT", 0, -8)
     page.list:SetPoint("RIGHT", 0, 0)
     page.list:SetPoint("BOTTOM", note, "TOP", 0, 4)
 
