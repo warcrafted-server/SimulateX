@@ -106,6 +106,8 @@ Mismo patrón que Druida: sin variante real de Nivel 2 en las 3 specs.
   bloqueo: sin punto de bajada disponible sin romper cascada. **Pendiente**.
 
 Sacerdote es la primera clase con candidatos de rendimiento real detectados
-(a diferencia del patrón "todo al máximo" de Druida/Paladín), pero completar
-la variante exige tocar el árbol Disciplina para liberar puntos sin romper
-su propia cascada — trabajo no terminado en esta sesión, retomar aquí.
+(a diferencia del patrón "todo al máximo" de Druida/Paladín), pero el árbol
+Disciplina de la build Sagrado (18 puntos) tampoco tiene ningún candidato de
+bajada disponible sin romper su propia cascada: mismo patrón que las demás
+clases. Ninguna de las 4 specs de Sacerdote tiene variante Nivel 2 real con
+esta build de referencia.
