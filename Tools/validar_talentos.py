@@ -18,6 +18,12 @@ CLASS_ID_TO_GAME_CLASS = {
     6: "Deathknight", 7: "Shaman", 8: "Mage", 9: "Warlock", 11: "Druid",
 }
 
+# Prerrequisitos rotos conocidos en Tools/talentos_referencia/ (huérfanos:
+# el talento requerido no existe en Talent.dbc, ver su fichero de validación
+# "_validation.txt", sección "Failures"). Se ignoran en vez de bloquear el
+# árbol entero; no se adivina cuál era el id correcto.
+KNOWN_BROKEN_PREREQUISITES = {1756, 1993}
+
 
 def load_reference() -> list:
     return json.loads(REFERENCE_PATH.read_text(encoding="utf-8"))
@@ -49,7 +55,7 @@ def validate_tree(talents: list, digits: str) -> tuple[bool, str, int]:
         if talent["required_points"] > spent and n > 0:
             return False, (f"{talent['name']}: su fila pide {talent['required_points']} puntos "
                             f"gastados en el árbol antes, hay {spent}"), spent
-        if talent["required_talent"] and n > 0:
+        if talent["required_talent"] and n > 0 and talent["talent_id"] not in KNOWN_BROKEN_PREREQUISITES:
             need_id, need_rank = talent["required_talent"], talent["required_talent_rank"]
             if ranks_by_id.get(need_id, 0) < need_rank:
                 return False, f"{talent['name']}: requiere el talento {need_id} a rango {need_rank}", spent
@@ -64,8 +70,12 @@ def validate_build(class_id: int, talents_string: str) -> tuple[bool, str]:
     depende del nivel del personaje simulado, ajeno a este fichero."""
     reference = load_reference()
     blocks = talents_string.split("-")
+    # wowsims trunca también un tercer bloque vacío entero (no solo sus ceros
+    # finales): "50...-50..." sin el "-" final es tan válido como "50...-50...-"
+    while len(blocks) < 3:
+        blocks.append("")
     if len(blocks) != 3:
-        return False, f"se esperaban 3 bloques separados por '-', hay {len(blocks)}"
+        return False, f"se esperaban como máximo 3 bloques separados por '-', hay {len(blocks)}"
 
     total = 0
     for tree_index, digits in enumerate(blocks):

@@ -39,3 +39,26 @@ gasta sus puntos en un óptimo local dentro de su propio total. Encontrar algo
 mejor exigiría permitir cambiar varias filas a la vez (más o menos puntos
 totales, o redistribuciones de varias filas simultáneas), que es
 precisamente el problema del Nivel 3 (búsqueda combinatoria), no del Nivel 2.
+
+## Paladín
+
+- **Sagrado (holy_paladin)**: cadena estándar tiene solo 2 bloques
+  (`50350151020013053100515221-50023131203`), sin el tercer bloque de
+  Reprensión: formato válido de wowsims (trunca el bloque entero si está
+  vacío), ajustado `validar_talentos.py` para tolerarlo. Candidatos con
+  margen (Imposición de manos mejorada, Anticipación, Consistencia): ninguno
+  aparece en los 38 campos `Talents.X` reales de `sim/paladin/`, o su efecto
+  no aporta a HPS (Anticipación es +esquiva).
+- **Protección (protection_paladin)**: candidatos (Expiación, Armonización
+  espiritual, Oración, Sentencias mejoradas). Armonización espiritual
+  (`SpiritualAttunement`) sí está implementada, pero solo restaura maná al
+  recibir daño; no afecta a amenaza ni supervivencia (las métricas que mide
+  la simulación de tanque). El resto no aparece en el motor.
+- **Reprensión (retribution_paladin)**: sin ningún candidato de subida (todo
+  lo relevante ya está al máximo o a 0 sin puntos sueltos intermedios). Su
+  cadena estándar además referencia un prerrequisito roto en las DBC
+  (talento 1756 pide 1409, que no existe; ver validation.txt de la
+  extracción) — añadido a `KNOWN_BROKEN_PREREQUISITES` en
+  `validar_talentos.py` en vez de intentar adivinar el id correcto.
+
+Mismo patrón que Druida: sin variante real de Nivel 2 en las 3 specs.
