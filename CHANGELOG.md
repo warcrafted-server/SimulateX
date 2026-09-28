@@ -2,6 +2,17 @@
 
 Todos los cambios notables de este proyecto serán documentados en este archivo.
 
+## Sin publicar
+### Añadido
+- Opción en el panel para quitar la flecha naranja (la que sale cuando el objeto solo mejora otra especialización). Activada por defecto.
+### Cambiado
+- Tooltip más claro: una línea por especialización con un único % de mejora o pérdida (verde/rojo, "≈ igual" en gris), sin unidades ni líneas de Supervivencia/Amenaza. La cabecera indica contra qué objeto equipado se compara.
+- Por debajo de nivel 80 el % se calcula sobre el personaje entero (equipo puesto más estadísticas base), no solo sobre el equipo. Antes daba cifras infladas (p. ej. +115 % en Restauración por 15 de espíritu).
+- Los tanques se valoran por su amenaza: el daño recibido de sus simulaciones no es fiable (el jefe apenas les pega).
+### Corregido
+- Feral y Guardián contaban las dos como "tu spec" (comparten árbol de talentos), así que dos objetos podían salir como mejora el uno del otro. Ahora decide la forma: oso = Guardián, felina = Feral; en forma humanoide se usa la última forma.
+- La flecha de mejora salía en casi cualquier objeto: por debajo de 80, Supervivencia y Amenaza eran la misma cifra con el signo cambiado, así que una de las dos siempre parecía mejorar.
+
 ## v0.3.0 - 2026-09-27
 ### Añadido
 - Panel de configuración en Interfaz > AddOns (`/simulatexconfig` como alternativa): activar/desactivar el modo estimado de nivel 1-79, y elegir qué sub-especializaciones de la clase se muestran en el tooltip.

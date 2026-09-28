@@ -26,8 +26,22 @@ lowLevelCheck:SetScript("OnClick", function(self)
     SimulateX_DB.lowLevelEstimateDisabled = not self:GetChecked()
 end)
 
+local otherArrowCheck = CreateFrame("CheckButton", "SimulateXOptionsOtherArrowCheck", panel, "UICheckButtonTemplate")
+otherArrowCheck:SetPoint("TOPLEFT", lowLevelCheck, "BOTTOMLEFT", 0, -8)
+local otherArrowText = _G[otherArrowCheck:GetName() .. "Text"]
+otherArrowText:SetText("Flecha naranja si el objeto solo mejora otra especialización")
+otherArrowText:SetWidth(380)
+otherArrowText:SetJustifyH("LEFT")
+
+otherArrowCheck:SetScript("OnClick", function(self)
+    SimulateX_DB.otherSpecArrowDisabled = not self:GetChecked()
+    if SimulateX_RefreshIcons then
+        SimulateX_RefreshIcons()
+    end
+end)
+
 local specsLabel = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-specsLabel:SetPoint("TOPLEFT", lowLevelCheck, "BOTTOMLEFT", 2, -20)
+specsLabel:SetPoint("TOPLEFT", otherArrowCheck, "BOTTOMLEFT", 2, -20)
 specsLabel:SetText("Sub-especializaciones a mostrar (nivel 80):")
 
 local specCheckboxes = {}
@@ -81,6 +95,7 @@ end
 
 panel.refresh = function()
     lowLevelCheck:SetChecked(not SimulateX_DB.lowLevelEstimateDisabled)
+    otherArrowCheck:SetChecked(not SimulateX_DB.otherSpecArrowDisabled)
     RebuildSpecCheckboxes()
 end
 

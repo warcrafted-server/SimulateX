@@ -9,7 +9,7 @@ El proyecto está diseñado para transformar por completo la forma en que los ju
 ## Características Principales
 
 *   **Datos Reales por Especialización y Nivel:** Los pesos de cada estadística salen de simulaciones de combate reales por especialización (motor WowSims), con el escalado por nivel calculado desde las tablas del propio servidor: no son aproximaciones genéricas.
-*   **Indicadores de Mejora en Tooltips:** Visualiza de forma inmediata el rendimiento real que ganarás o perderás al pasar el ratolí sobre cualquier pieza de equipo (ej. `+145 DPS`).
+*   **Indicadores de Mejora en Tooltips:** Visualiza de forma inmediata el rendimiento real que ganarás o perderás al pasar el ratolí sobre cualquier pieza de equipo (ej. `Feral (tu spec) +3.2 %`), con una línea por cada especialización de tu clase.
 *   **Comparador Visual de Equipamiento:** Una interfaz moderna, limpia e interactiva para contrastar piezas de equipamiento en paralelo, analizando el impacto global en tu personaje.
 *   **Asistente de Búsqueda (Lista de la Compra):** Una guía visual que te indica de forma ordenada qué objetos necesitas buscar para mejorar tu personaje y qué jefes de banda, mazmorras o intendentes los proporcionan.
 *   **Diseño Vanguardista:** Interfaz fluida y reactiva, alejada de la estética tosca y obsoleta de los addons clásicos.

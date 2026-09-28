@@ -41,8 +41,33 @@ Plan: `datos-completos-v0.4.PLAN.md` (mismo directorio). Auditoría de errores E
   `Data/sims/<spec>/<build_id>.json` ya existe con `status: ok` y lo salta si es así.
   Relanzar el mismo comando tras una interrupción retoma justo donde se quedó, sin
   volver a gastar CPU en lo ya hecho. `--force` repite todo desde cero si hace falta.
-- **Sin hacer todavía**: commit + push (pedir permiso primero); pruebas en juego de
-  Equilibrio/Guardián/Restauración.
+- Commit `74be63b` (Druida completo + reanudación) ya pusheado.
+
+**Tras la 1ª prueba en juego de Druida (2026-09-28, sin commit):** el usuario pidió un
+tooltip más claro y reportó flecha de mejora en ambas piezas de un intercambio. Cambios
+en `SimulateX.lua` (decisiones del usuario, sustituyen al formato de tooltip del paso 6 del
+PLAN):
+- Tooltip = cabecera `SimulateX  vs. <equipado>` + **una línea por spec** con un único %
+  (`AddDoubleLine`, verde/rojo, "≈ igual" gris). Sin unidades (DPS/HPS), sin
+  Supervivencia/Amenaza, sin "estimado/simulado". Una métrica por rol (`ROLE_METRIC`):
+  dps, hps, y **tps para tanques**.
+- "Tu spec" (`GetActiveSpecKey`): árbol con más puntos; si lo comparten varias specs,
+  Druida decide por forma (oso = tanque, felina = dps, `UnitAura` id 5487/9634/768 o
+  icono; se recuerda en `SimulateX_DB.feralRole`, evento `UPDATE_SHAPESHIFT_FORM`),
+  Sacerdote disciplina prefiere Sanación. Antes Feral y Guardián eran activas a la vez.
+- % por debajo de 80 (o preset) = ganancia / (EP del equipo + EP de las primarias base
+  de `UnitStat`: `stat − posBuff − negBuff`, verificado en `PaperDollFrame.lua` 3.3.5a).
+- Causa de "flecha en casi todo": por debajo de 80 Supervivencia y Amenaza usaban los
+  mismos pesos con signo invertido (una de las dos siempre > 0).
+- **Limitación conocida de tanques**: `compute_stat_weights` solo lee `dps.weights`, y
+  el dtps de las simulaciones de tanque es ruido (`feral_tank_druid` p1: dtps base 59.1,
+  deltas de −11 a +65). El valor de tanque ignora aguante/armadura/esquivar hasta
+  re-simular los tanques con un encuentro donde el jefe pegue al tanque (afecta a
+  feral_tank_druid, protection_paladin, protection_warrior, tank_deathknight). Pendiente
+  de que el usuario decida si se hace.
+- Flecha naranja ("mejora otra spec"): casilla en el panel
+  (`SimulateX_DB.otherSpecArrowDisabled`, activada por defecto), decisión del usuario.
+- **Sin hacer todavía**: prueba en juego de estos cambios; commit + push (pedir permiso).
 
 ## Entorno
 

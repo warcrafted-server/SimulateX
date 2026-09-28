@@ -46,6 +46,40 @@ local function GetActiveTalentTree()
     return bestTree
 end
 
+-- Feral y Guardián comparten árbol: decide la forma (oso = tanque, felina =
+-- dps). Icono como respaldo por si el cliente no da el id de hechizo.
+local BEAR_FORM_SPELLS = { [5487] = true, [9634] = true }
+local CAT_FORM_SPELL = 768
+
+local function GetDruidFormRole()
+    for i = 1, 40 do
+        local name, _, icon, _, _, _, _, _, _, _, spellId = UnitAura("player", i, "HELPFUL")
+        if not name then
+            return nil
+        end
+        local iconLower = icon and icon:lower() or ""
+        if BEAR_FORM_SPELLS[spellId] or iconLower:find("bearform") then
+            return "tank"
+        end
+        if spellId == CAT_FORM_SPELL or iconLower:find("catform") then
+            return "dps"
+        end
+    end
+    return nil
+end
+
+-- Rol que cuenta como "tu spec" si varias specs comparten el árbol activo.
+-- Druida: la última forma usada (en humanoide no hay pista). Sacerdote
+-- disciplina: Sanación antes que Castigo.
+local SHARED_TREE_ROLE = { PRIEST = "healer" }
+
+local function GetSharedTreeRole(classFileName)
+    if classFileName == "DRUID" then
+        return SimulateX_DB.feralRole or "dps"
+    end
+    return SHARED_TREE_ROLE[classFileName] or "dps"
+end
+
 --[[----------------------------------------------------------------------
     USABILIDAD: se decide con datos de item_template (Data/SimulateX_ItemTypes.lua)
     y GetItemInfo, nunca construyendo un tooltip: hacerlo mientras el cliente
@@ -678,10 +712,9 @@ end
 
 --[[----------------------------------------------------------------------
     PORCENTAJE Y RUIDO: a 80 con weightsKind = "sim" el % es sobre base
-    (dps/hps/tps/dtps de la build); en cualquier otro caso (preset, o nivel
-    < 80) no hay "base" de referencia con sentido con pesos reescalados, así
-    que el % es sobre la suma de puntuación EP de todo el equipo actual con
-    esos mismos pesos. |ganancia| < 0.3 % del denominador → "≈ igual".
+    (dps/hps/tps de la build); en cualquier otro caso (preset, o nivel < 80)
+    es sobre la puntuación EP del personaje entero con esos mismos pesos:
+    equipo puesto + estadísticas base. |ganancia| < 0.3 % → "≈ igual".
 ------------------------------------------------------------------------]]
 
 local NOISE_THRESHOLD_PCT = 0.3
@@ -697,6 +730,26 @@ local function GetEquippedTotalScore(weights, build)
     return total
 end
 
+-- Índice de UnitStat: 1 fuerza, 2 agilidad, 3 aguante, 4 intelecto, 5 espíritu.
+local PRIMARY_STAT_KEYS = {
+    "ITEM_MOD_STRENGTH_SHORT", "ITEM_MOD_AGILITY_SHORT", "ITEM_MOD_STAMINA_SHORT",
+    "ITEM_MOD_INTELLECT_SHORT", "ITEM_MOD_SPIRIT_SHORT",
+}
+
+-- Primarias sin equipo ni buffs (la cifra entre paréntesis de la hoja de
+-- personaje): el equipo ya lo cuenta GetEquippedTotalScore.
+local function GetBaseStatsScore(weights)
+    local total = 0
+    for statIndex, key in ipairs(PRIMARY_STAT_KEYS) do
+        local weight = weights[key]
+        if weight then
+            local stat, _, posBuff, negBuff = UnitStat("player", statIndex)
+            total = total + weight * ((stat or 0) - (posBuff or 0) - (negBuff or 0))
+        end
+    end
+    return total
+end
+
 -- Devuelve (percent, isNoise). base80 es build.base[metricName] (solo válido
 -- si weightsKind == "sim" y el jugador está a nivel 80).
 local function ComputePercent(gain, weightsKind, playerLevel, base80, weights, build)
@@ -704,7 +757,7 @@ local function ComputePercent(gain, weightsKind, playerLevel, base80, weights, b
     if weightsKind == "sim" and playerLevel >= 80 and base80 and base80 ~= 0 then
         denominator = base80
     else
-        denominator = GetEquippedTotalScore(weights, build)
+        denominator = GetEquippedTotalScore(weights, build) + GetBaseStatsScore(weights)
     end
 
     if not denominator or denominator == 0 then
@@ -721,17 +774,10 @@ end
     para el tooltip y para la flecha de mejora.
 ------------------------------------------------------------------------]]
 
--- role de la build -> lista de métricas a mostrar (nombre, etiqueta,
--- menorEsMejor). Tanque muestra las DOS (Supervivencia y Amenaza): arregla
--- E8, antes mostraba "DPS" para tanque, un dato que no le sirve al jugador.
-local ROLE_METRICS = {
-    dps = { { metric = "dps", label = "DPS", lowerIsBetter = false } },
-    healer = { { metric = "hps", label = "HPS", lowerIsBetter = false } },
-    tank = {
-        { metric = "dtps", label = "Supervivencia", lowerIsBetter = true },
-        { metric = "tps", label = "Amenaza", lowerIsBetter = false },
-    },
-}
+-- Una sola métrica por rol: el tooltip da un % global por spec.
+-- Tanque: amenaza, no dtps. En sus simulaciones el jefe apenas pega (dtps
+-- base ~60), así que el daño recibido es ruido.
+local ROLE_METRIC = { dps = "dps", healer = "hps", tank = "tps" }
 
 -- Nombre del objeto (u objetos) contra el que se comparó, para la línea
 -- "vs. X" del tooltip. Usa el mismo criterio que CompareAgainstEquipped para
@@ -790,53 +836,66 @@ local function GetComparisonLabel(equipLoc, build, weights, metricName)
     return worstLink and GetItemInfo(worstLink)
 end
 
--- Devuelve una lista de evaluaciones (una para dps/healer, dos para tank:
--- Supervivencia y Amenaza). "gain"/"percent" siempre positivo = mejora, ya
--- invertido para las métricas donde menor es mejor (dtps).
+-- Una evaluación por build, o nil si no es usable o el slot no es comparable
+-- (camisa, tabardo, munición...). gain > 0 = mejora.
 local function EvaluateBuild(itemLink, itemId, equipLoc, buildId, build, playerLevel, classGameName)
-    local roleMetrics = ROLE_METRICS[build.role] or ROLE_METRICS.dps
     if not IsItemUsable(itemLink) then
         return nil
     end
 
+    local metric = ROLE_METRIC[build.role] or "dps"
     local weights = GetWeightsAtLevel(build, playerLevel, classGameName)
-    local blockedByLevel = IsBlockedByLevelOnly(itemLink)
-    local isExact = (build.weightsKind == "sim" and playerLevel >= 80)
+    local gain = CompareAgainstEquipped(itemLink, itemId, equipLoc, build, weights, metric)
+    if gain == nil then
+        return nil
+    end
 
-    local evaluations = {}
-    for _, roleInfo in ipairs(roleMetrics) do
-        local rawGain = CompareAgainstEquipped(itemLink, itemId, equipLoc, build, weights, roleInfo.metric)
-        if rawGain ~= nil then
-            local gain = roleInfo.lowerIsBetter and -rawGain or rawGain
-            local percent, isNoise = ComputePercent(gain, build.weightsKind, playerLevel,
-                build.base and build.base[roleInfo.metric] and (roleInfo.lowerIsBetter and -build.base[roleInfo.metric] or build.base[roleInfo.metric]),
-                weights, build)
-            local comparisonLabel = GetComparisonLabel(equipLoc, build, weights, roleInfo.metric)
+    local percent, isNoise = ComputePercent(gain, build.weightsKind, playerLevel,
+        build.base and build.base[metric], weights, build)
 
-            table.insert(evaluations, {
-                buildId = buildId,
-                specLabel = build.specLabel or build.spec,
-                role = build.role,
-                metricLabel = roleInfo.label,
-                comparisonLabel = comparisonLabel,
-                gain = gain,
-                percent = percent,
-                isNoise = isNoise,
-                isExact = isExact,
-                blockedByLevel = blockedByLevel,
-                talentTree = build.talentTree,
-            })
+    return {
+        buildId = buildId,
+        spec = build.spec,
+        specLabel = build.specLabel or build.spec,
+        role = build.role,
+        metric = metric,
+        comparisonLabel = GetComparisonLabel(equipLoc, build, weights, metric),
+        gain = gain,
+        percent = percent,
+        isNoise = isNoise,
+        isExact = (build.weightsKind == "sim" and playerLevel >= 80),
+        blockedByLevel = IsBlockedByLevelOnly(itemLink),
+        talentTree = build.talentTree,
+    }
+end
+
+-- Clave (spec#árbol) de la build que cuenta como "tu spec": la del árbol con
+-- más puntos y, si ese árbol lo comparten varias specs, la del rol de
+-- GetSharedTreeRole.
+local function GetActiveSpecKey(bestBySpec, classFileName)
+    local activeTree = GetActiveTalentTree()
+    local candidates = {}
+    for key, entry in pairs(bestBySpec) do
+        if entry.build.talentTree == activeTree then
+            table.insert(candidates, key)
         end
     end
-
-    if #evaluations == 0 then
-        return nil  -- slot no comparable (camisa, tabardo, munición, ...)
+    if #candidates <= 1 then
+        return candidates[1]
     end
-    return evaluations
+
+    table.sort(candidates)  -- pairs() no tiene orden fijo
+    local wantedRole = GetSharedTreeRole(classFileName)
+    for _, key in ipairs(candidates) do
+        if bestBySpec[key].build.role == wantedRole then
+            return key
+        end
+    end
+    return candidates[1]
 end
 
 -- Evalúa el objeto contra todas las builds relevantes de la clase del
--- jugador (una por spec real, decisión 9), ordenadas: la activa primero.
+-- jugador (una línea por spec, decisión 9), la activa primero.
 local function GetItemEvaluations(itemLink)
     local classFileName = select(2, UnitClass("player"))
     local gameClassName = CLASS_FILE_TO_GAME_CLASS[classFileName]
@@ -852,24 +911,32 @@ local function GetItemEvaluations(itemLink)
         return nil
     end
 
-    local activeTree = GetActiveTalentTree()
     local bestBySpec = GetBestBuildPerSpec(classData)
+    local activeKey = GetActiveSpecKey(bestBySpec, classFileName)
     local playerLevel = GetEffectivePlayerLevel()
 
-    local results = {}
-    for _, entry in pairs(bestBySpec) do
-        local specEnabled = SimulateX_DB.disabledSpecs == nil
-            or not SimulateX_DB.disabledSpecs[entry.build.specLabel or entry.build.spec]
+    -- Por etiqueta: Sanación tiene build de disciplina y de sagrado, pero en
+    -- el tooltip es una sola línea (la del árbol activo si la hay).
+    local byLabel = {}
+    for key, entry in pairs(bestBySpec) do
+        local specLabel = entry.build.specLabel or entry.build.spec
+        local specEnabled = SimulateX_DB.disabledSpecs == nil or not SimulateX_DB.disabledSpecs[specLabel]
         if specEnabled then
-            local evaluations = EvaluateBuild(itemLink, itemId, equipLoc, entry.buildId, entry.build, playerLevel, gameClassName)
-            if evaluations then
-                local isActive = (entry.build.talentTree == activeTree)
-                for _, evaluation in ipairs(evaluations) do
-                    evaluation.isActive = isActive
-                    table.insert(results, evaluation)
+            local evaluation = EvaluateBuild(itemLink, itemId, equipLoc, entry.buildId, entry.build, playerLevel, gameClassName)
+            if evaluation then
+                evaluation.isActive = (key == activeKey)
+                local current = byLabel[specLabel]
+                if not current or (evaluation.isActive and not current.isActive)
+                    or (not current.isActive and evaluation.talentTree < current.talentTree) then
+                    byLabel[specLabel] = evaluation
                 end
             end
         end
+    end
+
+    local results = {}
+    for _, evaluation in pairs(byLabel) do
+        table.insert(results, evaluation)
     end
 
     table.sort(results, function(a, b)
@@ -921,35 +988,25 @@ local function GetUpgradeMarker(itemLink)
     end
 
     if hasActiveUpgrade then return "active" end
-    if hasOtherUpgrade then return "other" end
+    if hasOtherUpgrade and not SimulateX_DB.otherSpecArrowDisabled then return "other" end
     return nil
 end
 
--- mode: "header" (línea principal, spec activa, primera métrica: "SimulateX
--- · Spec (tu spec)  ..."), "secondary" (misma spec activa, métrica extra de
--- tanque: solo el valor, indentado bajo la línea principal), "compact"
--- (otras specs, una línea corta cada una).
-local function FormatEvaluationLine(evaluation, mode)
-    local sign = evaluation.gain >= 0 and "+" or ""
-    local sourceLabel = evaluation.isExact and "simulado" or "estimado"
-    local valueText
+local function FormatPercent(evaluation)
     if evaluation.isNoise then
-        valueText = "≈ igual"
-    else
-        local unit = evaluation.isExact and evaluation.metricLabel or "pts"
-        valueText = string.format("%s%.1f %%  (%s%.0f %s)", sign, evaluation.percent, sign, evaluation.gain, unit)
+        return "≈ igual"
     end
+    return string.format("%+.1f %%", evaluation.percent)
+end
 
-    if mode == "header" then
-        return string.format("SimulateX · %s (%s)       %s   %s",
-            evaluation.specLabel, evaluation.isActive and "tu spec" or "otra spec", valueText, sourceLabel)
+local function GetPercentColor(evaluation)
+    if evaluation.isNoise then
+        return 0.6, 0.6, 0.6
     end
-    if mode == "secondary" then
-        return string.format("%s: %s", evaluation.metricLabel, valueText)
+    if evaluation.gain > 0 then
+        return 0.1, 1, 0.1
     end
-    return string.format("%s: %s%s", evaluation.specLabel,
-        evaluation.isNoise and "≈ igual" or string.format("%s%.1f %%", sign, evaluation.percent),
-        evaluation.isNoise and "" or (evaluation.isExact and (" " .. evaluation.metricLabel) or ""))
+    return 1, 0.3, 0.3
 end
 
 local function OnTooltipSetItem(tooltip)
@@ -970,39 +1027,27 @@ local function OnTooltipSetItem(tooltip)
         return
     end
 
-    -- La spec activa va primero (orden de GetItemEvaluations) y puede traer
-    -- 1 o 2 evaluaciones (tanque: Supervivencia + Amenaza); el resto son de
-    -- otras specs de la misma clase, una línea compacta cada una.
-    local activeEvaluations, otherEvaluations = {}, {}
+    -- bloqueado solo por nivel: el dato existe, pero aún no se enseña
+    if evaluations[1].blockedByLevel then
+        return
+    end
+
+    -- evaluations[1] es la spec activa (si está activada en el panel)
+    local header = "SimulateX"
+    if evaluations[1].comparisonLabel then
+        header = header .. "  vs. " .. evaluations[1].comparisonLabel
+    end
+    tooltip:AddLine(header, 0.6, 0.8, 1)
+
     for _, evaluation in ipairs(evaluations) do
+        local label, lr, lg, lb
         if evaluation.isActive then
-            table.insert(activeEvaluations, evaluation)
+            label, lr, lg, lb = "  " .. evaluation.specLabel .. " (tu spec)", 1, 1, 1
         else
-            table.insert(otherEvaluations, evaluation)
+            label, lr, lg, lb = "  " .. evaluation.specLabel, 0.75, 0.75, 0.75
         end
-    end
-
-    if #activeEvaluations == 0 then
-        return  -- la spec activa no tiene dato para este slot (ej. munición para un caster)
-    end
-    if activeEvaluations[1].blockedByLevel then
-        return  -- bloqueado solo por nivel: dato sí existe, pero no se muestra flecha ni comparación todavía
-    end
-
-    tooltip:AddLine(FormatEvaluationLine(activeEvaluations[1], "header"), 0.6, 0.8, 1)
-    if activeEvaluations[1].comparisonLabel then
-        tooltip:AddLine("  vs. " .. activeEvaluations[1].comparisonLabel, 0.7, 0.7, 0.7)
-    end
-    for i = 2, #activeEvaluations do
-        tooltip:AddLine("  " .. FormatEvaluationLine(activeEvaluations[i], "secondary"), 0.6, 0.8, 1)
-    end
-
-    if #otherEvaluations > 0 then
-        local otherParts = {}
-        for _, evaluation in ipairs(otherEvaluations) do
-            table.insert(otherParts, FormatEvaluationLine(evaluation, "compact"))
-        end
-        tooltip:AddLine("  Otras: " .. table.concat(otherParts, ", "), 0.6, 0.6, 0.6)
+        local pr, pg, pb = GetPercentColor(evaluation)
+        tooltip:AddDoubleLine(label, FormatPercent(evaluation), lr, lg, lb, pr, pg, pb)
     end
 
     tooltip:Show()
@@ -1263,6 +1308,7 @@ local function RefreshOpenContainers()
         UpdateOpenMailIcons()
     end
 end
+SimulateX_RefreshIcons = RefreshOpenContainers  -- para el panel de opciones
 
 --[[----------------------------------------------------------------------
     REFRESCO: PLAYER_EQUIPMENT_CHANGED, PLAYER_LEVEL_UP, PLAYER_TALENT_UPDATE
@@ -1301,6 +1347,13 @@ local function OnEvent(self, event, ...)
         HookAuctionFrame()
     elseif event == "PLAYER_EQUIPMENT_CHANGED" or event == "PLAYER_LEVEL_UP" or event == "PLAYER_TALENT_UPDATE" then
         RefreshOpenContainers()
+    elseif event == "UPDATE_SHAPESHIFT_FORM" then
+        -- humanoide (o cualquier otra forma) no cambia nada: vale la última
+        local role = GetDruidFormRole()
+        if role and role ~= SimulateX_DB.feralRole then
+            SimulateX_DB.feralRole = role
+            RefreshOpenContainers()
+        end
     end
 end
 
@@ -1308,6 +1361,7 @@ SimulateX:RegisterEvent("ADDON_LOADED")
 SimulateX:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
 SimulateX:RegisterEvent("PLAYER_LEVEL_UP")
 SimulateX:RegisterEvent("PLAYER_TALENT_UPDATE")
+SimulateX:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
 SimulateX:SetScript("OnEvent", OnEvent)
 
 --[[----------------------------------------------------------------------
@@ -1355,9 +1409,10 @@ local function PrintDebugInfo(itemLink)
         print("  Sin evaluación por spec (¿clase sin datos, o slot no comparable?).")
         return
     end
+    print("  Rol feral recordado: " .. tostring(SimulateX_DB.feralRole or "dps (por defecto)"))
     for _, evaluation in ipairs(evaluations) do
-        print(string.format("  %s%s [%s]: ganancia %.2f, %.1f%% %s%s%s",
-            evaluation.isActive and "*" or "", evaluation.specLabel, evaluation.metricLabel,
+        print(string.format("  %s%s [%s, %s]: ganancia %.2f, %.1f%% %s%s%s",
+            evaluation.isActive and "*" or "", evaluation.specLabel, evaluation.buildId, evaluation.metric,
             evaluation.gain, evaluation.percent, evaluation.isExact and "(simulado)" or "(estimado)",
             evaluation.isNoise and " ≈igual" or "", evaluation.blockedByLevel and " [bloqueado por nivel]" or ""))
     end

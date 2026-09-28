@@ -9,7 +9,7 @@ The project is designed to completely transform how players evaluate their gear,
 ## Key Features
 
 *   **Real Data Per Spec and Level:** Each stat's weight comes from real combat simulations per specialization (WowSims engine), with level scaling calculated from the server's own tables: no generic approximations.
-*   **Tooltip Upgrade Indicators:** Instantly see the actual performance delta when hovering over any piece of gear (e.g., `+145 DPS`).
+*   **Tooltip Upgrade Indicators:** Instantly see the actual performance delta when hovering over any piece of gear (e.g., `Feral (tu spec) +3.2 %`), with one line per specialization of your class.
 *   **Visual Gear Comparator:** A modern, clean, and interactive interface to compare items side-by-side, analyzing the overall impact on your character.
 *   **Upgrade Guide (Shopping List):** A visual guide showing you exactly which items to look for to upgrade your character and which raid bosses, dungeons, or quartermasters drop them.
 *   **Modern UI Aesthetics:** A smooth and responsive user interface, moving away from the clunky and outdated look of classic addons.
