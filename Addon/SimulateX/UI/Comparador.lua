@@ -4,8 +4,8 @@
     Configuración. El cálculo sale siempre de SimulateX_API (SimulateX.lua).
 ------------------------------------------------------------------------]]
 
-local PANEL_WIDTH = 800
-local PANEL_HEIGHT = 580
+local PANEL_WIDTH = 940
+local PANEL_HEIGHT = 600
 local SIDEBAR_WIDTH = 150
 local HEADER_HEIGHT = 58
 local CONTENT_LEFT = SIDEBAR_WIDTH + 14

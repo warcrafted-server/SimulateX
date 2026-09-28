@@ -22,4 +22,19 @@ SimulateX_Talentos_Druid = {
       },
     },
   },
+  ["feral_tank_druid"] = {
+    specLabel = "Guardián",
+    metric = "tps",
+    referenceBuild = "p4",
+    variants = {
+      {
+        label = "estandar",
+        talents = "-503232132322010353120300313511-20350001",
+        dps = 5498.1,
+        hps = 0,
+        tps = 11505.2,
+        dtps = 3101.2,
+      },
+    },
+  },
 }

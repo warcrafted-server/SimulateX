@@ -16,7 +16,7 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from simular_builds import (
-    build_env, run_go_extractor, run_wowsimcli, extract_metrics, load_json, TOOLS_DIR,
+    build_env, run_go_extractor, run_wowsimcli, extract_metrics, load_json, TOOLS_DIR, apl_suffix,
 )
 from validar_talentos import validate_build, CLASS_ID_TO_GAME_CLASS
 
@@ -59,12 +59,26 @@ TALENT_VARIANTS = {
         ("estandar", "-503202132322010053120230310511-205503012"),
         ("mas_potp", "-503202132322010053101330310511-205503012"),
     ],
+    # Guardián (feral_tank_druid): StandardTalents de wowsims para tanque,
+    # ya investigada (Tools/NOTAS_TALENTOS_NIVEL2.md): todos los talentos
+    # de fila con impacto en amenaza/supervivencia ya al máximo, sin punto
+    # suelto real. Solo la variante estándar por ahora.
+    "feral_tank_druid": [
+        ("estandar", "-503232132322010353120300313511-20350001"),
+    ],
 }
 
 
 def pick_reference_build(spec: str) -> dict:
     """La build de mayor fase con datos ya consolidados en Data/sims/<spec>,
-    para no repetir la elección de gear/APL best-in-slot."""
+    para no repetir la elección de gear/APL best-in-slot.
+
+    El build_id real (nombre del .json en Data/sims/<spec>/) es el gear_file
+    a secas salvo que haya más de un APL para el mismo gear_file, caso en el
+    que simular_builds.py lo desambigua con un sufijo (ver su build_id_for /
+    apl_suffix). Se prueban ambos formatos en vez de asumir uno solo: asumir
+    siempre el sufijo (como hacía antes) fallaba en specs sin colisión de
+    APL, p.ej. feral_tank_druid, cuyos ficheros son p1.json...p4.json."""
     mapeo_path = MAPEO_DIR / f"{spec}.json"
     if not mapeo_path.exists():
         raise SystemExit(f"no hay mapeo de builds para {spec}: {mapeo_path}")
@@ -72,9 +86,6 @@ def pick_reference_build(spec: str) -> dict:
 
     sims_dir = DATA_DIR / "sims" / spec
     available = {p.stem for p in sims_dir.glob("*.json")} if sims_dir.exists() else set()
-
-    def apl_suffix(apl_const_name):
-        return apl_const_name.lower().replace("apl_rotation_", "apl_rotation_") if apl_const_name else ""
 
     candidates = [b for b in builds if b.get("status") == "ok"]
     # prioriza fase más alta (p4 > p3 > ... > preraid)
@@ -84,10 +95,13 @@ def pick_reference_build(spec: str) -> dict:
 
     candidates.sort(key=phase_rank, reverse=True)
     for build in candidates:
-        build_id = f"{build['phase']}_{apl_suffix(build.get('apl'))}" if build.get("apl") else build["phase"]
-        if build_id in available:
-            build["_build_id"] = build_id
-            return build
+        candidate_ids = [build["gear_file"]]
+        if build.get("apl"):
+            candidate_ids.append(f"{build['gear_file']}_{apl_suffix(build['apl'])}")
+        for build_id in candidate_ids:
+            if build_id in available:
+                build["_build_id"] = build_id
+                return build
     raise SystemExit(f"ninguna build de {spec} tiene datos ya consolidados en {sims_dir}")
 
 
