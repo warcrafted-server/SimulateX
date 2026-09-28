@@ -10,7 +10,7 @@ The project is designed to completely transform how players evaluate their gear,
 
 *   **Real Data Per Spec and Level:** Each stat's weight comes from real combat simulations per specialization (WowSims engine), with level scaling calculated from the server's own tables: no generic approximations.
 *   **Tooltip Upgrade Indicators:** Instantly see the actual performance delta when hovering over any piece of gear (e.g., `Feral (tu spec) +3.2 %`), with one line per specialization of your class.
-*   **Visual Gear Comparator:** Put two items (drag them in or Shift-click) and compare them against each other, or against what you're wearing, with a breakdown of which stat makes the difference. Available via `/simulatex comparar`, a button on the character sheet, the minimap, or the **wcdpanel** bar.
+*   **Visual Gear Comparator:** Put two items (drag them in or Shift-click) and compare them against each other, or against what you're wearing, with a breakdown of which stat makes the difference. Each item shows its stats, level, type and requirements; rings and trinkets are compared against both of the ones you're wearing, and it tells you which one to swap. The same window has a Settings tab. Available via `/simulatex comparar`, a button on the character sheet, the minimap, or the **wcdpanel** bar.
 *   **Upgrade Guide (Shopping List):** A visual guide showing you exactly which items to look for to upgrade your character and which raid bosses, dungeons, or quartermasters drop them.
 *   **Modern UI Aesthetics:** A smooth and responsive user interface, moving away from the clunky and outdated look of classic addons.
 

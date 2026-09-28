@@ -5,13 +5,18 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 ## Sin publicar
 ### Añadido
 - Comparador de equipo (v0.6): pon dos objetos, uno en cada hueco (arrastrando o con Mayús+clic), y compáralos entre sí o, si dejas el segundo vacío, contra lo que llevas puesto. Muestra el % de cada especialización y, para la tuya, en qué estadísticas se nota la diferencia. Se abre con `/simulatex comparar`, desde un botón en la hoja de personaje (junto al icono de cerrar), desde un icono en el minimapa, o desde la barra de wcdpanel si la tienes instalada.
-- Comparador: cada hueco muestra el nombre del objeto (con el color de su calidad), nivel de objeto, tipo y para qué ranura es. Si dejas el hueco B vacío, muestra ahí mismo qué objeto equipado se está usando para comparar.
+- Comparador rediseñado: una tarjeta por objeto con icono, nombre en el color de su calidad, nivel, tipo, ranura, nivel requerido (en rojo si aún no llegas o no puedes usarlo) y todas sus estadísticas, en verde lo que tiene de más y en rojo lo que tiene de menos que el otro. Avisa si el objeto trae gemas o encantamiento, que no entran en el cálculo. Si dejas B vacío, la tarjeta muestra el objeto que llevas puesto.
+- Comparador: anillos y abalorios se comparan con los dos que llevas a la vez, cada uno en su tarjeta (B y C), y te dice cuál cambiar. Puedes sustituir cualquiera de los dos por otro objeto.
+- Comparador: una frase con la conclusión para tu spec, tabla de % por especialización con barras, y desglose por estadística con la diferencia real (p. ej. +30 fuerza), lo que aporta cada una y las que cambian pero no te sirven.
+- Pestaña Configuración dentro de la ventana, con las mismas opciones que Interfaz > AddOns > SimulateX.
+- La ventana se cierra con Esc y se actualiza sola si te cambias de equipo con ella abierta.
 - Icono propio de SimulateX (antes usaba uno genérico).
 - Opción en el panel para quitar la flecha naranja (la que sale cuando el objeto solo mejora otra especialización). Activada por defecto.
 - Opción en el panel para quitar el icono del minimapa.
 - Opción en el panel para ajustar la opacidad de la ventana del comparador.
 ### Corregido
-- El icono de un objeto podía no aparecer en el comparador la primera vez (el cliente no lo tenía cacheado todavía); ahora reintenta hasta que llega.
+- El icono de algunos objetos no aparecía en el comparador: el fondo del hueco vacío se pintaba en la misma capa que el icono y a veces quedaba encima. Además el icono ya no espera a que el objeto esté en la caché del cliente.
+- Con un hueco de anillo o abalorio libre, el tooltip comparaba contra el otro que llevas en vez de contarlo entero.
 - La ventana del comparador dejaba ver demasiado el fondo del juego y era más pequeña de lo cómodo; ahora es más grande y opaca por defecto (ajustable en las opciones).
 ### Cambiado
 - Tooltip más claro: una línea por especialización con un único % de mejora o pérdida (verde/rojo, "≈ igual" en gris), sin unidades ni líneas de Supervivencia/Amenaza. La cabecera indica contra qué objeto equipado se compara.

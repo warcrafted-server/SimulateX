@@ -714,19 +714,18 @@ local function CompareAgainstEquipped(itemLink, itemId, equipLoc, build, weights
         return ComparePair(itemLink, itemId, equippedLink, equippedId, build, weights, metricName, hand)
     end
 
-    -- Anillos/abalorios: contra el peor de los dos equipados.
+    -- Anillos/abalorios: contra el peor de los dos equipados; con un hueco
+    -- vacío iría ahí sin quitar nada, así que cuenta entero.
     local worstLink, worstId, worstScore
     for _, slotName in ipairs(slots) do
         local equippedLink, equippedId = GetEquippedItemId(slotName)
-        if equippedLink then
-            local equippedScore = GetScore(equippedLink, equippedId, build, weights, metricName)
-            if not worstScore or equippedScore < worstScore then
-                worstScore, worstLink, worstId = equippedScore, equippedLink, equippedId
-            end
+        if not equippedLink then
+            return GetScore(itemLink, itemId, build, weights, metricName)
         end
-    end
-    if not worstLink then
-        return GetScore(itemLink, itemId, build, weights, metricName)  -- ambos slots vacíos: puntuación completa
+        local equippedScore = GetScore(equippedLink, equippedId, build, weights, metricName)
+        if not worstScore or equippedScore < worstScore then
+            worstScore, worstLink, worstId = equippedScore, equippedLink, equippedId
+        end
     end
     return ComparePair(itemLink, itemId, worstLink, worstId, build, weights, metricName)
 end
@@ -872,11 +871,12 @@ local function GetComparisonLabel(equipLoc, build, weights, metricName)
     local worstLink, worstScore
     for _, slotName in ipairs(slots) do
         local link, id = GetEquippedItemId(slotName)
-        if link then
-            local score = GetScore(link, id, build, weights, metricName)
-            if not worstScore or score < worstScore then
-                worstScore, worstLink = score, link
-            end
+        if not link then
+            return nil  -- hueco libre: no sustituye a nada
+        end
+        local score = GetScore(link, id, build, weights, metricName)
+        if not worstScore or score < worstScore then
+            worstScore, worstLink = score, link
         end
     end
     return worstLink and GetItemInfo(worstLink)
@@ -1023,9 +1023,22 @@ local function CompareDirect(linkA, idA, linkB, idB, build, weights, metricName,
     return ComparePair(linkA, idA, linkB, idB, build, weights, metricName, hand)
 end
 
+-- Ganancia de A según contra qué se compara: hueco vacío (A entero), B, o
+-- lo equipado.
+local function ComparisonGain(linkA, idA, linkB, idB, equipLoc, build, weights, metric, hand, againstEmpty)
+    if againstEmpty then
+        return GetScore(linkA, idA, build, weights, metric, hand)
+    end
+    if linkB then
+        return CompareDirect(linkA, idA, linkB, idB, build, weights, metric, hand)
+    end
+    return CompareAgainstEquipped(linkA, idA, equipLoc, build, weights, metric)
+end
+
 -- Evaluación de A frente a B para una build (misma forma que EvaluateBuild),
--- para el comparador. linkB/idB nil = contra lo equipado (CompareAgainstEquipped).
-local function EvaluateBuildComparison(linkA, idA, linkB, idB, equipLoc, buildId, build, playerLevel, classGameName)
+-- para el comparador. linkB nil = contra lo equipado; againstEmpty = contra
+-- un hueco vacío.
+local function EvaluateBuildComparison(linkA, idA, linkB, idB, equipLoc, buildId, build, playerLevel, classGameName, againstEmpty)
     if not IsItemUsable(linkA) then
         return nil
     end
@@ -1037,12 +1050,7 @@ local function EvaluateBuildComparison(linkA, idA, linkB, idB, equipLoc, buildId
     local weights = GetWeightsAtLevel(build, playerLevel, classGameName)
     local hand = GetDefaultHand(linkA)
 
-    local gain
-    if linkB then
-        gain = CompareDirect(linkA, idA, linkB, idB, build, weights, metric, hand)
-    else
-        gain = CompareAgainstEquipped(linkA, idA, equipLoc, build, weights, metric)
-    end
+    local gain = ComparisonGain(linkA, idA, linkB, idB, equipLoc, build, weights, metric, hand, againstEmpty)
     if gain == nil then
         return nil
     end
@@ -1053,12 +1061,7 @@ local function EvaluateBuildComparison(linkA, idA, linkB, idB, equipLoc, buildId
     if build.role == "tank" and build.survival then
         local survival = GetSurvivalBuild(build)
         local survivalWeights = GetWeightsAtLevel(survival, playerLevel, classGameName)
-        local survivalGain
-        if linkB then
-            survivalGain = CompareDirect(linkA, idA, linkB, idB, survival, survivalWeights, "surv", hand)
-        else
-            survivalGain = CompareAgainstEquipped(linkA, idA, equipLoc, survival, survivalWeights, "surv")
-        end
+        local survivalGain = ComparisonGain(linkA, idA, linkB, idB, equipLoc, survival, survivalWeights, "surv", hand, againstEmpty)
         if survivalGain then
             local survivalPercent = ComputePercent(survivalGain, build.weightsKind, playerLevel,
                 build.base and build.base.dtps, survivalWeights, survival)
@@ -1074,7 +1077,7 @@ local function EvaluateBuildComparison(linkA, idA, linkB, idB, equipLoc, buildId
         specLabel = build.specLabel or build.spec,
         role = build.role,
         metric = metric,
-        comparisonLabel = not linkB and GetComparisonLabel(equipLoc, build, weights, metric) or nil,
+        comparisonLabel = not linkB and not againstEmpty and GetComparisonLabel(equipLoc, build, weights, metric) or nil,
         gain = gain,
         percent = percent,
         isNoise = isNoise,
@@ -1083,9 +1086,10 @@ local function EvaluateBuildComparison(linkA, idA, linkB, idB, equipLoc, buildId
     }
 end
 
--- Una línea por spec, A contra B (o contra equipado si linkB es nil). Misma
--- selección de build activa/etiquetas que GetItemEvaluations.
-local function GetComparisonEvaluations(linkA, linkB)
+-- Una línea por spec, A contra B (o contra equipado si linkB es nil, o
+-- contra un hueco vacío con againstEmpty). Misma selección de build
+-- activa/etiquetas que GetItemEvaluations.
+local function GetComparisonEvaluations(linkA, linkB, againstEmpty)
     local classFileName = select(2, UnitClass("player"))
     local gameClassName = CLASS_FILE_TO_GAME_CLASS[classFileName]
     local dataVarName = CLASS_DATA_VARS[classFileName]
@@ -1117,7 +1121,7 @@ local function GetComparisonEvaluations(linkA, linkB)
         local specLabel = entry.build.specLabel or entry.build.spec
         local specEnabled = SimulateX_DB.disabledSpecs == nil or not SimulateX_DB.disabledSpecs[specLabel]
         if specEnabled then
-            local evaluation = EvaluateBuildComparison(linkA, idA, linkB, idB, equipLoc, entry.buildId, entry.build, playerLevel, gameClassName)
+            local evaluation = EvaluateBuildComparison(linkA, idA, linkB, idB, equipLoc, entry.buildId, entry.build, playerLevel, gameClassName, againstEmpty)
             if evaluation then
                 evaluation.isActive = (key == activeKey)
                 local current = byLabel[specLabel]
@@ -1158,7 +1162,7 @@ local BREAKDOWN_LABELS = setmetatable({
 -- linkB es nil) y cuánto aporta cada una al % de esa spec (mismo denominador
 -- que ComputePercent para esa build), ordenado por |aporte| descendente.
 -- buildId: clave de classData (ver GetComparisonEvaluations/evaluation.buildId).
-local function GetComparisonBreakdown(linkA, linkB, buildId)
+local function GetComparisonBreakdown(linkA, linkB, buildId, againstEmpty)
     local classFileName = select(2, UnitClass("player"))
     local gameClassName = CLASS_FILE_TO_GAME_CLASS[classFileName]
     local dataVarName = CLASS_DATA_VARS[classFileName]
@@ -1177,7 +1181,9 @@ local function GetComparisonBreakdown(linkA, linkB, buildId)
 
     local _, contribA = ScoreItemBreakdown(linkA, weights, build, hand)
     local contribB
-    if linkB then
+    if againstEmpty then
+        contribB = {}
+    elseif linkB then
         _, contribB = ScoreItemBreakdown(linkB, weights, build, hand)
     else
         -- objeto equipado en ese hueco (slot único; anillos/abalorios y armas
@@ -1209,7 +1215,7 @@ local function GetComparisonBreakdown(linkA, linkB, buildId)
         local diff = (contribA[key] or 0) - (contribB[key] or 0)
         if diff ~= 0 then
             local percentContribution = denominator and denominator ~= 0 and (diff / denominator * 100) or 0
-            table.insert(rows, { label = BREAKDOWN_LABELS[key], diff = diff, percent = percentContribution })
+            table.insert(rows, { key = key, label = BREAKDOWN_LABELS[key], diff = diff, percent = percentContribution })
         end
     end
     table.sort(rows, function(a, b) return math.abs(a.percent) > math.abs(b.percent) end)
@@ -1220,6 +1226,10 @@ end
 SimulateX_API = {
     GetComparisonEvaluations = GetComparisonEvaluations,
     GetComparisonBreakdown = GetComparisonBreakdown,
+    GetItemStats = GetItemStatsFromData,
+    GetStatLabel = function(key) return BREAKDOWN_LABELS[key] end,
+    IsItemUsable = IsItemUsable,
+    INVTYPE_TO_SLOTS = INVTYPE_TO_SLOTS,
     GetEffectivePlayerLevel = GetEffectivePlayerLevel,
     CLASS_FILE_TO_GAME_CLASS = CLASS_FILE_TO_GAME_CLASS,
     CLASS_DATA_VARS = CLASS_DATA_VARS,
