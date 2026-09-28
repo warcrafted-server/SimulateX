@@ -6,9 +6,13 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 ### Añadido
 - Panel de configuración en Interfaz > AddOns (`/simulatexconfig` como alternativa): activar/desactivar el modo estimado de nivel 1-79, y elegir qué sub-especializaciones de la clase se muestran en el tooltip.
 
-## Sin publicar
+## v0.4.0 - 2026-09-28
 ### Añadido
+- Puntuación en tiempo real por EP (puntos de equipo): pesos por estadística calculados con simulaciones reales de combate (motor wowsims) por spec y build, sustituyendo a `lowLevelScores`. Cubre cualquier objeto, incluidos sufijos aleatorios.
+- Catálogo completo de nivel 80 filtrado por clase (tipo de armadura y arma que cada clase puede usar), en vez del catálogo parcial anterior.
+- Escalado de pesos por nivel (`SimulateX_Levels.lua`) desde las tablas del propio servidor (`gtCombatRatings.dbc`, `gtChanceToMeleeCrit.dbc`, `gtChanceToSpellCrit.dbc`), no aproximaciones genéricas.
 - Flecha de mejora también en la Casa de Subastas (buscar, mis pujas, mis subastas) y en el correo (bandeja y carta abierta).
+- Datos reales de Druida: `feral_druid` (DPS), `balance_druid` (DPS), `feral_tank_druid` (tanque) simulados con el catálogo completo; `restoration_druid` (sanador) con pesos preset de wowsims, ya que su rotación en el motor de simulación da 0 HPS.
 ### Cambiado
 - Marca de mejora más visible: brillo alrededor del icono (`UI-ActionButton-Border`) del color de calidad del objeto, para no confundir un objeto azul o morado con uno verde; la flecha sigue siendo verde para la spec activa y naranja para otra spec y flecha `Interface\Buttons\Arrow-Up-Up` teñida con contorno negro, por encima del borde del botón.
 - `/simulatex debug` muestra si la clase tiene competencia con el tipo de objeto y si está en su lista de clases.

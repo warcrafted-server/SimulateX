@@ -20,8 +20,9 @@ from mapeo_stats import (
 )
 from simular_builds import (
     build_env, run_go_extractor, run_go_stat_weights, load_json, ITEMS_BD_PATH, WOWSIMS_DB_PATH,
-    base_gear_gem_pool, base_gear_items, load_gem_colors, WOWSIMS_SRC,
+    base_gear_gem_pool, base_gear_items, load_gem_colors, WOWSIMS_SRC, apl_suffix,
 )
+import collections
 from specs_metadata import SPEC_GO_PACKAGES
 from emparejar_builds import dominant_talent_tree
 
@@ -243,7 +244,17 @@ def main() -> None:
 
         mapeo_path = BUILDS_DIR / "_mapeo" / f"{spec}.json"
         mapeo = load_json(mapeo_path) if mapeo_path.exists() else {"builds": []}
-        builds_by_gear_file = {b["gear_file"]: b for b in mapeo["builds"] if b["status"] == "ok"}
+        ok_builds = [b for b in mapeo["builds"] if b["status"] == "ok"]
+        # Mismo build_id que simular_builds.py: gear_file solo, o gear_file +
+        # sufijo de APL cuando varias builds comparten gear_file (variantes de
+        # rotación reales, ver emparejar_builds.py::pick_candidates).
+        gear_file_counts = collections.Counter(b["gear_file"] for b in ok_builds)
+        builds_by_gear_file = {}
+        for b in ok_builds:
+            key = b["gear_file"]
+            if gear_file_counts[key] > 1 and b.get("apl"):
+                key = f"{key}_{apl_suffix(b['apl'])}"
+            builds_by_gear_file[key] = b
 
         try:
             ep_config = extract_ep_config(spec)
@@ -251,9 +262,11 @@ def main() -> None:
             print(f"[{spec}] ERROR leyendo epStats/epWeights: {exc}, se omite")
             continue
 
+        sim_files = sorted(spec_sims_dir.glob("*.json"))
+        consolidated_count = 0
         with tempfile.TemporaryDirectory(dir=WOWSIMS_SRC / "sim" / SPEC_GO_PACKAGES[spec]) as tmp:
             work_dir = pathlib.Path(tmp)
-            for sim_file in sorted(spec_sims_dir.glob("*.json")):
+            for sim_file in sim_files:
                 sim_result = load_json(sim_file)
                 if sim_result.get("status") != "ok":
                     print(f"[{spec}/{sim_file.stem}] sin status ok, se omite")
@@ -293,8 +306,13 @@ def main() -> None:
                                     weights_kind, gear_items, items_by_id, gem_colors, talents_string)
                 build_key = f"{spec}_{sim_result['build_id']}"
                 entries_by_class.setdefault(game_class, {})[build_key] = entry
+                consolidated_count += 1
                 print(f"[{spec}/{sim_result['build_id']}] consolidado ({len(entry['items'])} objetos, "
                       f"pesos={weights_kind}, avgItemLevel={entry['avgItemLevel']})")
+
+        if consolidated_count == 0:
+            print(f"*** AVISO: [{spec}] 0/{len(sim_files)} builds consolidados, la spec entera "
+                  f"queda fuera de SimulateX_Data_{game_class}.lua ***")
 
     ADDON_DATA_DIR.mkdir(parents=True, exist_ok=True)
     for class_name, entries in entries_by_class.items():

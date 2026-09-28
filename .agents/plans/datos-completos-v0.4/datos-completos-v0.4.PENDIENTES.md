@@ -2,7 +2,47 @@
 
 Plan: `datos-completos-v0.4.PLAN.md` (mismo directorio). Auditoría de errores E1-E8:
 `.agents/plans/auditoria-v0.3/auditoria-v0.3.REVIEW.md`. Pasos 1-6 hechos y pusheados
-(último commit `aee3dc8`); paso 7 sin empezar. Todo validado solo con `feral_druid`.
+(últimos commits en `master`: `ee03215`, `6c45465`, `961acae`, `06292b2`, `b7addc8`,
+`1f834bb`). F1/F3 corregidos, probados en juego y ya en `master`. `.toc` en 0.4.0.
+
+**Estado exacto (2026-09-28 13:10): paso 7.2 de datos COMPLETO.**
+- Las 4 specs de druida están simuladas correctamente y consolidadas:
+  `feral_druid` (10/10 builds), `balance_druid` (21/21), `feral_tank_druid` (4/4),
+  `restoration_druid` (5/5), todas `status: ok`. `SimulateX_Data_Druid.lua` regenerado
+  con `generar_db_addon.py` (sin `--spec`): 40 builds, verificado por spec. De paso
+  también regeneró `SimulateX_Data_Paladin.lua` y creó `SimulateX_Data_Priest.lua`
+  (datos válidos de sesiones anteriores, el usuario decidió dejarlos en el mismo cambio).
+- README.md/README.en.md tienen la línea de "Datos Reales por Especialización y Nivel";
+  CHANGELOG.md tiene la entrada `## v0.4.0 - 2026-09-28`. **Nada de esto tiene commit
+  todavía** — pedir permiso explícito antes de commit + push.
+- **Dos bugs encontrados y corregidos esta sesión en el pipeline de simulación**:
+  1. Bug de build_id (builds con mismo `gear_file` y distinto APL se pisaban el mismo
+     fichero) — fix ya documentado abajo, aplicado en `simular_builds.py` y
+     `generar_db_addon.py` el 2026-09-27.
+  2. **Bug nuevo en la validación de objetos base** (`simular_builds.py::main`, línea
+     ~444): reconstruía el nombre del fichero temporal `_base.json` con
+     `build['gear_file']` a secas, sin el sufijo de APL, mientras que `simulate_build`
+     sí lo escribía con sufijo → `FileNotFoundError` en cualquier build con colisión de
+     `gear_file` (afectó a `feral_druid` y `balance_druid` al relanzarlas). Fix: usar
+     `result['build_id']` (ya con el sufijo correcto) en vez de reconstruirlo. Sin este
+     fix, cualquier spec con variantes de APL reales por gear_file fallará igual al
+     re-simular (ojo con el resto de clases en el paso 7.3).
+  3. Los relanzamientos dejaron ficheros viejos sin sufijo mezclados con los nuevos en
+     `Data/sims/feral_druid/` y `Data/sims/balance_druid/` (restos de antes del fix de
+     build_id) — se borraron a mano tras confirmar la fecha (27 = viejo, 28 = nuevo).
+     Si se re-simula cualquier otra spec afectada por el mismo bug, revisar y limpiar
+     `Data/sims/<spec>/` de la misma forma antes de consolidar.
+- **Mejora en `generar_db_addon.py`**: ahora imprime `*** AVISO: [spec] 0/N builds
+  consolidados ***` cuando una spec entera se queda fuera del `.lua` regenerado (así se
+  detectó el bug de build_id en `feral_druid`/`balance_druid` la segunda vez, en vez de
+  pasar desapercibido entre las líneas de log).
+- **Reanudación en `simular_builds.py`** (2026-09-28, por el reinicio diario del
+  servidor a las 04:00): antes de simular cada build, comprueba si
+  `Data/sims/<spec>/<build_id>.json` ya existe con `status: ok` y lo salta si es así.
+  Relanzar el mismo comando tras una interrupción retoma justo donde se quedó, sin
+  volver a gastar CPU en lo ya hecho. `--force` repite todo desde cero si hace falta.
+- **Sin hacer todavía**: commit + push (pedir permiso primero); pruebas en juego de
+  Equilibrio/Guardián/Restauración.
 
 ## Entorno
 
@@ -20,7 +60,9 @@ Plan: `datos-completos-v0.4.PLAN.md` (mismo directorio). Auditoría de errores E
   7. `python3 generar_tipos_objeto.py` → `Addon/.../SimulateX_ItemTypes.lua` (tras regenerar `items_bd.json`)
   8. `SIMX_DBC_DIR=... python3 generar_estadisticas_objeto.py` → `Addon/.../SimulateX_ItemStats.lua` (tras regenerar `items_bd.json`)
 - Procesos largos: `nohup ... &` en background da "completed" al instante (solo el desacople);
-  vigilar el fin real con Monitor + `while pgrep -f ...; do sleep 10; done`.
+  vigilar el fin real con Monitor + `while pgrep -f ...; do sleep 10; done`. Comando exacto
+  usado para `restoration_druid` (pesos preset, decisión 3, no necesita muchas iteraciones):
+  `SIMX_DBC_DIR=/home/stark/Servers/acore-playerbots/data/dbc python3 simular_builds.py --spec restoration_druid --iterations 100`
 
 ## Fallos confirmados (resolver con Opus, esfuerzo alto)
 
@@ -70,11 +112,15 @@ nivel < 80 el % es sobre el EP del equipo, no sobre el DPS real, e infla las cif
   (peso lineal solo por encima del umbral). `mapeo_stats.py::feral_attack_power` hoy no se usa.
 - El porcentaje (`ComputePercent`) y el "equipado" también cambian al arreglarlo; revalidar.
 
-### F2 — Penetración de armadura a nivel 80 no cuadra
+### F2 — Penetración de armadura a nivel 80 no cuadra (cerrado, no reproducible)
 `gtCombatRatings.dbc` da 15.40 (CR_ARMOR_PENETRATION=24, fila 24×100+79); el plan esperaba ≈13.99.
-Factor de clase `gtOCTClassCombatRatingScalar.dbc` (record 8 bytes, ratio en 2º float,
-índice `(clase−1)×32 + cr + 1`) da 1.0 para druida. Crítico/golpe/celeridad (45.91/32.79) y
-druida 83.33 agi/1 % sí cuadran. Averiguar si 13.99 es de otra fuente/clase o si falta un factor.
+Reverificado con la fórmula exacta del core (`Player::GetRatingMultiplier`,
+`sGtOCTClassCombatRatingScalarStore.LookupEntry((clase−1)×32 + cr + 1)`, ratio en el 2º float
+del registro): el factor de clase da 1.0 para las 10 clases jugables en `CR_ARMOR_PENETRATION`,
+igual que en crítico/golpe/celeridad (que sí cuadran: 45.91/32.79, y druida 83.33 agi/1 %). El
+13.99 del plan no cita ninguna fuente (ni una auditoría previa, ni un enlace, ni una comprobación
+en juego); no se ha podido reproducir con ninguna combinación de estas DBCs. Se deja como está
+(15.40 real), documentado en `generar_tablas_nivel.py`. No bloquea nada del resto de la tabla.
 
 ### F3 — Flecha de mejora demasiado sutil (petición del usuario)
 `SimulateX.lua::UpdateUpgradeIcon`: textura `Interface\Buttons\UI-SortArrow` 14×14 (verde) /
@@ -85,23 +131,19 @@ que la textura elegida existe; no suponer rutas.
 
 ## Pendientes conocidos (no son fallos)
 
-- Solo `feral_druid` tiene datos → el tooltip no muestra "Otras: …" (Equilibrio, Guardián,
-  Restauración se simulan en el paso 7).
-- `Data/sims/feral_druid/p1..p4.json` son del pipeline anterior al fix E1 (sesgados);
-  `preraid.json` es post-E1 pero solo 800 candidatos a 100 it. Resimular en el paso 7.
-- `simular_builds.py`: dos builds con el mismo `gear_file` y distinto APL escriben el mismo
-  `Data/sims/<spec>/<gear_file>.json` (la segunda pisa la primera).
+- **Bug de build_id y su fix derivado**: resuelto, ver estado exacto arriba (dos bugs
+  distintos, ambos corregidos y verificados con las 4 specs de druida completas).
 - Sin probar en juego: hooks de vendedor/banco, tooltip de tanque (Supervivencia + Amenaza),
-  objetos con sufijo aleatorio, detección de rojo con el pecho de malla del bug v0.2.
-- Documentación del proyecto (`README.md`, `README.en.md`, `CHANGELOG.md`) sin actualizar
-  para los pasos 1-6 (regla del `CLAUDE.md`: docs vivas en cada cambio). `.toc` sigue en 0.3.0
-  (sube a 0.4.0 en el paso 7.2).
-- `procesar_objetos.py`/`items_procesados.json` quedaron obsoletos (sustituidos por
-  `extraer_objetos_bd.py`); no se han borrado.
+  objetos con sufijo aleatorio, detección de rojo con el pecho de malla del bug v0.2, y
+  las 3 specs nuevas (Equilibrio/Guardián/Restauración) recién consolidadas.
 
 ## Paso 7 (resto del plan)
-Tras arreglar F1 (y F3), el usuario vuelve a probar Feral en juego (nivel 28 con EP;
-`/simulatex nivel 80` para la lógica de 80) y da el visto bueno antes de seguir con 7.2-7.4.
+F1/F3 probados en juego y aprobados por el usuario. **7.2 completo**: las 4 specs de
+druida simuladas y consolidadas en `SimulateX_Data_Druid.lua` (ver estado arriba). Falta
+el commit + push (pedir permiso) y que el usuario pruebe en juego. Después: 7.3-7.4
+(resto de clases — ojo con el bug #2 de validación de objetos base si alguna otra spec
+tiene variantes de APL por gear_file, ya corregido en el código pero vigilar el primer
+relanzamiento de cada una).
 
 ## Preferencias del usuario
 - Hablar siempre en castellano.

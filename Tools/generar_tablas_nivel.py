@@ -6,24 +6,29 @@ Fuente: DBCs del servidor (WDBC, formato de AzerothCore/WotLK), solo lectura,
 directorio dado por el env SIMX_DBC_DIR. Fórmulas replicadas de
 acore-playerbots/src/server/game/Entities/Player/Player.cpp — no inventadas:
 
-- GetRatingMultiplier(cr): sGtCombatRatingsStore[cr*100 + nivel-1].ratio, con
-  cr el índice 0-based del enum CombatRating de Unit.h (CR_HIT_MELEE=5,
-  CR_CRIT_MELEE=8, CR_HASTE_MELEE=17, CR_ARMOR_PENETRATION=24). El motor
-  también aplica un factor por clase (gtOCTClassCombatRatingScalar.dbc), pero
-  para crítico/golpe/celeridad ese factor es 1.0 en todas las clases
-  (verificado); para penetración de armadura da igualmente 1.0 en druida, así
-  que el valor bruto de gtCombatRatings ya es el resultado final para esas
-  4 comprobaciones — no se aplica ese segundo factor aquí.
+- GetRatingMultiplier(cr) real del core (Player::GetRatingMultiplier):
+  classRating->ratio / Rating->ratio, con Rating de sGtCombatRatingsStore[cr*100
+  + nivel-1] y classRating de sGtOCTClassCombatRatingScalarStore[(clase-1)*32 +
+  cr+1] (32 = GT_MAX_RATING). "Puntos de rating por 1%" = Rating->ratio /
+  classRating->ratio. Para crítico/golpe/celeridad y para penetración de
+  armadura ese factor de clase da 1.0 en las 10 clases jugables (reverificado
+  con la fórmula exacta del core, LookupEntry((clase-1)*32+cr+1) — un intento
+  previo de leer la tabla con un índice de clase incorrecto encontró 1.1 por
+  error; corregido, se confirma 1.0 en todos los casos), así que el valor
+  bruto de gtCombatRatings ya es el resultado final para las 5 comprobaciones
+  y no hace falta tabla de penetración de armadura por clase.
 - GetMeleeCritFromAgility/GetSpellCritFromIntellect: agi (o int) por 1% de
   crítico = 1 / (sGtChanceTo*CritStore[(clase-1)*100 + nivel-1].ratio * 100).
 
 Comprobaciones a nivel 80 verificadas contra estas DBCs: crítico melee/hechizo
 45.91, golpe melee 32.79, celeridad melee 32.79 (mismo valor para las 10
-clases: el motor solo tiene una fila de gtCombatRatings por rating, no por
-clase, salvo el factor de clase ya comentado). Druida: 83.33 agi/1% crit.
-Penetración de armadura da 15.40 real (la comprobación previa del plan, 13.99,
-no se ha podido reproducir con estas DBCs ni con el factor de clase; se deja
-anotado, no bloquea el resto de la tabla).
+clases). Druida: 83.33 agi/1% crit. Penetración de armadura da 15.40 real
+(reverificado con la fórmula exacta de Player::GetRatingMultiplier y el
+factor de clase correcto, que sigue siendo 1.0 para druida); el 13.99 del
+plan no tiene fuente citada en ningún documento del proyecto (parece un
+valor anotado de memoria en su momento, no de una comprobación en juego) y
+no se ha podido reproducir con ninguna combinación de estas DBCs. No bloquea
+el resto de la tabla.
 """
 
 import os

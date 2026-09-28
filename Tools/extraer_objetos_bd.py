@@ -1,9 +1,8 @@
 """Extrae el catálogo de objetos de acore_world (tabla item_template): fuente
 única de candidatos para simular_builds.py (nivel 1-79) y catálogo de
-simulación de nivel 80 (paso 2 del plan datos-completos-v0.4). Sustituye al
-XML de AoWoW (procesar_objetos.py/items_procesados.json): los stats de socket,
-armadura y daño de arma que exige el paso 1 (gemas/encantamientos) no vienen
-estructurados en ese XML.
+simulación de nivel 80 (paso 2 del plan datos-completos-v0.4). Sustituye al pipeline
+anterior basado en el XML de AoWoW: los stats de socket, armadura y daño de
+arma que exige el paso 1 (gemas/encantamientos) no venían estructurados ahí.
 
 Requiere las credenciales de conexión como variables de entorno (nunca se
 escriben en este repo): SIMX_DB_HOST, SIMX_DB_PORT, SIMX_DB_USER,

@@ -18,6 +18,7 @@ el delta sale sesgado hacia negativo incluso comparado contra sí mismo (E1,
 ver .agents/plans/auditoria-v0.3/auditoria-v0.3.REVIEW.md).
 """
 
+import collections
 import json
 import pathlib
 import subprocess
@@ -277,9 +278,25 @@ def simulate_one_swap(base_input: pathlib.Path, item_slot: int, candidate: dict,
     return extract_metrics(result) if result is not None else None
 
 
+def apl_suffix(apl_const_name: str) -> str:
+    """ROTATION_PRESET_P4_FOCUS_APL -> p4_focus, para desambiguar build_id
+    cuando el mismo gear_file tiene varias variantes de APL (ver decisión de
+    emparejar_builds.py::pick_candidates: "unico_o_toda_la_spec" cubre cada
+    variante como una build de referencia distinta, no elige una sola)."""
+    name = apl_const_name.removeprefix("ROTATION_PRESET_").removesuffix("_APL")
+    return name.lower()
+
+
+def build_id_for(build: dict) -> str:
+    build_id = build["gear_file"]
+    if build.get("_disambiguate_apl") and build.get("apl"):
+        build_id = f"{build_id}_{apl_suffix(build['apl'])}"
+    return build_id
+
+
 def simulate_build(spec: str, build: dict, talents_string: str, work_dir: pathlib.Path,
                     items_by_id: dict, candidate_pool: dict, gem_colors: dict, iterations: int) -> dict:
-    build_id = f"{build['gear_file']}"
+    build_id = build_id_for(build)
     base_input = work_dir / f"{build_id}_base.json"
 
     env = build_env(spec, build["gear_file"], build.get("apl_file"), None, talents_string, base_input, iterations)
@@ -361,6 +378,8 @@ def main() -> None:
     parser.add_argument("--limit-items", type=int, help="Límite de objetos candidatos por build (para pruebas)")
     parser.add_argument("--iterations", type=int, default=300,
                          help="Iteraciones de Monte Carlo por simulación (por defecto 300; wowsims usa 2000 para su propio 'Average')")
+    parser.add_argument("--force", action="store_true",
+                         help="Re-simular también los builds que ya tienen un JSON con status ok en Data/sims/<spec>/")
     args = parser.parse_args()
 
     if not ITEMS_BD_PATH.exists():
@@ -397,6 +416,14 @@ def main() -> None:
         if args.limit_builds:
             builds = builds[:args.limit_builds]
 
+        # Varias builds con el mismo gear_file (distinto APL, apl_rule
+        # "unico_o_toda_la_spec") son variantes reales a simular por separado,
+        # no una sola a elegir: sin esto se pisan el mismo fichero de salida.
+        gear_file_counts = collections.Counter(b["gear_file"] for b in builds)
+        for build in builds:
+            if gear_file_counts[build["gear_file"]] > 1:
+                build["_disambiguate_apl"] = True
+
         spec_out_dir = SIMS_OUT_DIR / spec
         spec_out_dir.mkdir(exist_ok=True)
 
@@ -406,12 +433,19 @@ def main() -> None:
         with tempfile.TemporaryDirectory(dir=WOWSIMS_SRC / "sim" / SPEC_GO_PACKAGES[spec]) as tmp:
             work_dir = pathlib.Path(tmp)
             for build in builds:
+                build_id = build_id_for(build)
+                out_path = spec_out_dir / f"{build_id}.json"
+                if not args.force and out_path.exists():
+                    existing = load_json(out_path)
+                    if existing.get("status") == "ok":
+                        print(f"[{spec}/{build_id}] ya simulado, se salta (--force para repetir)")
+                        continue
+
                 talents_string = talent_sets_by_spec.get(spec, {}).get(build["talent_set"], "")
                 apl_file = apl_files_by_spec.get(spec, {}).get(build["apl"]) if build.get("apl") else None
                 build_with_apl = {**build, "apl_file": apl_file, "_limit_items": args.limit_items}
 
                 result = simulate_build(spec, build_with_apl, talents_string, work_dir, items_by_id, candidate_pool, gem_colors, args.iterations)
-                out_path = spec_out_dir / f"{result['build_id']}.json"
                 out_path.write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
 
                 status_marker = "OK" if result["status"] == "ok" else f"ERROR: {result.get('motivo')}"
@@ -421,7 +455,7 @@ def main() -> None:
 
                 validation_note = ""
                 if result["status"] == "ok":
-                    base_ids = {it.get("id") for it in base_gear_items(work_dir / f"{build['gear_file']}_base.json") if it.get("id")}
+                    base_ids = {it.get("id") for it in base_gear_items(work_dir / f"{result['build_id']}_base.json") if it.get("id")}
                     base_metric_name = "dps" if result["base_dps"] else "hps"
                     base_metric_value = result["base_dps"] or result["base_hps"]
                     if base_metric_value:
