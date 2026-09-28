@@ -42,11 +42,21 @@ def validate_tree(talents: list, digits: str) -> tuple[bool, str, int]:
     formato wowhead trunca ceros finales (el último talento del árbol casi
     nunca lleva puntos), así que una cadena más corta que el árbol es válida:
     los talentos que faltan al final cuentan como 0. Devuelve (válido,
-    motivo_si_no, puntos_gastados)."""
+    motivo_si_no, puntos_gastados).
+
+    Dos pasadas: la fila/columna del juego no siempre coincide con el orden
+    de dependencia entre talentos de la MISMA fila (ej. Chamán Mejora fila 6:
+    "Especialización en doble empuñadura" va en la columna 0 pero depende de
+    "Doble empuñadura", columna 1) — comprobar prerrequisitos incrementalmente
+    en orden columna daría un falso negativo. Se registran todos los rangos
+    primero y se valida contra el estado final del árbol."""
     if len(digits) > len(talents):
         return False, f"longitud {len(digits)} > {len(talents)} talentos del árbol", 0
 
     ranks_by_id = {}
+    for talent, digit in zip(talents, digits):
+        ranks_by_id[talent["talent_id"]] = int(digit)
+
     spent = 0
     for talent, digit in zip(talents, digits):
         n = int(digit)
@@ -59,7 +69,6 @@ def validate_tree(talents: list, digits: str) -> tuple[bool, str, int]:
             need_id, need_rank = talent["required_talent"], talent["required_talent_rank"]
             if ranks_by_id.get(need_id, 0) < need_rank:
                 return False, f"{talent['name']}: requiere el talento {need_id} a rango {need_rank}", spent
-        ranks_by_id[talent["talent_id"]] = n
         spent += n
     return True, "", spent
 

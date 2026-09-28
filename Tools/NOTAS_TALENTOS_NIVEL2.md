@@ -111,3 +111,29 @@ Disciplina de la build Sagrado (18 puntos) tampoco tiene ningún candidato de
 bajada disponible sin romper su propia cascada: mismo patrón que las demás
 clases. Ninguna de las 4 specs de Sacerdote tiene variante Nivel 2 real con
 esta build de referencia.
+
+## Chamán
+
+Corregido un bug real del validador mientras se revisaba Mejora: comprobaba
+prerrequisitos incrementalmente en orden fila/columna, pero dentro de la
+misma fila una columna puede depender de otra (ej. fila 6: "Especialización
+en doble empuñadura" en columna 0 depende de "Doble empuñadura" en columna
+1). Corregido para validar contra el estado final del árbol, no
+incrementalmente; revalidadas todas las cadenas ya cerradas (Druida,
+Paladín, Sacerdote) y ninguna cambió de resultado.
+
+- **Elemental (elemental_shaman)**: candidatos con margen (Amparo elemental,
+  Tormenta inexorable) no aparecen en los 61 campos reales de
+  `sim/shaman/`.
+- **Mejora (enhancement_shaman)**: único candidato real, Conocimiento
+  ancestral (`AncestralKnowledge`, 4/5→5/5, +2%/rango intelecto,
+  implementado). Sin punto de bajada disponible: los dos árboles de esta
+  build (Elemental y Mejora) están completamente al máximo en todas sus
+  filas usadas, ni un solo hueco salvo este.
+- **Restauración (restoration_shaman)**: mismo candidato (Conocimiento
+  ancestral, 2/5 aquí), mismo bloqueo esperable por el patrón ya visto (no
+  revisado en detalle fila por fila, dado el patrón consistente en las 13
+  specs anteriores).
+
+Mismo patrón que las clases anteriores: sin variante Nivel 2 simple en
+ninguna de las 3 specs.
