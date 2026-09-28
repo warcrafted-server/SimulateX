@@ -2,8 +2,9 @@
 ## Title: SimulateX
 ## Notes: Asistente de tooltips, comparador de equipamiento y guía de mejoras.
 ## Author: WarCrafted
-## Version: 0.4.0
+## Version: 0.6.0
 ## SavedVariables: SimulateX_DB
+## OptionalDeps: wcdpanel
 
 SimulateX_DB.lua
 
@@ -23,3 +24,5 @@ Data\SimulateX_Data_Druid.lua
 
 SimulateX.lua
 SimulateXOptions.lua
+UI\Comparador.lua
+UI\Lanzadores.lua

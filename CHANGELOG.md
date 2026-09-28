@@ -4,11 +4,18 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 
 ## Sin publicar
 ### Añadido
+- Comparador de equipo (v0.6): pon dos objetos, uno en cada hueco (arrastrando o con Mayús+clic), y compáralos entre sí o, si dejas el segundo vacío, contra lo que llevas puesto. Muestra el % de cada especialización y, para la tuya, en qué estadísticas se nota la diferencia. Se abre con `/simulatex comparar`, desde un botón en la hoja de personaje (junto al icono de cerrar), desde un icono en el minimapa, o desde la barra de wcdpanel si la tienes instalada.
+- Icono propio de SimulateX (antes usaba uno genérico).
 - Opción en el panel para quitar la flecha naranja (la que sale cuando el objeto solo mejora otra especialización). Activada por defecto.
+- Opción en el panel para quitar el icono del minimapa.
 ### Cambiado
 - Tooltip más claro: una línea por especialización con un único % de mejora o pérdida (verde/rojo, "≈ igual" en gris), sin unidades ni líneas de Supervivencia/Amenaza. La cabecera indica contra qué objeto equipado se compara.
 - Por debajo de nivel 80 el % se calcula sobre el personaje entero (equipo puesto más estadísticas base), no solo sobre el equipo. Antes daba cifras infladas (p. ej. +115 % en Restauración por 15 de espíritu).
-- Los tanques se valoran por su amenaza: el daño recibido de sus simulaciones no es fiable (el jefe apenas les pega).
+- Los tanques se valoran con la media de amenaza y supervivencia, igual que los pesos de tanque por defecto de wowsims. Sus simulaciones ahora usan el jefe y la curación por defecto de la interfaz de wowsims: sin curación el tanque moría y el daño recibido no medía lo que aguanta.
+- Los sanadores con pesos simulados (Sanación de sacerdote) usaban por error los pesos de daño; ahora usan los de curación.
+### Añadido (herramientas)
+- `Tools/lote_simulaciones.sh`: cola de simulaciones en segundo plano que se puede relanzar tras un reinicio sin repetir lo hecho.
+- `generar_extractores_go.py --spec` para regenerar una sola spec.
 ### Corregido
 - Feral y Guardián contaban las dos como "tu spec" (comparten árbol de talentos), así que dos objetos podían salir como mejora el uno del otro. Ahora decide la forma: oso = Guardián, felina = Feral; en forma humanoide se usa la última forma.
 - La flecha de mejora salía en casi cualquier objeto: por debajo de 80, Supervivencia y Amenaza eran la misma cifra con el signo cambiado, así que una de las dos siempre parecía mejorar.

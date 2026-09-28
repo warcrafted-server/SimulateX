@@ -10,6 +10,7 @@ serializa el resultado con protojson. Es el mismo patrón validado a mano para
 el Cazador Supervivencia, generalizado por script en vez de repetido 21 veces.
 """
 
+import argparse
 import pathlib
 import re
 import sys
@@ -50,6 +51,31 @@ CONFIG_BLOCK_RE = re.compile(
     re.DOTALL,
 )
 IMPORT_BLOCK_RE = re.compile(r"^import \(\n(.*?)\n\)\n", re.DOTALL | re.MULTILINE)
+
+
+def tank_setup_go(player_var: str) -> str:
+    """Declara `encounter` y, para tanques, pone el jefe y la curación por
+    defecto de la interfaz de wowsims (ui/core/encounter.ts, player.ts
+    setDefaultHealingParams). Los tests de wowsims no curan al tanque: se
+    muere, y el dtps pasa a medir cuánto tarda en morir, no cuánto aguanta."""
+    return (
+        "\tencounter := core.MakeSingleTargetEncounter(5)\n"
+        "\tif config.IsTank {\n"
+        f"\t\t{player_var}.HealingModel = &proto.HealingModel{{Hps: 0.175 * 65000 / 1.5, CadenceSeconds: 1.5 * 1.5}}\n"
+        "\t\t// copia: NewDefaultTarget devuelve un proto compartido\n"
+        "\t\ttargetStats := append([]float64(nil), core.NewDefaultTarget().Stats...)\n"
+        "\t\ttargetStats[proto.Stat_StatAttackPower] = 805\n"
+        "\t\ttargetStats[proto.Stat_StatBlockValue] = 76\n"
+        "\t\tencounter.Targets = []*proto.Target{{\n"
+        "\t\t\tLevel:         core.CharacterLevel + 3,\n"
+        "\t\t\tMobType:       proto.MobType_MobTypeGiant,\n"
+        "\t\t\tSwingSpeed:    1.5,\n"
+        "\t\t\tMinBaseDamage: 65000,\n"
+        "\t\t\tParryHaste:    true,\n"
+        "\t\t\tStats:         targetStats,\n"
+        "\t\t}}\n"
+        "\t}"
+    )
 INIT_BLOCK_RE = re.compile(r"func init\(\) \{.*?\n\}\n", re.DOTALL)
 PACKAGE_LINE_RE = re.compile(r"^package \w+\n")
 
@@ -102,6 +128,7 @@ def generate_main_go(spec: str, test_source: str, rel_ui_prefix: str) -> str:
     # Los parámetros de la build (gear/rotación/talentos) se leen de variables
     # de entorno, no de flags: el fichero se ejecuta con `go test -run`, y los
     # flags custom chocan con los propios flags de `go test`.
+    tank_setup_player = tank_setup_go("defaultPlayer")
     return f'''package {package_name}
 
 import (
@@ -157,6 +184,8 @@ func TestGenExtractor(t *testing.T) {{
 \t\t}},
 \t\tconfig.SpecOptions.SpecOptions)
 
+{tank_setup_player}
+
 \tdefaultRaid := core.SinglePlayerRaidProto(defaultPlayer, core.FullPartyBuffs, core.FullRaidBuffs, core.FullDebuffs)
 \tif config.IsTank {{
 \t\tdefaultRaid.Tanks = append(defaultRaid.Tanks, &proto.UnitReference{{Type: proto.UnitReference_Player, Index: 0}})
@@ -167,7 +196,7 @@ func TestGenExtractor(t *testing.T) {{
 
 \trsr := &proto.RaidSimRequest{{
 \t\tRaid:      defaultRaid,
-\t\tEncounter: core.MakeSingleTargetEncounter(5),
+\t\tEncounter: encounter,
 \t\tSimOptions: &proto.SimOptions{{
 \t\t\tIterations: int32(iterations),
 \t\t\tIsTest:     true,
@@ -209,6 +238,7 @@ def generate_stat_weights_go(spec: str, test_source: str, ep_config: dict) -> st
     # envOr ya está declarada en zzz_gen_extractor_test.go, generado por
     # generate_main_go() en el mismo paquete: redeclararla aquí duplicaría el
     # símbolo y rompería la compilación.
+    tank_setup_player = tank_setup_go("player")
     return f'''package {package_name}
 
 import (
@@ -252,12 +282,14 @@ func TestGenStatWeights(t *testing.T) {{
 \t\t}},
 \t\tconfig.SpecOptions.SpecOptions)
 
+{tank_setup_player}
+
 \tswr := &proto.StatWeightsRequest{{
 \t\tPlayer:    player,
 \t\tRaidBuffs: core.FullRaidBuffs,
 \t\tPartyBuffs: core.FullPartyBuffs,
 \t\tDebuffs:   core.FullDebuffs,
-\t\tEncounter: core.MakeSingleTargetEncounter(5),
+\t\tEncounter: encounter,
 \t\tSimOptions: &proto.SimOptions{{
 \t\t\tIterations: int32(iterations),
 \t\t\tIsTest:     true,
@@ -287,8 +319,14 @@ func TestGenStatWeights(t *testing.T) {{
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--spec", help="Solo generar esta spec (por defecto, todas)")
+    args = parser.parse_args()
+
     generated = 0
     for spec, rel_path in SPEC_TEST_FILES.items():
+        if args.spec and spec != args.spec:
+            continue
         test_path = SIM_DIR / rel_path
         if not test_path.exists():
             print(f"[{spec}] AVISO: no existe {test_path}, se omite")

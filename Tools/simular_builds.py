@@ -365,6 +365,7 @@ def simulate_build(spec: str, build: dict, talents_string: str, work_dir: pathli
         "items": item_deltas,
         "n_candidatos": len(candidates),
         "n_omitidos": omitidos,
+        "iterations": iterations,
     }
 
 
@@ -437,7 +438,8 @@ def main() -> None:
                 out_path = spec_out_dir / f"{build_id}.json"
                 if not args.force and out_path.exists():
                     existing = load_json(out_path)
-                    if existing.get("status") == "ok":
+                    # sin "iterations": resultados de antes de guardarlo, todos a 300
+                    if existing.get("status") == "ok" and existing.get("iterations", 300) >= args.iterations:
                         print(f"[{spec}/{build_id}] ya simulado, se salta (--force para repetir)")
                         continue
 

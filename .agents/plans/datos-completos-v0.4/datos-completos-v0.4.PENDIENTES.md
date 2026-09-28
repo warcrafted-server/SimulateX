@@ -59,12 +59,39 @@ PLAN):
   de `UnitStat`: `stat − posBuff − negBuff`, verificado en `PaperDollFrame.lua` 3.3.5a).
 - Causa de "flecha en casi todo": por debajo de 80 Supervivencia y Amenaza usaban los
   mismos pesos con signo invertido (una de las dos siempre > 0).
-- **Limitación conocida de tanques**: `compute_stat_weights` solo lee `dps.weights`, y
-  el dtps de las simulaciones de tanque es ruido (`feral_tank_druid` p1: dtps base 59.1,
-  deltas de −11 a +65). El valor de tanque ignora aguante/armadura/esquivar hasta
-  re-simular los tanques con un encuentro donde el jefe pegue al tanque (afecta a
-  feral_tank_druid, protection_paladin, protection_warrior, tank_deathknight). Pendiente
-  de que el usuario decida si se hace.
+- **Tanques (en curso, sin commit)**: el dtps viejo era ruido (dtps base 59.1) porque los
+  tests de wowsims no curan al tanque y muere. Arreglo:
+  `generar_extractores_go.py::tank_setup_go` pone para `IsTank` el jefe y la curación por
+  defecto de la UI de wowsims (65000 cada 1.5 s, HealingModel 0.175×65000/1.5 hps,
+  cadencia 2.25 s). Verificado: Guardián P1 da dtps base 5252. `generar_db_addon.py` usa
+  los pesos de la métrica del rol (`ROLE_WEIGHTS_METRIC`: dps/hps/tps; antes siempre dps,
+  también para healing_priest) y para tanques añade `survival` (pesos dtps negados, con
+  su valor de hueco y critComponent). Addon: % de tanque = media 1:1 de amenaza y
+  supervivencia (métrica "surv" = −dtps en `GetExactDelta`), como los pesos de tanque por
+  defecto de wowsims. El aguante apenas cuenta (con curación el tanque no muere; wowsims
+  lo valora por riesgo de muerte, ratio 0 por defecto).
+  - Datos viejos de tanque apartados en `Data/sims_obsoletos/<spec>_sin_curacion`.
+  - `feral_tank_druid` relanzado a 1000 iteraciones a prioridad normal (log
+    `Data/logs/sim_feral_tank_druid.log`). Al terminar (autorizado por el usuario, sin
+    volver a preguntar): `python3 generar_db_addon.py --clase Druid`, comprobar que las
+    builds de Guardián traen `survival`, y commit + push.
+- **Cola del resto de clases**: `Tools/lote_simulaciones.sh` (relanzable; 2 en paralelo,
+  1000 iteraciones o 100 para specs preset; regenera los Go de cada spec antes de
+  simularla; se salta una spec si ya hay otro `simular_builds.py` con ella). Corre con
+  `nice -n 10` para dejar prioridad a Guardián; progreso en `Data/logs/lote.log` y
+  `Data/logs/sim_<spec>.log`. Al final de la cola van `feral_druid` y `balance_druid`.
+  **Tras el reinicio de las 04:00**, desde la raíz del repo:
+  `nohup nice -n 10 Tools/lote_simulaciones.sh > Data/logs/lote.log 2>&1 &`
+- **Iteraciones**: `simular_builds.py` guarda `iterations` en cada resultado y la
+  reanudación solo salta una build si se hizo con al menos las iteraciones pedidas (sin el
+  campo = 300). Así, lo simulado hoy a 300 por descuido (feral_druid, balance_druid y lo
+  parcial de retribution_paladin, shadow_priest, elemental_shaman) se repite a 1000 en la
+  cola, decisión del usuario.
+- `generar_db_addon.py --clase <Clase>`: regenera solo esa clase (el .lua se reescribe
+  entero; `--spec` suelto dejaría fuera las otras specs de la clase).
+- Restos sin sufijo de APL (de antes del fix de build_id) en `Data/sims/` de
+  retribution_paladin, shadow_priest y elemental_shaman: borrarlos tras re-simular
+  (fecha anterior al 2026-09-28 = viejo), como se hizo con feral/balance.
 - Flecha naranja ("mejora otra spec"): casilla en el panel
   (`SimulateX_DB.otherSpecArrowDisabled`, activada por defecto), decisión del usuario.
 - **Sin hacer todavía**: prueba en juego de estos cambios; commit + push (pedir permiso).

@@ -67,8 +67,9 @@ SPELL_CRIT_INDEX = 8
 
 
 def compute_stat_weights(spec: str, build: dict, talents_string: str, work_dir: pathlib.Path) -> dict | None:
-    """Ejecuta TestGenStatWeights (paso 3) para esta build y devuelve
-    dps.weights.stats/pseudoStats (pesos brutos), o None si falla."""
+    """Ejecuta TestGenStatWeights (paso 3) para esta build y devuelve el
+    StatWeightsResult entero ({dps, hps, tps, dtps, ...}.weights con
+    stats/pseudoStats brutos), o None si falla."""
     out_file = work_dir / f"{build['gear_file']}_sw.json"
     env = build_env(spec, build["gear_file"], build.get("apl_file"), None, talents_string, out_file)
     env["SIMX_SW_OUT_FILE"] = str(out_file)
@@ -79,12 +80,35 @@ def compute_stat_weights(spec: str, build: dict, talents_string: str, work_dir: 
         return None
     result = load_json(out_file)
     out_file.unlink(missing_ok=True)
-    return result.get("dps", {}).get("weights", {})
+    return result
+
+
+# Métrica cuyos pesos valen para el rol (la misma que usa el addon). Los
+# tanques además llevan un bloque "survival" con los de dtps.
+ROLE_WEIGHTS_METRIC = {"dps": "dps", "healer": "hps", "tank": "tps"}
 
 
 def weights_by_stat_index(raw_weights: dict) -> dict:
     stats = raw_weights.get("stats", [])
     return {i: v for i, v in enumerate(stats) if v}
+
+
+def survival_block(raw_dtps_weights: dict, gear_items: list, items_by_id: dict, gem_colors: dict) -> dict:
+    """Pesos de supervivencia de un tanque: los de dtps con el signo cambiado
+    (menos daño recibido = mejor), con su propio valor de hueco y critComponent."""
+    negated = {key: [-v for v in raw_dtps_weights.get(key, [])] for key in ("stats", "pseudoStats")}
+    weights_index = weights_by_stat_index(negated)
+    socket_value, meta_socket_value = compute_socket_values(gear_items, items_by_id, gem_colors, weights_index)
+    return {
+        "weights": build_item_mod_weights(weights_index),
+        "weaponDps": weapon_dps_weights(negated["pseudoStats"]),
+        "critComponent": {
+            "melee": round(weights_index.get(MELEE_CRIT_INDEX, 0.0), 4),
+            "spell": round(weights_index.get(SPELL_CRIT_INDEX, 0.0), 4),
+        },
+        "socketValue": socket_value,
+        "metaSocketValue": meta_socket_value,
+    }
 
 
 def build_item_mod_weights(weights_index: dict) -> dict:
@@ -127,7 +151,7 @@ def compute_socket_values(gear_items: list, items_by_id: dict, gem_colors: dict,
 
 def build_entry(spec: str, build_id: str, sim_result: dict, weights_index: dict, weapon_dps: dict,
                 weights_kind: str, gear_items: list, items_by_id: dict, gem_colors: dict,
-                talents_string: str) -> dict:
+                talents_string: str, survival: dict | None = None) -> dict:
     game_class, role, spec_label = SPEC_INFO[spec]
     avg_item_level = compute_avg_item_level(gear_items, items_by_id)
     socket_value, meta_socket_value = compute_socket_values(gear_items, items_by_id, gem_colors, weights_index)
@@ -171,6 +195,8 @@ def build_entry(spec: str, build_id: str, sim_result: dict, weights_index: dict,
     }
     if spec in FERAL_WEAPON_AP_SPECS and weapon_dps:
         entry["feralWeaponAp"] = {"base": FERAL_AP_BASE, "perDps": FERAL_AP_PER_DPS}
+    if survival:
+        entry["survival"] = survival
     return entry
 
 
@@ -213,6 +239,8 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--spec", help="Solo consolidar esta spec (por defecto, todas las que tengan datos en Data/sims/)")
+    parser.add_argument("--clase", help="Solo las specs de esta clase (p. ej. Druid): el .lua de la clase "
+                        "se reescribe entero, así que --spec suelto deja fuera las demás specs")
     args = parser.parse_args()
 
     if not ITEMS_BD_PATH.exists():
@@ -230,13 +258,15 @@ def main() -> None:
         apl_files_by_spec[data["spec"]] = {a["const_name"]: a["apl_file"] for a in data["apl_presets"]}
 
     specs = [args.spec] if args.spec else [s for s in SPEC_INFO if (SIMS_DIR / s).exists()]
+    if args.clase:
+        specs = [s for s in specs if s in SPEC_INFO and SPEC_INFO[s][0] == args.clase]
 
     entries_by_class: dict[str, dict] = {}
     for spec in specs:
         if spec not in SPEC_INFO:
             print(f"[{spec}] spec desconocida, se omite")
             continue
-        game_class, _role, _spec_label = SPEC_INFO[spec]
+        game_class, role, _spec_label = SPEC_INFO[spec]
         spec_sims_dir = SIMS_DIR / spec
         if not spec_sims_dir.exists():
             print(f"[{spec}] sin Data/sims/{spec}/, se omite (pendiente del paso 7)")
@@ -288,22 +318,27 @@ def main() -> None:
                     continue
                 gear_items = base_gear_items(base_input)
 
+                survival = None
                 if ep_config["kind"] == "preset":
                     weights_index = {STAT_NAME_TO_INDEX[name]: value for name, value in ep_config["ep_weights"].items()
                                       if name in STAT_NAME_TO_INDEX}
                     weapon_dps = {}
                     weights_kind = "preset"
                 else:
-                    raw_weights = compute_stat_weights(spec, build_with_apl, talents_string, work_dir)
-                    if raw_weights is None:
+                    sw_result = compute_stat_weights(spec, build_with_apl, talents_string, work_dir)
+                    if sw_result is None:
                         print(f"[{spec}/{sim_file.stem}] fallo generando pesos (TestGenStatWeights), se omite")
                         continue
+                    raw_weights = sw_result.get(ROLE_WEIGHTS_METRIC[role], {}).get("weights", {})
                     weights_index = weights_by_stat_index(raw_weights)
                     weapon_dps = weapon_dps_weights(raw_weights.get("pseudoStats", []))
                     weights_kind = "sim"
+                    if role == "tank":
+                        survival = survival_block(sw_result.get("dtps", {}).get("weights", {}),
+                                                  gear_items, items_by_id, gem_colors)
 
                 entry = build_entry(spec, sim_result["build_id"], sim_result, weights_index, weapon_dps,
-                                    weights_kind, gear_items, items_by_id, gem_colors, talents_string)
+                                    weights_kind, gear_items, items_by_id, gem_colors, talents_string, survival)
                 build_key = f"{spec}_{sim_result['build_id']}"
                 entries_by_class.setdefault(game_class, {})[build_key] = entry
                 consolidated_count += 1

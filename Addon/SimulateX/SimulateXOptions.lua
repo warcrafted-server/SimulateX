@@ -7,6 +7,17 @@ local title = panel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
 title:SetPoint("TOPLEFT", 16, -16)
 title:SetText("SimulateX")
 
+local openButton = CreateFrame("Button", "SimulateXOptionsOpenButton", panel, "UIPanelButtonTemplate")
+openButton:SetWidth(150)
+openButton:SetHeight(22)
+openButton:SetPoint("TOPRIGHT", -16, -16)
+openButton:SetText("Abrir comparador")
+openButton:SetScript("OnClick", function()
+    if SimulateX_Comparador_Toggle then
+        SimulateX_Comparador_Toggle()
+    end
+end)
+
 local subtitle = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
 subtitle:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
 subtitle:SetPoint("RIGHT", panel, "RIGHT", -16, 0)
@@ -40,8 +51,19 @@ otherArrowCheck:SetScript("OnClick", function(self)
     end
 end)
 
+local minimapCheck = CreateFrame("CheckButton", "SimulateXOptionsMinimapCheck", panel, "UICheckButtonTemplate")
+minimapCheck:SetPoint("TOPLEFT", otherArrowCheck, "BOTTOMLEFT", 0, -8)
+local minimapText = _G[minimapCheck:GetName() .. "Text"]
+minimapText:SetText("Botón en el minimapa (hace falta /reload o reiniciar el cliente)")
+minimapText:SetWidth(380)
+minimapText:SetJustifyH("LEFT")
+
+minimapCheck:SetScript("OnClick", function(self)
+    SimulateX_DB.minimapHidden = not self:GetChecked() or nil
+end)
+
 local specsLabel = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-specsLabel:SetPoint("TOPLEFT", otherArrowCheck, "BOTTOMLEFT", 2, -20)
+specsLabel:SetPoint("TOPLEFT", minimapCheck, "BOTTOMLEFT", 2, -20)
 specsLabel:SetText("Sub-especializaciones a mostrar (nivel 80):")
 
 local specCheckboxes = {}
@@ -96,6 +118,7 @@ end
 panel.refresh = function()
     lowLevelCheck:SetChecked(not SimulateX_DB.lowLevelEstimateDisabled)
     otherArrowCheck:SetChecked(not SimulateX_DB.otherSpecArrowDisabled)
+    minimapCheck:SetChecked(not SimulateX_DB.minimapHidden)
     RebuildSpecCheckboxes()
 end
 

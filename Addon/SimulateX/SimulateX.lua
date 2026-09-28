@@ -415,37 +415,55 @@ local function ScoreWeaponDps(dps, build, hand)
     return weight * dps
 end
 
--- Puntuación = Σ peso × stat + DPS de arma + huecos × valor de hueco
--- (socketValue/metaSocketValue de la build). Ignora la bonificación de ranura
--- (igual que el paso 1 al simular: Pawn por defecto tampoco la cuenta).
+-- Igual que ScoreItem, pero además de la puntuación total devuelve cuánto
+-- aporta cada estadística (clave = misma clave ITEM_MOD_*/"weaponDps"/
+-- "socket", para el desglose del comparador; ver ComparadorBreakdown).
 -- hand: mano donde iría el arma; sin ella se deduce del tipo de objeto.
-local function ScoreItem(itemLink, weights, build, hand)
+local function ScoreItemBreakdown(itemLink, weights, build, hand)
     local stats = GetItemStatsFromData(itemLink)
-    local score = ScoreWeaponDps(stats.ITEM_MOD_DAMAGE_PER_SECOND_SHORT, build, hand or GetDefaultHand(itemLink))
+    local contributions = {}
+    local score = 0
+
+    local weaponContribution = ScoreWeaponDps(stats.ITEM_MOD_DAMAGE_PER_SECOND_SHORT, build, hand or GetDefaultHand(itemLink))
+    if weaponContribution ~= 0 then
+        contributions.weaponDps = weaponContribution
+        score = score + weaponContribution
+    end
 
     for _, key in ipairs(DIRECT_WEIGHT_KEYS) do
         local weight = weights[key]
         if weight and stats[key] then
-            score = score + weight * stats[key]
+            local contribution = weight * stats[key]
+            contributions[key] = (contributions[key] or 0) + contribution
+            score = score + contribution
         end
     end
     for itemModKey in pairs(SCALABLE_BY_LEVEL) do
         local weight = weights[itemModKey]
         if weight and stats[itemModKey] then
-            score = score + weight * stats[itemModKey]
+            local contribution = weight * stats[itemModKey]
+            contributions[itemModKey] = (contributions[itemModKey] or 0) + contribution
+            score = score + contribution
         end
     end
 
     for statKey, count in pairs(stats) do
         if statKey:match("^EMPTY_SOCKET_") then
-            if statKey == "EMPTY_SOCKET_META" then
-                score = score + (build.metaSocketValue or 0) * count
-            else
-                score = score + (build.socketValue or 0) * count
-            end
+            local socketWeight = statKey == "EMPTY_SOCKET_META" and (build.metaSocketValue or 0) or (build.socketValue or 0)
+            local contribution = socketWeight * count
+            contributions.sockets = (contributions.sockets or 0) + contribution
+            score = score + contribution
         end
     end
 
+    return score, contributions
+end
+
+-- Puntuación = Σ peso × stat + DPS de arma + huecos × valor de hueco
+-- (socketValue/metaSocketValue de la build). Ignora la bonificación de ranura
+-- (igual que el paso 1 al simular: Pawn por defecto tampoco la cuenta).
+local function ScoreItem(itemLink, weights, build, hand)
+    local score = ScoreItemBreakdown(itemLink, weights, build, hand)
     return score
 end
 
@@ -574,6 +592,9 @@ local function GetExactDelta(build, itemId, metricName, whichHand)
     local data = build.items and build.items[itemId]
     if not data then
         return nil
+    end
+    if metricName == "surv" then
+        return data.dtps and -data.dtps  -- menos daño recibido = mejor
     end
     if whichHand == "oh" then
         return metricName == "dps" and data.dpsOH or nil
@@ -750,15 +771,20 @@ local function GetBaseStatsScore(weights)
     return total
 end
 
+-- Mismo denominador que usa ComputePercent, expuesto aparte para el
+-- desglose del comparador (GetComparisonBreakdown necesita el número, no
+-- solo el % ya dividido).
+local function GetPercentDenominator(weightsKind, playerLevel, base80, weights, build)
+    if weightsKind == "sim" and playerLevel >= 80 and base80 and base80 ~= 0 then
+        return base80
+    end
+    return GetEquippedTotalScore(weights, build) + GetBaseStatsScore(weights)
+end
+
 -- Devuelve (percent, isNoise). base80 es build.base[metricName] (solo válido
 -- si weightsKind == "sim" y el jugador está a nivel 80).
 local function ComputePercent(gain, weightsKind, playerLevel, base80, weights, build)
-    local denominator
-    if weightsKind == "sim" and playerLevel >= 80 and base80 and base80 ~= 0 then
-        denominator = base80
-    else
-        denominator = GetEquippedTotalScore(weights, build) + GetBaseStatsScore(weights)
-    end
+    local denominator = GetPercentDenominator(weightsKind, playerLevel, base80, weights, build)
 
     if not denominator or denominator == 0 then
         return 0, true
@@ -774,10 +800,30 @@ end
     para el tooltip y para la flecha de mejora.
 ------------------------------------------------------------------------]]
 
--- Una sola métrica por rol: el tooltip da un % global por spec.
--- Tanque: amenaza, no dtps. En sus simulaciones el jefe apenas pega (dtps
--- base ~60), así que el daño recibido es ruido.
+-- Una sola métrica por rol: el tooltip da un % global por spec. Tanque:
+-- amenaza, y si la build trae "survival" se promedia con la supervivencia
+-- (EvaluateBuild).
 local ROLE_METRIC = { dps = "dps", healer = "hps", tank = "tps" }
+
+-- Vista de la build con los pesos de supervivencia (dtps con el signo
+-- cambiado); lo demás (items, base, feralWeaponAp...) es el de la build.
+local survivalBuilds = setmetatable({}, { __mode = "k" })
+
+local function GetSurvivalBuild(build)
+    local survival = survivalBuilds[build]
+    if not survival then
+        local data = build.survival
+        survival = setmetatable({
+            weights = data.weights,
+            weaponDps = data.weaponDps,
+            critComponent = data.critComponent,
+            socketValue = data.socketValue,
+            metaSocketValue = data.metaSocketValue,
+        }, { __index = build })
+        survivalBuilds[build] = survival
+    end
+    return survival
+end
 
 -- Nombre del objeto (u objetos) contra el que se comparó, para la línea
 -- "vs. X" del tooltip. Usa el mismo criterio que CompareAgainstEquipped para
@@ -852,6 +898,21 @@ local function EvaluateBuild(itemLink, itemId, equipLoc, buildId, build, playerL
 
     local percent, isNoise = ComputePercent(gain, build.weightsKind, playerLevel,
         build.base and build.base[metric], weights, build)
+
+    -- tanque: media 1:1 de amenaza y supervivencia, como los pesos de tanque
+    -- por defecto de wowsims
+    if build.role == "tank" and build.survival then
+        local survival = GetSurvivalBuild(build)
+        local survivalWeights = GetWeightsAtLevel(survival, playerLevel, classGameName)
+        local survivalGain = CompareAgainstEquipped(itemLink, itemId, equipLoc, survival, survivalWeights, "surv")
+        if survivalGain then
+            local survivalPercent = ComputePercent(survivalGain, build.weightsKind, playerLevel,
+                build.base and build.base.dtps, survivalWeights, survival)
+            percent = (percent + survivalPercent) / 2
+            gain = percent
+            isNoise = math.abs(percent) < NOISE_THRESHOLD_PCT
+        end
+    end
 
     return {
         buildId = buildId,
@@ -945,6 +1006,225 @@ local function GetItemEvaluations(itemLink)
     end)
     return results
 end
+
+--[[----------------------------------------------------------------------
+    COMPARADOR (v0.6): A contra B (huecos ya validados como compatibles por
+    el llamador, UI/Comparador.lua) o A contra lo equipado si B está vacío.
+    Reutiliza el mismo motor que el tooltip: nunca dos cálculos distintos
+    para la misma pregunta.
+------------------------------------------------------------------------]]
+
+-- Ganancia de A frente a B para una sola métrica, con las mismas reglas de
+-- ComparePair (exacto solo si A y B tienen dato en build.items, si no EP
+-- para los dos). A y B son del mismo equipLoc (validado por el llamador), así
+-- que no hace falta la lógica de doble empuñadura/2M/peor-de-dos de
+-- CompareAgainstEquipped: es una comparación directa de dos objetos.
+local function CompareDirect(linkA, idA, linkB, idB, build, weights, metricName, hand)
+    return ComparePair(linkA, idA, linkB, idB, build, weights, metricName, hand)
+end
+
+-- Evaluación de A frente a B para una build (misma forma que EvaluateBuild),
+-- para el comparador. linkB/idB nil = contra lo equipado (CompareAgainstEquipped).
+local function EvaluateBuildComparison(linkA, idA, linkB, idB, equipLoc, buildId, build, playerLevel, classGameName)
+    if not IsItemUsable(linkA) then
+        return nil
+    end
+    if linkB and not IsItemUsable(linkB) then
+        return nil
+    end
+
+    local metric = ROLE_METRIC[build.role] or "dps"
+    local weights = GetWeightsAtLevel(build, playerLevel, classGameName)
+    local hand = GetDefaultHand(linkA)
+
+    local gain
+    if linkB then
+        gain = CompareDirect(linkA, idA, linkB, idB, build, weights, metric, hand)
+    else
+        gain = CompareAgainstEquipped(linkA, idA, equipLoc, build, weights, metric)
+    end
+    if gain == nil then
+        return nil
+    end
+
+    local percent, isNoise = ComputePercent(gain, build.weightsKind, playerLevel,
+        build.base and build.base[metric], weights, build)
+
+    if build.role == "tank" and build.survival then
+        local survival = GetSurvivalBuild(build)
+        local survivalWeights = GetWeightsAtLevel(survival, playerLevel, classGameName)
+        local survivalGain
+        if linkB then
+            survivalGain = CompareDirect(linkA, idA, linkB, idB, survival, survivalWeights, "surv", hand)
+        else
+            survivalGain = CompareAgainstEquipped(linkA, idA, equipLoc, survival, survivalWeights, "surv")
+        end
+        if survivalGain then
+            local survivalPercent = ComputePercent(survivalGain, build.weightsKind, playerLevel,
+                build.base and build.base.dtps, survivalWeights, survival)
+            percent = (percent + survivalPercent) / 2
+            gain = percent
+            isNoise = math.abs(percent) < NOISE_THRESHOLD_PCT
+        end
+    end
+
+    return {
+        buildId = buildId,
+        spec = build.spec,
+        specLabel = build.specLabel or build.spec,
+        role = build.role,
+        metric = metric,
+        gain = gain,
+        percent = percent,
+        isNoise = isNoise,
+        isExact = (build.weightsKind == "sim" and playerLevel >= 80),
+        talentTree = build.talentTree,
+    }
+end
+
+-- Una línea por spec, A contra B (o contra equipado si linkB es nil). Misma
+-- selección de build activa/etiquetas que GetItemEvaluations.
+local function GetComparisonEvaluations(linkA, linkB)
+    local classFileName = select(2, UnitClass("player"))
+    local gameClassName = CLASS_FILE_TO_GAME_CLASS[classFileName]
+    local dataVarName = CLASS_DATA_VARS[classFileName]
+    local classData = dataVarName and _G[dataVarName]
+    if not classData or not gameClassName then
+        return nil
+    end
+
+    local idA = tonumber(linkA:match("item:(%d+)"))
+    local _, _, _, _, _, _, _, _, equipLoc = GetItemInfo(linkA)
+    if not equipLoc or equipLoc == "" then
+        return nil
+    end
+    local idB
+    if linkB then
+        idB = tonumber(linkB:match("item:(%d+)"))
+        local _, _, _, _, _, _, _, _, equipLocB = GetItemInfo(linkB)
+        if not INVTYPE_TO_SLOTS[equipLoc] or equipLocB ~= equipLoc then
+            return nil, "no van en el mismo hueco"
+        end
+    end
+
+    local bestBySpec = GetBestBuildPerSpec(classData)
+    local activeKey = GetActiveSpecKey(bestBySpec, classFileName)
+    local playerLevel = GetEffectivePlayerLevel()
+
+    local byLabel = {}
+    for key, entry in pairs(bestBySpec) do
+        local specLabel = entry.build.specLabel or entry.build.spec
+        local specEnabled = SimulateX_DB.disabledSpecs == nil or not SimulateX_DB.disabledSpecs[specLabel]
+        if specEnabled then
+            local evaluation = EvaluateBuildComparison(linkA, idA, linkB, idB, equipLoc, entry.buildId, entry.build, playerLevel, gameClassName)
+            if evaluation then
+                evaluation.isActive = (key == activeKey)
+                local current = byLabel[specLabel]
+                if not current or (evaluation.isActive and not current.isActive)
+                    or (not current.isActive and evaluation.talentTree < current.talentTree) then
+                    byLabel[specLabel] = evaluation
+                end
+            end
+        end
+    end
+
+    local results = {}
+    for _, evaluation in pairs(byLabel) do
+        table.insert(results, evaluation)
+    end
+    table.sort(results, function(a, b)
+        if a.isActive ~= b.isActive then return a.isActive end
+        return a.specLabel < b.specLabel
+    end)
+    return results
+end
+
+-- Etiquetas legibles en castellano de cada clave del desglose (globales
+-- traducidas del cliente para las de item, resto a mano).
+local BREAKDOWN_LABELS = setmetatable({
+    weaponDps = "DPS de arma", sockets = "Huecos de gema",
+    ITEM_MOD_CRIT_RATING_SHORT = ITEM_MOD_CRIT_RATING_SHORT or "Crítico",
+    ITEM_MOD_HIT_RATING_SHORT = ITEM_MOD_HIT_RATING_SHORT or "Puntería",
+    ITEM_MOD_HASTE_RATING_SHORT = ITEM_MOD_HASTE_RATING_SHORT or "Celeridad",
+    ITEM_MOD_ARMOR_PENETRATION_RATING_SHORT = ITEM_MOD_ARMOR_PENETRATION_RATING_SHORT or "Penetración de armadura",
+}, {
+    __index = function(_, key)
+        return _G[key] or key
+    end,
+})
+
+-- Desglose de una spec: diferencia de estadísticas (A − B, o A − equipo si
+-- linkB es nil) y cuánto aporta cada una al % de esa spec (mismo denominador
+-- que ComputePercent para esa build), ordenado por |aporte| descendente.
+-- buildId: clave de classData (ver GetComparisonEvaluations/evaluation.buildId).
+local function GetComparisonBreakdown(linkA, linkB, buildId)
+    local classFileName = select(2, UnitClass("player"))
+    local gameClassName = CLASS_FILE_TO_GAME_CLASS[classFileName]
+    local dataVarName = CLASS_DATA_VARS[classFileName]
+    local classData = dataVarName and _G[dataVarName]
+    local build = classData and classData[buildId]
+    if not build then
+        return nil
+    end
+
+    local _, _, _, _, _, _, _, _, equipLoc = GetItemInfo(linkA)
+    local playerLevel = GetEffectivePlayerLevel()
+    local weights = GetWeightsAtLevel(build, playerLevel, gameClassName)
+    local hand = GetDefaultHand(linkA)
+    local metric = ROLE_METRIC[build.role] or "dps"
+    local denominator = GetPercentDenominator(build.weightsKind, playerLevel, build.base and build.base[metric], weights, build)
+
+    local _, contribA = ScoreItemBreakdown(linkA, weights, build, hand)
+    local contribB
+    if linkB then
+        _, contribB = ScoreItemBreakdown(linkB, weights, build, hand)
+    else
+        -- objeto equipado en ese hueco (slot único; anillos/abalorios y armas
+        -- con doble empuñadura no tienen un "el equipado" único, se omite el
+        -- desglose por estadística para esos huecos y solo se ve el % total)
+        local slots = INVTYPE_TO_SLOTS[equipLoc]
+        if not slots or #slots ~= 1 or equipLoc == "INVTYPE_WEAPON" or equipLoc == "INVTYPE_2HWEAPON" then
+            return nil
+        end
+        local equippedLink = select(1, GetEquippedItemId(slots[1]))
+        if equippedLink then
+            _, contribB = ScoreItemBreakdown(equippedLink, weights, build, hand)
+        else
+            contribB = {}
+        end
+    end
+
+    local keys = {}
+    local seen = {}
+    for key in pairs(contribA) do
+        if not seen[key] then seen[key] = true; table.insert(keys, key) end
+    end
+    for key in pairs(contribB) do
+        if not seen[key] then seen[key] = true; table.insert(keys, key) end
+    end
+
+    local rows = {}
+    for _, key in ipairs(keys) do
+        local diff = (contribA[key] or 0) - (contribB[key] or 0)
+        if diff ~= 0 then
+            local percentContribution = denominator and denominator ~= 0 and (diff / denominator * 100) or 0
+            table.insert(rows, { label = BREAKDOWN_LABELS[key], diff = diff, percent = percentContribution })
+        end
+    end
+    table.sort(rows, function(a, b) return math.abs(a.percent) > math.abs(b.percent) end)
+    return rows
+end
+
+-- API pública para UI/Comparador.lua: no expone las locales de este archivo.
+SimulateX_API = {
+    GetComparisonEvaluations = GetComparisonEvaluations,
+    GetComparisonBreakdown = GetComparisonBreakdown,
+    GetEffectivePlayerLevel = GetEffectivePlayerLevel,
+    CLASS_FILE_TO_GAME_CLASS = CLASS_FILE_TO_GAME_CLASS,
+    CLASS_DATA_VARS = CLASS_DATA_VARS,
+    GetBestBuildPerSpec = GetBestBuildPerSpec,
+    GetActiveSpecKey = GetActiveSpecKey,
+}
 
 --[[----------------------------------------------------------------------
     FLECHA Y TOOLTIP: "active" si mejora la spec activa, "other" si solo
@@ -1343,6 +1623,9 @@ local function OnEvent(self, event, ...)
             hooksecurefunc("OpenMail_Update", UpdateOpenMailIcons)
         end
         HookAuctionFrame()  -- por si otro addon ya cargó la subasta
+        if SimulateX_Lanzadores_Init then
+            SimulateX_Lanzadores_Init()
+        end
     elseif event == "ADDON_LOADED" and ... == "Blizzard_AuctionUI" then
         HookAuctionFrame()
     elseif event == "PLAYER_EQUIPMENT_CHANGED" or event == "PLAYER_LEVEL_UP" or event == "PLAYER_TALENT_UPDATE" then
@@ -1424,7 +1707,11 @@ SlashCmdList["SIMULATEX"] = function(msg)
     local command, rest = msg:match("^(%S*)%s*(.-)$")
     command = command:lower()
 
-    if command == "debug" then
+    if command == "comparar" then
+        if SimulateX_Comparador_Toggle then
+            SimulateX_Comparador_Toggle()
+        end
+    elseif command == "debug" then
         local link = rest ~= "" and rest or nil
         PrintDebugInfo(link)
     elseif command == "nivel" then
