@@ -3,17 +3,46 @@
     de Tools/generar_arbol_talentos.py, extraídos de Talent.dbc/TalentTab.dbc
     del servidor) y marca qué puntos pone cada distribución ya simulada
     (Tools/simular_talentos.py). Un selector arriba cambia de variante.
+    Icono, tamaño de casilla y líneas de conexión calcados de la interfaz
+    nativa del juego (Interface\TalentFrame\UI-TalentBranches/UI-TalentArrows,
+    ver FrameXML TalentFrameBase.lua) para que se lea igual que la calculadora
+    del juego, no una tabla aparte.
 ------------------------------------------------------------------------]]
 
-local ICON_SIZE = 26
-local CELL_SIZE = 31
+local unpack = unpack or table.unpack  -- Lua 5.1 (WoW 3.3.5a) trae unpack global
+
+local ICON_SIZE = 32          -- mismo tamaño que TALENT_BUTTON_SIZE del juego
+local CELL_SIZE = 40
 local TREE_COLUMNS = 4
 local TREE_ROWS = 11
 local NOISE_THRESHOLD_PCT = 0.3  -- mismo umbral que SimulateX.lua
 
-local treeFrames = {}   -- 3 frames (uno por árbol), cada uno con .cells[talentIndex]
+-- Coordenadas reales de Interface\TalentFrame\UI-TalentBranches (líneas
+-- rectas entre celdas adyacentes): [1] = requisito cumplido (dorado en la
+-- textura), [-1] = no cumplido (gris). Solo "down" (prerrequisito en la fila
+-- de encima, misma columna) y "right"/"left" (misma fila, columna
+-- adyacente) cubren la inmensa mayoría de dependencias reales del árbol.
+local BRANCH_TEXTURE = "Interface\\TalentFrame\\UI-TalentBranches"
+local BRANCH_COORDS = {
+    down = { [1] = { 0, 0.125, 0, 0.484375 }, [-1] = { 0, 0.125, 0.515625, 1.0 } },
+    right = { [1] = { 0.2578125, 0.3828125, 0, 0.5 }, [-1] = { 0.2578125, 0.3828125, 0.5, 1.0 } },
+}
+
+local treeFrames = {}   -- 3 frames (uno por árbol)
 local variantTabs = {}
 local currentVariantIndex = 1
+
+-- traduce el label interno de la variante a algo que lea un jugador. Si no
+-- hay traducción conocida, usa el label tal cual (mejor que nada, pero
+-- Tools/simular_talentos.py debería darle uno legible de entrada).
+local VARIANT_LABELS = {
+    estandar = "Estándar (wowsims)",
+    mas_potp = "Protector de la manada al máximo",
+}
+
+local function DisplayLabel(variant)
+    return VARIANT_LABELS[variant.label] or variant.label or "Variante"
+end
 
 local function GetTalentDataForClass()
     local classFileName = select(2, UnitClass("player"))
@@ -40,8 +69,7 @@ local function SplitTalentBlocks(talentsString)
 end
 
 --[[----------------------------------------------------------------------
-    UN TALENTO: icono + marco + texto "n/max". Los huecos sin talento real
-    (fila/columna sin entrada en la DBC) se quedan vacíos e invisibles.
+    UN TALENTO: icono + marco dorado si tiene puntos + contador grande.
 ------------------------------------------------------------------------]]
 
 local function CreateTalentCell(parent)
@@ -50,29 +78,39 @@ local function CreateTalentCell(parent)
     cell:SetHeight(ICON_SIZE)
     cell:EnableMouse(true)
 
+    cell.slotBg = cell:CreateTexture(nil, "BACKGROUND")
+    cell.slotBg:SetTexture("Interface\\Buttons\\UI-EmptySlot-White")
+    cell.slotBg:SetAllPoints()
+
     cell.icon = cell:CreateTexture(nil, "ARTWORK")
-    cell.icon:SetAllPoints()
+    cell.icon:SetPoint("TOPLEFT", 3, -3)
+    cell.icon:SetPoint("BOTTOMRIGHT", -3, 3)
     cell.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 
-    cell.border = cell:CreateTexture(nil, "OVERLAY")
-    cell.border:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
-    cell.border:SetBlendMode("ADD")
-    cell.border:SetPoint("CENTER")
-    cell.border:SetWidth(ICON_SIZE * 1.6)
-    cell.border:SetHeight(ICON_SIZE * 1.6)
-    cell.border:Hide()
+    cell.normalTexture = cell:CreateTexture(nil, "OVERLAY")
+    cell.normalTexture:SetTexture("Interface\\Buttons\\UI-Quickslot2")
+    cell.normalTexture:SetAllPoints()
 
-    cell.count = cell:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    cell.count:SetPoint("BOTTOMRIGHT", 2, -2)
+    cell.glow = cell:CreateTexture(nil, "OVERLAY")
+    cell.glow:SetTexture("Interface\\Buttons\\CheckButtonGlow")
+    cell.glow:SetBlendMode("ADD")
+    cell.glow:SetPoint("CENTER")
+    cell.glow:SetWidth(ICON_SIZE * 2)
+    cell.glow:SetHeight(ICON_SIZE * 2)
+    cell.glow:Hide()
+
+    cell.count = cell:CreateFontString(nil, "OVERLAY", "NumberFontNormalLarge")
+    cell.count:SetPoint("BOTTOMRIGHT", 1, 0)
     cell.count:SetText("")
 
     cell:SetScript("OnEnter", function(self)
         if not self.talent then return end
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         GameTooltip:SetText(self.talent.name, 1, 1, 1)
-        GameTooltip:AddLine(string.format("Rango %d / %d", self.rank or 0, self.talent.maxRank), 0.8, 0.8, 0.8)
+        GameTooltip:AddLine(string.format("Rango %d / %d", self.rank or 0, self.talent.maxRank),
+            self.rank and self.rank > 0 and 0.1 or 0.6, self.rank and self.rank > 0 and 1 or 0.6, 0.1)
         if self.talent.reqTalent then
-            GameTooltip:AddLine("Requiere otro talento a un rango mínimo", 0.6, 0.6, 0.6)
+            GameTooltip:AddLine("Requiere el talento de encima/al lado a rango mínimo", 0.6, 0.6, 0.6)
         end
         GameTooltip:Show()
     end)
@@ -83,10 +121,9 @@ local function CreateTalentCell(parent)
 end
 
 --[[----------------------------------------------------------------------
-    UN ÁRBOL: cuadrícula de TREE_ROWS x TREE_COLUMNS. Cada talento de la DBC
-    ocupa su fila/columna real; sin GetSpellInfo (icono) hasta que el
-    cliente lo tenga en caché, se reintenta con OnUpdate como en el resto
-    del addon (3.3.5a no tiene evento GET_SPELL_INFO_RECEIVED).
+    UN ÁRBOL: cuadrícula de TREE_ROWS x TREE_COLUMNS, con líneas de
+    conexión reales del juego (texturas Blizzard) hacia el prerrequisito de
+    cada talento que lo tenga.
 ------------------------------------------------------------------------]]
 
 local function RefreshCellIcon(cell)
@@ -117,59 +154,120 @@ end
 local function CreateTreeFrame(parent)
     local frame = CreateFrame("Frame", nil, parent)
     frame:SetWidth(TREE_COLUMNS * CELL_SIZE)
-    frame:SetHeight(TREE_ROWS * CELL_SIZE + 18)
+    frame:SetHeight(TREE_ROWS * CELL_SIZE + 20)
 
     frame.title = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
     frame.title:SetPoint("TOP", 0, 0)
     frame.title:SetTextColor(1, 0.82, 0)
 
     frame.grid = CreateFrame("Frame", nil, frame)
-    frame.grid:SetPoint("TOPLEFT", 0, -18)
+    frame.grid:SetPoint("TOPLEFT", 0, -20)
     frame.grid:SetWidth(TREE_COLUMNS * CELL_SIZE)
     frame.grid:SetHeight(TREE_ROWS * CELL_SIZE)
 
     frame.cells = {}
+    frame.branches = {}
     for row = 0, TREE_ROWS - 1 do
         for col = 0, TREE_COLUMNS - 1 do
             local cell = CreateTalentCell(frame.grid)
-            cell:SetPoint("TOPLEFT", frame.grid, "TOPLEFT", col * CELL_SIZE + 3, -(row * CELL_SIZE) - 3)
+            cell:SetPoint("CENTER", frame.grid, "TOPLEFT",
+                col * CELL_SIZE + CELL_SIZE / 2, -(row * CELL_SIZE) - CELL_SIZE / 2)
             frame.cells[row .. "_" .. col] = cell
         end
     end
     return frame
 end
 
--- Coloca los talentos reales de la DBC en su celda y marca los que trae
--- digits (cadena de un solo árbol, sin guiones).
+local function GetBranch(frame, index)
+    local branch = frame.branches[index]
+    if branch then return branch end
+    branch = frame.grid:CreateTexture(nil, "ARTWORK")
+    branch:SetTexture(BRANCH_TEXTURE)
+    frame.branches[index] = branch
+    return branch
+end
+
+-- Dibuja la línea entre el talento y su prerrequisito, si ambos existen en
+-- la cuadrícula y están alineados en vertical u horizontal (el caso normal;
+-- un puñado de talentos del juego real tiene desplazamientos en diagonal,
+-- ver limitación documentada arriba).
+local function DrawBranch(frame, branchIndex, fromCell, toCell, met)
+    if not fromCell or not toCell then return branchIndex end
+    local sameCol = fromCell.talent.col == toCell.talent.col
+    local sameRow = fromCell.talent.row == toCell.talent.row
+    if not sameCol and not sameRow then
+        return branchIndex  -- desplazamiento diagonal, no cubierto
+    end
+
+    branchIndex = branchIndex + 1
+    local branch = GetBranch(frame, branchIndex)
+    local rowDiff = toCell.talent.row - fromCell.talent.row
+
+    if sameCol and rowDiff == 1 then
+        branch:SetTexCoord(unpack(BRANCH_COORDS.down[met and 1 or -1]))
+        branch:SetWidth(CELL_SIZE)
+        branch:SetHeight(CELL_SIZE)
+        branch:SetPoint("TOP", fromCell, "BOTTOM", 0, 0)
+    elseif sameRow then
+        branch:SetTexCoord(unpack(BRANCH_COORDS.right[met and 1 or -1]))
+        branch:SetWidth(CELL_SIZE)
+        branch:SetHeight(CELL_SIZE)
+        local leftCell = fromCell.talent.col < toCell.talent.col and fromCell or toCell
+        branch:SetPoint("LEFT", leftCell, "RIGHT", 0, 0)
+    else
+        return branchIndex - 1  -- salto de más de una fila, no cubierto
+    end
+    branch:Show()
+    return branchIndex
+end
+
+-- Coloca los talentos reales de la DBC en su celda, marca los que trae
+-- digits (cadena de un solo árbol, sin guiones) y dibuja sus líneas.
 local function RenderTree(frame, treeData, digits)
     frame.title:SetText(treeData.name or "")
     for _, cell in pairs(frame.cells) do
         cell.talent = nil
         cell:Hide()
     end
+    for _, branch in pairs(frame.branches) do branch:Hide() end
 
+    local rankByIndex = {}
+    local cellByTalentId = {}
     for index, talent in ipairs(treeData.talents) do
         local cell = frame.cells[talent.row .. "_" .. talent.col]
         if cell then
             cell.talent = talent
             local rank = tonumber(digits and digits:sub(index, index)) or 0
             cell.rank = rank
+            rankByIndex[index] = rank
+            cellByTalentId[talent.id] = cell
             RefreshCellIcon(cell)
+
             if rank > 0 then
                 cell.icon:SetDesaturated(false)
                 cell.icon:SetAlpha(1)
-                cell.border:Show()
+                cell.glow:Show()
                 cell.count:SetText(rank .. "/" .. talent.maxRank)
-                cell.count:SetTextColor(1, 0.82, 0)
             else
                 cell.icon:SetDesaturated(true)
-                cell.icon:SetAlpha(0.55)
-                cell.border:Hide()
+                cell.icon:SetAlpha(0.4)
+                cell.glow:Hide()
                 cell.count:SetText("")
             end
             cell:Show()
         end
     end
+
+    local branchIndex = 0
+    for index, talent in ipairs(treeData.talents) do
+        if talent.reqTalent then
+            local fromCell = cellByTalentId[talent.reqTalent]
+            local toCell = frame.cells[talent.row .. "_" .. talent.col]
+            local met = (rankByIndex[index] or 0) > 0
+            branchIndex = DrawBranch(frame, branchIndex, fromCell, toCell, met)
+        end
+    end
+    for i = branchIndex + 1, #frame.branches do frame.branches[i]:Hide() end
 end
 
 --[[----------------------------------------------------------------------
@@ -181,7 +279,7 @@ local function GetVariantTab(index)
     if tab then return tab end
     local parent = variantTabs.parent
     tab = CreateFrame("Button", nil, parent)
-    tab:SetHeight(20)
+    tab:SetHeight(22)
     tab.bg = tab:CreateTexture(nil, "BACKGROUND")
     tab.bg:SetAllPoints()
     tab.label = tab:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
@@ -238,25 +336,28 @@ local function RenderPage(page, spec)
         page.emptyText:Show()
         page.treesFrame:Hide()
         page.summaryFrame:Hide()
+        page.variantBar:Hide()
         HideVariantTabsFrom(1)
         return
     end
 
     if not specData or not specData.variants or #specData.variants == 0 then
-        page.emptyText:SetText("Sin variantes simuladas todavía para esta especialización.")
+        page.emptyText:SetText("Sin variantes de talentos simuladas todavía para esta especialización.")
         page.emptyText:Show()
         page.summaryFrame:Hide()
-        -- sin datos de variante, el árbol se ve igualmente pero sin marcar nada
+        page.variantBar:Hide()
+        HideVariantTabsFrom(1)
+        -- el árbol se ve igual (nombres/iconos reales), pero sin marcar puntos
         for treeIndex = 1, 3 do
             RenderTree(treeFrames[treeIndex], treeData.trees[treeIndex], "")
         end
         page.treesFrame:Show()
-        HideVariantTabsFrom(1)
         return
     end
     page.emptyText:Hide()
     page.summaryFrame:Show()
     page.treesFrame:Show()
+    page.variantBar:Show()
 
     if currentVariantIndex > #specData.variants then
         currentVariantIndex = 1
@@ -268,9 +369,9 @@ local function RenderPage(page, spec)
         tab:ClearAllPoints()
         tab:SetPoint("TOPLEFT", page.variantBar, "TOPLEFT", (index - 1) * tabWidth, 0)
         tab:SetWidth(tabWidth - 2)
-        tab.label:SetText(variant.label or ("Variante " .. index))
+        tab.label:SetText(DisplayLabel(variant))
         local selected = (index == currentVariantIndex)
-        tab.bg:SetTexture(1, 0.82, 0, selected and 0.25 or 0.06)
+        tab.bg:SetTexture(1, 0.82, 0, selected and 0.28 or 0.07)
         tab.label:SetTextColor(selected and 1 or 0.75, selected and 1 or 0.75, selected and 0.6 or 0.75)
         tab:SetScript("OnClick", function()
             currentVariantIndex = index
@@ -299,7 +400,7 @@ function SimulateX_BuildTalentsPage(parent)
 
     local header = page:CreateFontString(nil, "ARTWORK", "GameFontNormal")
     header:SetPoint("TOPLEFT", 0, 0)
-    header:SetText("Árbol de talentos (mismo equipo, distinta distribución)")
+    header:SetText("Árbol de talentos")
     header:SetTextColor(1, 0.82, 0)
 
     local line = page:CreateTexture(nil, "ARTWORK")
@@ -313,7 +414,7 @@ function SimulateX_BuildTalentsPage(parent)
     page.emptyText:SetPoint("RIGHT", 0, 0)
     page.emptyText:SetJustifyH("LEFT")
 
-    -- resumen: valor de la variante actual + selector de variantes
+    -- resumen: valor de la variante actual + diferencia contra la mejor
     page.summaryFrame = CreateFrame("Frame", nil, page)
     page.summaryFrame:SetPoint("TOPLEFT", line, "BOTTOMLEFT", 0, -8)
     page.summaryFrame:SetPoint("RIGHT", 0, 0)
@@ -332,22 +433,23 @@ function SimulateX_BuildTalentsPage(parent)
     page.tiedText:SetTextColor(0.7, 0.7, 0.5)
     page.tiedText:Hide()
 
-    -- pestañitas de variante, justo encima de los árboles
+    -- pestañitas de variante (nombre legible), justo encima de los árboles
     page.variantBar = CreateFrame("Frame", nil, page)
     page.variantBar:SetPoint("TOPLEFT", page.tiedText, "BOTTOMLEFT", 0, -6)
     page.variantBar:SetPoint("RIGHT", 0, 0)
-    page.variantBar:SetHeight(20)
+    page.variantBar:SetHeight(22)
     variantTabs.parent = page.variantBar
 
     -- los 3 árboles lado a lado
     page.treesFrame = CreateFrame("Frame", nil, page)
-    page.treesFrame:SetPoint("TOPLEFT", page.variantBar, "BOTTOMLEFT", 0, -6)
+    page.treesFrame:SetPoint("TOPLEFT", page.variantBar, "BOTTOMLEFT", 0, -8)
     page.treesFrame:SetPoint("BOTTOMRIGHT", 0, 0)
 
     local treeWidth = TREE_COLUMNS * CELL_SIZE
     for treeIndex = 1, 3 do
         local frame = CreateTreeFrame(page.treesFrame)
-        frame:SetPoint("TOPLEFT", page.treesFrame, "TOPLEFT", (treeIndex - 1) * (treeWidth + 14), 0)
+        frame:SetPoint("TOP", page.treesFrame, "TOP", 0, 0)
+        frame:SetPoint("LEFT", page.treesFrame, "LEFT", (treeIndex - 1) * (treeWidth + 16), 0)
         treeFrames[treeIndex] = frame
     end
 

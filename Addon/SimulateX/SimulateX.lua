@@ -1678,6 +1678,9 @@ local function OnEvent(self, event, ...)
         if role and role ~= SimulateX_DB.feralRole then
             SimulateX_DB.feralRole = role
             RefreshOpenContainers()
+            if SimulateX_Comparador_Refresh then
+                SimulateX_Comparador_Refresh()
+            end
         end
     end
 end

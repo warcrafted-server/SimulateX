@@ -822,6 +822,10 @@ function SimulateX_Comparador_Refresh()
         return
     end
 
+    if talentsContent and talentsContent.refresh then
+        talentsContent.refresh()
+    end
+
     local linkA = cards[1].link
     local targets, multi = PrepareTargets(linkA)
     LayoutCards(multi and 3 or 2)

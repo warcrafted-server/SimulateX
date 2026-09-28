@@ -4,7 +4,7 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 
 ## Sin publicar
 ### Añadido
-- Pestaña Talentos (v0.7, en marcha): dibuja los 3 árboles de tu clase con los iconos reales, marcando qué talentos y cuántos puntos pone cada distribución ya simulada. Un selector cambia entre variantes y arriba se ve el DPS/HPS/Amenaza de cada una. Cuando todas rinden igual (caso de Feral: la build estándar ya gasta todos sus puntos en talentos al máximo) lo dice en vez de marcar una como "mejor" sin serlo.
+- Pestaña Talentos (v0.7, en marcha): dibuja los 3 árboles de tu clase con el mismo tamaño de icono y las mismas líneas de conexión que la calculadora nativa del juego, marcando qué talentos y cuántos puntos pone cada distribución ya simulada, con nombre legible. Arriba se ve el DPS/HPS/Amenaza de la variante activa. Cuando todas rinden igual (caso de Feral: la build estándar ya gasta todos sus puntos en talentos al máximo) lo dice en vez de marcar una como "mejor" sin serlo.
 - `Tools/generar_arbol_talentos.py`: vuelca la estructura completa de los árboles (fila, columna, máximo de rango, prerrequisitos) desde las DBC reales del servidor, para las 10 clases.
 - `Tools/validar_talentos.py`: valida cualquier cadena de talentos contra `Tools/talentos_referencia/` (extracción real de Talent.dbc/TalentTab.dbc del servidor: máximos de rango, prerrequisitos y orden real fila/columna), antes de simular nada. Ninguna variante se construye a ojo.
 - `Tools/simular_talentos.py` y `Tools/generar_db_talentos.py`: mismo pipeline que las simulaciones de equipo (SIMX_TALENTS), pero comparando distribuciones de talentos completas en vez de objetos.
@@ -21,6 +21,7 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 ### Corregido
 - El icono de algunos objetos no aparecía en el comparador: el fondo del hueco vacío se pintaba en la misma capa que el icono y a veces quedaba encima. Además el icono ya no espera a que el objeto esté en la caché del cliente.
 - Con un hueco de anillo o abalorio libre, el tooltip comparaba contra el otro que llevas en vez de contarlo entero.
+- La pestaña Talentos no se actualizaba al cambiar de forma con la ventana abierta (un Druida Feral podía ver el árbol de Feral estando en forma de Oso, en vez del de Guardián).
 - La ventana del comparador dejaba ver demasiado el fondo del juego y era más pequeña de lo cómodo; ahora es más grande y opaca por defecto (ajustable en las opciones).
 ### Cambiado
 - Tooltip más claro: una línea por especialización con un único % de mejora o pérdida (verde/rojo, "≈ igual" en gris), sin unidades ni líneas de Supervivencia/Amenaza. La cabecera indica contra qué objeto equipado se compara.
