@@ -66,6 +66,12 @@ TALENT_VARIANTS = {
     "feral_tank_druid": [
         ("estandar", "-503232132322010353120300313511-20350001"),
     ],
+    # Elemental (elemental_shaman): investigada (NOTAS_TALENTOS_NIVEL2.md),
+    # los dos candidatos con margen (Amparo elemental, Tormenta inexorable)
+    # no aparecen implementados en el motor. Solo la variante estándar.
+    "elemental_shaman": [
+        ("estandar", "0532001523212351322301351-005052031"),
+    ],
 }
 
 
