@@ -4,12 +4,13 @@
     duplica la lógica de puntuación.
 ------------------------------------------------------------------------]]
 
-local PANEL_WIDTH = 460
+local PANEL_WIDTH = 560
+local PANEL_HEIGHT = 460
 local SIDEBAR_WIDTH = 130
 local CONTENT_LEFT = 146
 local CONTENT_TOP = -86
 local BOTTOM_MARGIN = 18
-local SLOT_SIZE = 40
+local SLOT_SIZE = 44
 
 local frame, slotA, slotB, resultsFrame
 local rowPool = {}
@@ -20,34 +21,83 @@ local breakdownPool = {}
     derecho para vaciar. slot.link/slot.itemId guardan lo que contiene.
 ------------------------------------------------------------------------]]
 
+-- GetItemInfo puede no tener el objeto cacheado todavía (3.3.5a no tiene
+-- GET_ITEM_INFO_RECEIVED, ese evento es de expansiones posteriores): si
+-- falta el nombre, reintenta con un pequeño OnUpdate hasta que llegue.
+local function RefreshSlotIcon(slot)
+    local name, _, quality, itemLevel, _, itemType, itemSubType, _, equipLoc, texture = GetItemInfo(slot.link)
+    if not name then
+        if not slot.pendingIcon then
+            slot.pendingIcon = true
+            slot:SetScript("OnUpdate", function(self, elapsed)
+                self.retryTimer = (self.retryTimer or 0) + elapsed
+                if self.retryTimer < 0.2 then return end
+                self.retryTimer = 0
+                if GetItemInfo(self.link) then
+                    self:SetScript("OnUpdate", nil)
+                    self.pendingIcon = nil
+                    RefreshSlotIcon(self)
+                end
+            end)
+        end
+        slot.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+        slot.nameText:SetText("Cargando...")
+        slot.nameText:SetTextColor(0.6, 0.6, 0.6)
+        slot.detailText:SetText("")
+        return
+    end
+    slot.icon:SetTexture(texture or "Interface\\Icons\\INV_Misc_QuestionMark")
+    slot.nameText:SetText(name)
+    local color = ITEM_QUALITY_COLORS[quality or 1]
+    if color then
+        slot.nameText:SetTextColor(color.r, color.g, color.b)
+    end
+    local slotLabel = equipLoc and equipLoc ~= "" and _G[equipLoc]
+    local detail = string.format("Nivel de objeto %d", itemLevel or 0)
+    if itemSubType and itemSubType ~= "" then
+        detail = detail .. "  ·  " .. itemSubType
+    elseif itemType and itemType ~= "" then
+        detail = detail .. "  ·  " .. itemType
+    end
+    if slotLabel then
+        detail = detail .. "  ·  " .. slotLabel
+    end
+    slot.detailText:SetText(detail)
+end
+
 local function SetSlotItem(slot, itemLink)
     slot.link = itemLink
     slot.itemId = itemLink and tonumber(itemLink:match("item:(%d+)"))
+    slot.pendingIcon = nil
+    slot:SetScript("OnUpdate", nil)
     if itemLink then
-        local _, _, _, _, _, _, _, _, _, texture = GetItemInfo(itemLink)
-        slot.icon:SetTexture(texture or "Interface\\Icons\\INV_Misc_QuestionMark")
         slot.icon:Show()
         slot.placeholder:Hide()
+        slot.nameText:Show()
+        slot.detailText:Show()
+        RefreshSlotIcon(slot)
     else
         slot.icon:Hide()
         slot.placeholder:Show()
+        slot.nameText:Hide()
+        slot.detailText:Hide()
     end
     SimulateX_Comparador_Refresh()
 end
 
 local function CreateItemSlot(parent, label)
     local container = CreateFrame("Frame", nil, parent)
-    container:SetWidth(SLOT_SIZE + 8)
-    container:SetHeight(SLOT_SIZE + 26)
+    container:SetHeight(SLOT_SIZE + 4)
 
     local labelText = container:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-    labelText:SetPoint("TOP", 0, 0)
+    labelText:SetPoint("TOPLEFT", 0, 0)
     labelText:SetText(label)
+    labelText:SetTextColor(1, 0.82, 0)
 
     local slot = CreateFrame("Button", nil, container)
     slot:SetWidth(SLOT_SIZE)
     slot:SetHeight(SLOT_SIZE)
-    slot:SetPoint("TOP", labelText, "BOTTOM", 0, -6)
+    slot:SetPoint("BOTTOMLEFT", 0, 0)
     slot:SetNormalTexture("Interface\\Buttons\\UI-EmptySlot")
     slot:GetNormalTexture():SetTexCoord(0.08, 0.92, 0.08, 0.92)
     slot:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
@@ -62,6 +112,20 @@ local function CreateItemSlot(parent, label)
     slot.placeholder = slot:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
     slot.placeholder:SetPoint("CENTER", 0, 0)
     slot.placeholder:SetText("+")
+
+    slot.nameText = container:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    slot.nameText:SetPoint("BOTTOMLEFT", slot, "RIGHT", 10, 8)
+    slot.nameText:SetPoint("RIGHT", container, "RIGHT", 0, 0)
+    slot.nameText:SetJustifyH("LEFT")
+    slot.nameText:SetWordWrap(false)
+    slot.nameText:Hide()
+
+    slot.detailText = container:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+    slot.detailText:SetPoint("TOPLEFT", slot.nameText, "BOTTOMLEFT", 0, -3)
+    slot.detailText:SetPoint("RIGHT", container, "RIGHT", 0, 0)
+    slot.detailText:SetJustifyH("LEFT")
+    slot.detailText:SetWordWrap(false)
+    slot.detailText:Hide()
 
     slot:SetScript("OnReceiveDrag", function(self)
         local cursorType, _, itemLink = GetCursorInfo()
@@ -159,6 +223,12 @@ function SimulateX_Comparador_Refresh()
         for _, row in ipairs(rowPool) do row:Hide() end
         for _, row in ipairs(breakdownPool) do row:Hide() end
         resultsFrame.emptyText:Show()
+        if not slotB.link then
+            -- restaura el "+" (venía mostrando el objeto equipado)
+            slotB.nameText:Hide()
+            slotB.detailText:Hide()
+            slotB.placeholder:Show()
+        end
         return
     end
 
@@ -171,6 +241,25 @@ function SimulateX_Comparador_Refresh()
         return
     end
     resultsFrame.emptyText:Hide()
+
+    -- B vacío: enseña contra qué objeto equipado se está comparando en
+    -- realidad (misma etiqueta que el tooltip, GetComparisonLabel), en vez
+    -- del "+" a secas.
+    if not slotB.link then
+        local label = evaluations[1].comparisonLabel
+        if label then
+            slotB.placeholder:Hide()
+            slotB.nameText:SetText(label)
+            slotB.nameText:SetTextColor(0.6, 0.6, 0.6)
+            slotB.nameText:Show()
+            slotB.detailText:SetText("equipado ahora mismo")
+            slotB.detailText:Show()
+        else
+            slotB.nameText:Hide()
+            slotB.detailText:Hide()
+            slotB.placeholder:Show()
+        end
+    end
 
     local rowIndex = 0
     local activeEvaluation
@@ -243,10 +332,23 @@ end
     VENTANA
 ------------------------------------------------------------------------]]
 
+-- Opacidad del fondo de la ventana (0-1), configurable en el panel de
+-- opciones (SimulateX_DB.comparadorOpacity). Por defecto casi opaca: con el
+-- backdrop estándar de diálogo se veía demasiado el fondo del juego.
+local DEFAULT_OPACITY = 0.95
+
+function SimulateX_Comparador_ApplyOpacity()
+    if not frame then
+        return
+    end
+    local opacity = SimulateX_DB.comparadorOpacity or DEFAULT_OPACITY
+    frame:SetBackdropColor(0, 0, 0, opacity)
+end
+
 local function BuildFrame()
     frame = CreateFrame("Frame", "SimulateXComparadorFrame", UIParent)
     frame:SetWidth(PANEL_WIDTH)
-    frame:SetHeight(360)
+    frame:SetHeight(PANEL_HEIGHT)
     frame:SetPoint("CENTER")
     frame:SetFrameStrata("DIALOG")
     frame:SetToplevel(true)
@@ -261,6 +363,8 @@ local function BuildFrame()
         tile = true, tileSize = 16, edgeSize = 16,
         insets = { left = 4, right = 4, top = 4, bottom = 4 },
     })
+    frame:SetBackdropBorderColor(1, 1, 1, 1)
+    SimulateX_Comparador_ApplyOpacity()
     frame:Hide()
 
     local closeButton = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
@@ -300,30 +404,33 @@ local function BuildFrame()
     divider:SetPoint("TOPLEFT", frame, "TOPLEFT", CONTENT_LEFT - 1, CONTENT_TOP)
     divider:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", CONTENT_LEFT - 1, BOTTOM_MARGIN)
 
-    -- Tarjeta de huecos
+-- Tarjeta de huecos: A arriba, "vs." en medio, B abajo. Cada hueco ocupa
+-- todo el ancho para que el nombre del objeto no se corte.
     local card = CreateFrame("Frame", nil, frame)
     card:SetPoint("TOPLEFT", frame, "TOPLEFT", CONTENT_LEFT, CONTENT_TOP)
     card:SetPoint("RIGHT", frame, "RIGHT", -14, 0)
-    card:SetHeight(90)
+    card:SetHeight(180)
     card:SetBackdrop({
         bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
         edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
         tile = true, tileSize = 8, edgeSize = 12,
     })
-    card:SetBackdropColor(0, 0, 0, 0.5)
+    card:SetBackdropColor(0, 0, 0, 0.85)
     card:SetBackdropBorderColor(0.6, 0.6, 0.6, 0.8)
 
     local slotAContainer
     slotAContainer, slotA = CreateItemSlot(card, "A")
-    slotAContainer:SetPoint("LEFT", card, "LEFT", 30, 0)
+    slotAContainer:SetPoint("TOPLEFT", card, "TOPLEFT", 12, -10)
+    slotAContainer:SetPoint("RIGHT", card, "RIGHT", -12, 0)
 
-    local vsText = card:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    vsText:SetPoint("CENTER", card, "CENTER", 0, 4)
-    vsText:SetText("vs.")
+    local vsText = card:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+    vsText:SetPoint("TOP", slotAContainer, "BOTTOM", 0, -2)
+    vsText:SetText("contra")
 
     local slotBContainer
     slotBContainer, slotB = CreateItemSlot(card, "B (o equipado)")
-    slotBContainer:SetPoint("RIGHT", card, "RIGHT", -30, 0)
+    slotBContainer:SetPoint("TOPLEFT", slotAContainer, "BOTTOMLEFT", 0, -18)
+    slotBContainer:SetPoint("RIGHT", card, "RIGHT", -12, 0)
 
     local hint = card:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
     hint:SetPoint("BOTTOM", card, "BOTTOM", 0, 6)

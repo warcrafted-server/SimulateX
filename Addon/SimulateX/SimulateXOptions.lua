@@ -62,8 +62,33 @@ minimapCheck:SetScript("OnClick", function(self)
     SimulateX_DB.minimapHidden = not self:GetChecked() or nil
 end)
 
+local comparadorLabel = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+comparadorLabel:SetPoint("TOPLEFT", minimapCheck, "BOTTOMLEFT", 2, -20)
+comparadorLabel:SetText("Comparador de equipo:")
+
+local opacitySlider = CreateFrame("Slider", "SimulateXOptionsOpacitySlider", panel, "OptionsSliderTemplate")
+opacitySlider:SetPoint("TOPLEFT", comparadorLabel, "BOTTOMLEFT", 4, -22)
+opacitySlider:SetWidth(200)
+opacitySlider:SetMinMaxValues(0.3, 1)
+opacitySlider:SetValueStep(0.05)
+_G[opacitySlider:GetName() .. "Text"]:SetText("Opacidad de la ventana")
+_G[opacitySlider:GetName() .. "Low"]:SetText("")
+_G[opacitySlider:GetName() .. "High"]:SetText("")
+
+local opacityValueText = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+opacityValueText:SetPoint("LEFT", opacitySlider, "RIGHT", 10, 0)
+
+opacitySlider:SetScript("OnValueChanged", function(self, value)
+    value = math.floor(value * 20 + 0.5) / 20
+    SimulateX_DB.comparadorOpacity = value
+    opacityValueText:SetText(string.format("%d%%", value * 100))
+    if SimulateX_Comparador_ApplyOpacity then
+        SimulateX_Comparador_ApplyOpacity()
+    end
+end)
+
 local specsLabel = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-specsLabel:SetPoint("TOPLEFT", minimapCheck, "BOTTOMLEFT", 2, -20)
+specsLabel:SetPoint("TOPLEFT", opacitySlider, "BOTTOMLEFT", -4, -26)
 specsLabel:SetText("Sub-especializaciones a mostrar (nivel 80):")
 
 local specCheckboxes = {}
@@ -119,6 +144,7 @@ panel.refresh = function()
     lowLevelCheck:SetChecked(not SimulateX_DB.lowLevelEstimateDisabled)
     otherArrowCheck:SetChecked(not SimulateX_DB.otherSpecArrowDisabled)
     minimapCheck:SetChecked(not SimulateX_DB.minimapHidden)
+    opacitySlider:SetValue(SimulateX_DB.comparadorOpacity or 0.95)
     RebuildSpecCheckboxes()
 end
 

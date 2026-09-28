@@ -1074,6 +1074,7 @@ local function EvaluateBuildComparison(linkA, idA, linkB, idB, equipLoc, buildId
         specLabel = build.specLabel or build.spec,
         role = build.role,
         metric = metric,
+        comparisonLabel = not linkB and GetComparisonLabel(equipLoc, build, weights, metric) or nil,
         gain = gain,
         percent = percent,
         isNoise = isNoise,
