@@ -116,10 +116,21 @@ def simulate_variant(spec: str, build: dict, label: str, talents_string: str,
     }
 
 
+def load_existing_results(out_path: pathlib.Path) -> dict:
+    """label -> resultado ya guardado, para saltar lo ya simulado si se
+    interrumpe el proceso (reinicio del servidor a las 04:00)."""
+    if not out_path.exists():
+        return {}
+    data = load_json(out_path)
+    return {v["label"]: v for v in data.get("variants", [])}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--spec", required=True)
     parser.add_argument("--iterations", type=int, default=1000)
+    parser.add_argument("--force", action="store_true",
+                         help="repite también las variantes que ya tengan resultado guardado")
     args = parser.parse_args()
 
     variants = TALENT_VARIANTS.get(args.spec)
@@ -137,20 +148,38 @@ def main() -> None:
         if not ok:
             raise SystemExit(f"variante '{label}' inválida contra las DBC reales: {info}")
 
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    out_path = OUT_DIR / f"{args.spec}.json"
+    existing = {} if args.force else load_existing_results(out_path)
+
     build = pick_reference_build(args.spec)
     print(f"build de referencia: {build['_build_id']} (gear={build['gear_file']}, apl={build.get('apl')})")
 
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
     work_dir = TOOLS_DIR / "wowsimcli-src" / "sim" / __import__("specs_metadata").SPEC_GO_PACKAGES[args.spec]
 
     results = []
     for label, talents_string in variants:
+        prior = existing.get(label)
+        if prior and prior.get("status") == "ok" and prior.get("_iterations", 0) >= args.iterations \
+                and prior.get("talents") == talents_string:
+            print(f"{label}: ya simulado, se salta (--force para repetir)")
+            results.append(prior)
+            continue
+
         print(f"simulando {label}...", end=" ", flush=True)
         result = simulate_variant(args.spec, build, label, talents_string, work_dir, args.iterations)
+        result["_iterations"] = args.iterations
         print(result.get("status"), result.get("motivo", ""))
         results.append(result)
+        # guarda tras cada variante: si el proceso se corta a medias (p.ej.
+        # el reinicio de las 04:00), lo ya hecho no se pierde
+        out_path.write_text(json.dumps({
+            "spec": args.spec,
+            "reference_build": build["_build_id"],
+            "iterations": args.iterations,
+            "variants": results,
+        }, indent=2, ensure_ascii=False), encoding="utf-8")
 
-    out_path = OUT_DIR / f"{args.spec}.json"
     out_path.write_text(json.dumps({
         "spec": args.spec,
         "reference_build": build["_build_id"],
