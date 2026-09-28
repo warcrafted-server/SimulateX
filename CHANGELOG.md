@@ -23,6 +23,7 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 - Con un hueco de anillo o abalorio libre, el tooltip comparaba contra el otro que llevas en vez de contarlo entero.
 - La pestaña Talentos no se actualizaba al cambiar de forma con la ventana abierta (un Druida Feral podía ver el árbol de Feral estando en forma de Oso, en vez del de Guardián).
 - `Tools/simular_talentos.py` calculaba mal el nombre del fichero de gear ya simulado para specs sin más de una rotación por fase (p. ej. Guardián): asumía siempre un sufijo de rotación que solo existe cuando hay más de una APL para la misma fase, así que nunca encontraba la build de referencia. Guardián ya tiene datos reales de talentos.
+- El árbol de talentos podía no dibujarse en absoluto (solo se veía el resumen y el aviso): el desplegable de variante se reinicializaba entero en cada refresco de la pestaña, lo que a veces interfería con el sistema de menús compartido del juego. Ahora se inicializa una sola vez al abrir la ventana, como corresponde.
 - La ventana del comparador dejaba ver demasiado el fondo del juego y era más pequeña de lo cómodo; ahora es más grande y opaca por defecto (ajustable en las opciones).
 ### Cambiado
 - Tooltip más claro: una línea por especialización con un único % de mejora o pérdida (verde/rojo, "≈ igual" en gris), sin unidades ni líneas de Supervivencia/Amenaza. La cabecera indica contra qué objeto equipado se compara.

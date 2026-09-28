@@ -284,19 +284,30 @@ end
 -- Desplegable nativo (UIDropDownMenuTemplate) en vez de una fila de
 -- pestañas: no escala cuando el Nivel 3 traiga muchas más variantes por
 -- spec, y así queda consistente con el resto de la UI del juego.
-local function InitializeVariantDropdown(dropdown, page, spec, specData)
-    UIDropDownMenu_Initialize(dropdown, function()
+-- El callback de UIDropDownMenu_Initialize solo se registra UNA vez (en
+-- SimulateX_BuildTalentsPage): la propia función de inicialización, no
+-- llamarla de nuevo, es lo que hay que repetir en cada refresco. Llamar a
+-- UIDropDownMenu_Initialize entero en cada RenderPage reinicializa de golpe
+-- los DropDownList1/2 globales y compartidos de todo el juego (ver
+-- UIDropDownMenu_InitializeHelper en FrameXML) cada vez que se dibuja la
+-- pestaña, no solo al abrir el menú: eso puede fallar de forma silenciosa.
+-- El callback lee page.currentSpec/page.currentSpecData, que RenderPage
+-- mantiene actualizados.
+local function BuildVariantDropdownInitializer(page)
+    return function()
+        local specData = page.currentSpecData
+        if not specData then return end
         for index, variant in ipairs(specData.variants) do
             local info = UIDropDownMenu_CreateInfo()
             info.text = DisplayLabel(variant)
             info.checked = (index == currentVariantIndex)
             info.func = function()
                 currentVariantIndex = index
-                RenderPage(page, spec)
+                RenderPage(page, page.currentSpec)
             end
             UIDropDownMenu_AddButton(info)
         end
-    end)
+    end
 end
 
 local function RenderSummary(page, specData)
@@ -367,22 +378,24 @@ RenderPage = function(page, spec)
         currentVariantIndex = 1
     end
 
-    -- con una sola variante el desplegable no aporta nada: se oculta y el
-    -- resumen ya deja claro que es la única.
-    if #specData.variants > 1 then
-        page.variantBar:Show()
-        UIDropDownMenu_SetText(page.variantDropdown, DisplayLabel(specData.variants[currentVariantIndex]))
-        InitializeVariantDropdown(page.variantDropdown, page, spec, specData)
-    else
-        page.variantBar:Hide()
-    end
-
     RenderSummary(page, specData)
 
     local current = specData.variants[currentVariantIndex]
     local blocks = SplitTalentBlocks(current.talents or "")
     for treeIndex = 1, 3 do
         RenderTree(treeFrames[treeIndex], treeData.trees[treeIndex], blocks[treeIndex - 1])
+    end
+
+    -- el desplegable va al final: el árbol ya dibujado no depende de que
+    -- esto salga bien. page.currentSpec/currentSpecData son lo que lee el
+    -- callback del dropdown, registrado una sola vez (ver SimulateX_BuildTalentsPage).
+    page.currentSpec = spec
+    page.currentSpecData = specData
+    if #specData.variants > 1 then
+        page.variantBar:Show()
+        UIDropDownMenu_SetText(page.variantDropdown, DisplayLabel(specData.variants[currentVariantIndex]))
+    else
+        page.variantBar:Hide()
     end
 end
 
@@ -442,6 +455,7 @@ function SimulateX_BuildTalentsPage(parent)
     page.variantDropdown = CreateFrame("Frame", "SimulateXTalentVariantDropdown", page.variantBar, "UIDropDownMenuTemplate")
     page.variantDropdown:SetPoint("LEFT", variantLabel, "RIGHT", -8, -2)
     UIDropDownMenu_SetWidth(page.variantDropdown, 220)
+    UIDropDownMenu_Initialize(page.variantDropdown, BuildVariantDropdownInitializer(page))
 
     -- los 3 árboles lado a lado
     page.treesFrame = CreateFrame("Frame", nil, page)
