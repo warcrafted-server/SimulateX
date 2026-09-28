@@ -4,7 +4,8 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 
 ## Sin publicar
 ### Añadido
-- Pestaña Talentos (v0.7, en marcha): compara el DPS/HPS/Amenaza de varias distribuciones de talentos ya simuladas para tu spec, con el mismo equipo. Cuando todas rinden igual (caso de Feral: la build estándar ya gasta todos sus puntos en talentos al máximo) lo dice en vez de marcar una como "mejor" sin serlo.
+- Pestaña Talentos (v0.7, en marcha): dibuja los 3 árboles de tu clase con los iconos reales, marcando qué talentos y cuántos puntos pone cada distribución ya simulada. Un selector cambia entre variantes y arriba se ve el DPS/HPS/Amenaza de cada una. Cuando todas rinden igual (caso de Feral: la build estándar ya gasta todos sus puntos en talentos al máximo) lo dice en vez de marcar una como "mejor" sin serlo.
+- `Tools/generar_arbol_talentos.py`: vuelca la estructura completa de los árboles (fila, columna, máximo de rango, prerrequisitos) desde las DBC reales del servidor, para las 10 clases.
 - `Tools/validar_talentos.py`: valida cualquier cadena de talentos contra `Tools/talentos_referencia/` (extracción real de Talent.dbc/TalentTab.dbc del servidor: máximos de rango, prerrequisitos y orden real fila/columna), antes de simular nada. Ninguna variante se construye a ojo.
 - `Tools/simular_talentos.py` y `Tools/generar_db_talentos.py`: mismo pipeline que las simulaciones de equipo (SIMX_TALENTS), pero comparando distribuciones de talentos completas en vez de objetos.
 - Comparador de equipo (v0.6): pon dos objetos, uno en cada hueco (arrastrando o con Mayús+clic), y compáralos entre sí o, si dejas el segundo vacío, contra lo que llevas puesto. Muestra el % de cada especialización y, para la tuya, en qué estadísticas se nota la diferencia. Se abre con `/simulatex comparar`, desde un botón en la hoja de personaje (junto al icono de cerrar), desde un icono en el minimapa, o desde la barra de wcdpanel si la tienes instalada.

@@ -32,6 +32,21 @@ SimulateX_TalentDataVars = {
     DRUID = "SimulateX_Talentos_Druid",
 }
 
+-- v0.7: estructura fija del árbol (Tools/generar_arbol_talentos.py), para
+-- dibujar el árbol real en la pestaña Talentos.
+SimulateX_ArbolTalentosVars = {
+    WARRIOR = "SimulateX_ArbolTalentos_Warrior",
+    PALADIN = "SimulateX_ArbolTalentos_Paladin",
+    HUNTER = "SimulateX_ArbolTalentos_Hunter",
+    ROGUE = "SimulateX_ArbolTalentos_Rogue",
+    PRIEST = "SimulateX_ArbolTalentos_Priest",
+    DEATHKNIGHT = "SimulateX_ArbolTalentos_Deathknight",
+    SHAMAN = "SimulateX_ArbolTalentos_Shaman",
+    MAGE = "SimulateX_ArbolTalentos_Mage",
+    WARLOCK = "SimulateX_ArbolTalentos_Warlock",
+    DRUID = "SimulateX_ArbolTalentos_Druid",
+}
+
 -- Nivel efectivo del jugador: el real, salvo que /simulatex nivel 80 lo haya
 -- forzado para esta sesión (solo para probar la lógica de 80 sin tener un
 -- personaje de ese nivel; nunca se guarda entre sesiones).

@@ -31,6 +31,16 @@ Data\SimulateX_Talentos_Shaman.lua
 Data\SimulateX_Talentos_Mage.lua
 Data\SimulateX_Talentos_Warlock.lua
 Data\SimulateX_Talentos_Druid.lua
+Data\SimulateX_ArbolTalentos_Warrior.lua
+Data\SimulateX_ArbolTalentos_Paladin.lua
+Data\SimulateX_ArbolTalentos_Hunter.lua
+Data\SimulateX_ArbolTalentos_Rogue.lua
+Data\SimulateX_ArbolTalentos_Priest.lua
+Data\SimulateX_ArbolTalentos_Deathknight.lua
+Data\SimulateX_ArbolTalentos_Shaman.lua
+Data\SimulateX_ArbolTalentos_Mage.lua
+Data\SimulateX_ArbolTalentos_Warlock.lua
+Data\SimulateX_ArbolTalentos_Druid.lua
 
 SimulateX.lua
 SimulateXOptions.lua

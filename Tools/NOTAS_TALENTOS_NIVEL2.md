@@ -79,3 +79,33 @@ precisamente el problema del Nivel 3 (búsqueda combinatoria), no del Nivel 2.
   `validar_talentos.py` en vez de intentar adivinar el id correcto.
 
 Mismo patrón que Druida: sin variante real de Nivel 2 en las 3 specs.
+
+## Sacerdote
+
+- **Sanación, disciplina (healing_priest/disc)**: candidatos con margen
+  (Esperanza renovada, Amparo de hechizos) no aparecen en los 59 campos
+  reales de `sim/priest/`.
+- **Sanación, sagrado (healing_priest/holy)**: a diferencia de las specs
+  anteriores, sí hay talentos con margen y efecto real en HPS:
+  Especialización Sagrada (`HolySpecialization`, 4/5→5/5, +1% crítico en casi
+  toda la sanación), Sanación potenciada (`EmpoweredHealing`, 4/5→5/5, +0.08
+  al coeficiente de Sanación mayor/Curación rápida) y Renovar potenciado
+  (`ImprovedRenew`, 1/3→3/3, +5%/rango al efecto de Renovar). **Pendiente**:
+  esta build no tiene ningún candidato de bajada disponible sin romper la
+  cascada de filas (necesitaría 4 puntos y no hay ninguno suelto en el árbol
+  Sagrado); haría falta sacarlos del árbol Disciplina y comprobar que no
+  rompe SU cascada, no completado por presupuesto de esta sesión.
+- **Sombras (shadow_priest)**: único candidato, Forma de las Sombras
+  mejorada (`VeiledShadows`, 1/2) — implementado, reduce el enfriamiento de
+  Espectro de las Sombras (más invocaciones en fights largos, efecto
+  indirecto en DPS). Sin punto de bajada disponible sin romper cascada.
+  **Pendiente** de completar.
+- **Castigo (smite_priest)**: candidatos Absolución (sin implementar) y
+  Aspiración (`Aspiration`, 1/2→2/2, implementada: -10%/rango de
+  enfriamiento de Penitencia/Infusión de poder, efecto real en DPS). Mismo
+  bloqueo: sin punto de bajada disponible sin romper cascada. **Pendiente**.
+
+Sacerdote es la primera clase con candidatos de rendimiento real detectados
+(a diferencia del patrón "todo al máximo" de Druida/Paladín), pero completar
+la variante exige tocar el árbol Disciplina para liberar puntos sin romper
+su propia cascada — trabajo no terminado en esta sesión, retomar aquí.
