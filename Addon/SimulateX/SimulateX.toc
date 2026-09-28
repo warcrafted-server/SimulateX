@@ -24,5 +24,6 @@ Data\SimulateX_Data_Druid.lua
 
 SimulateX.lua
 SimulateXOptions.lua
+UI\Talentos.lua
 UI\Comparador.lua
 UI\Lanzadores.lua

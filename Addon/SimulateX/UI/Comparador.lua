@@ -30,7 +30,7 @@ local STAT_ORDER = {
 local STAT_RANK = {}
 for index, key in ipairs(STAT_ORDER) do STAT_RANK[key] = index end
 
-local frame, comparePage, configPage, configRefresh
+local frame, comparePage, configPage, configRefresh, talentsPage, talentsContent
 local cards = {}
 local tabs = {}
 local resultsFrame, breakdownFrame, verdictText, verdictBg
@@ -892,7 +892,10 @@ local function SelectTab(index)
         tab.label:SetTextColor(selected and 1 or 0.7, selected and 1 or 0.7, selected and 1 or 0.7)
         SetShown(tab.page, selected)
     end
-    if index == 2 and configRefresh then
+    if index == 2 and talentsContent and talentsContent.refresh then
+        talentsContent.refresh()
+    end
+    if index == 3 and configRefresh then
         configRefresh()
     end
 end
@@ -1003,6 +1006,13 @@ local function BuildConfigPage()
     configRefresh = SimulateX_BuildOptions(configPage, "SimulateXComparadorConfig", 440)
 end
 
+local function BuildTalentsPage()
+    talentsPage = CreateFrame("Frame", nil, frame)
+    talentsPage:SetPoint("TOPLEFT", CONTENT_LEFT, -HEADER_HEIGHT - 8)
+    talentsPage:SetPoint("BOTTOMRIGHT", -CONTENT_RIGHT, 14)
+    talentsContent = SimulateX_BuildTalentsPage(talentsPage)
+end
+
 local function BuildFrame()
     frame = CreateFrame("Frame", "SimulateXComparadorFrame", UIParent)
     frame:SetWidth(PANEL_WIDTH)
@@ -1058,9 +1068,11 @@ local function BuildFrame()
     divider:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", SIDEBAR_WIDTH, 12)
 
     BuildComparePage()
+    BuildTalentsPage()
     BuildConfigPage()
     CreateTab(1, "Comparador", "Interface\\Addons\\SimulateX\\Media\\SimulateX", comparePage)
-    CreateTab(2, "Configuración", "Interface\\Icons\\INV_Misc_Gear_01", configPage)
+    CreateTab(2, "Talentos", "Interface\\Icons\\Spell_Nature_ProtectionformNature", talentsPage)
+    CreateTab(3, "Configuración", "Interface\\Icons\\INV_Misc_Gear_01", configPage)
     SelectTab(1)
 
     frame:SetScript("OnHide", function()
