@@ -11,6 +11,7 @@ Data/sims/<spec>/<build>.json se omite (aparecerá tras el paso 7).
 """
 
 import pathlib
+import subprocess
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -27,6 +28,7 @@ import collections
 from specs_metadata import SPEC_GO_PACKAGES
 from emparejar_builds import dominant_talent_tree
 from rutas_addon import class_data_dir, ensure_class_addon_toc
+from modelo_caps import build_caps
 
 TOOLS_DIR = pathlib.Path(__file__).resolve().parent
 DATA_DIR = TOOLS_DIR.parent / "Data"
@@ -273,6 +275,15 @@ def main() -> None:
             print(f"[{spec}] sin Data/sims/{spec}/, se omite (pendiente del paso 7)")
             continue
 
+        # el test Go de pesos se genera una vez y se reutiliza: uno viejo
+        # ignoraría SIMX_SW_BONUS_STATS sin avisar y los topes saldrían mal
+        if subprocess.run(["pgrep", "-f", f"simular_builds.py --spec {spec}( |$)"],
+                          capture_output=True).returncode == 0:
+            print(f"[{spec}] se está simulando ahora mismo, se omite (consolidar al terminar)")
+            continue
+        subprocess.run([sys.executable, str(TOOLS_DIR / "generar_extractores_go.py"), "--spec", spec],
+                       check=True, capture_output=True)
+
         mapeo_path = BUILDS_DIR / "_mapeo" / f"{spec}.json"
         mapeo = load_json(mapeo_path) if mapeo_path.exists() else {"builds": []}
         ok_builds = [b for b in mapeo["builds"] if b["status"] == "ok"]
@@ -338,8 +349,17 @@ def main() -> None:
                         survival = survival_block(sw_result.get("dtps", {}).get("weights", {}),
                                                   gear_items, items_by_id, gem_colors)
 
+                caps = None
+                if weights_kind == "sim":
+                    caps = build_caps(spec, role, ROLE_WEIGHTS_METRIC[role], base_input, build_with_apl,
+                                      talents_string, work_dir, weights_index, items_by_id)
+                    if caps is None and role != "healer":
+                        print(f"[{spec}/{sim_file.stem}] AVISO: sin modelo de topes (fallo calculándolo)")
+
                 entry = build_entry(spec, sim_result["build_id"], sim_result, weights_index, weapon_dps,
                                     weights_kind, gear_items, items_by_id, gem_colors, talents_string, survival)
+                if caps:
+                    entry["caps"] = caps
                 build_key = f"{spec}_{sim_result['build_id']}"
                 entries_by_class.setdefault(game_class, {})[build_key] = entry
                 consolidated_count += 1

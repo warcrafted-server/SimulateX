@@ -239,6 +239,7 @@ def generate_stat_weights_go(spec: str, test_source: str, ep_config: dict) -> st
     # generate_main_go() en el mismo paquete: redeclararla aquí duplicaría el
     # símbolo y rompería la compilación.
     tank_setup_player = tank_setup_go("player")
+    strings_import = "" if '"strings"' in imports else '\t"strings"\n'
     return f'''package {package_name}
 
 import (
@@ -246,6 +247,7 @@ import (
 \t"fmt"
 \t"os"
 \t"strconv"
+{strings_import}
 
 \t"google.golang.org/protobuf/encoding/protojson"
 )
@@ -284,6 +286,18 @@ func TestGenStatWeights(t *testing.T) {{
 
 {tank_setup_player}
 
+\t// SIMX_SW_BONUS_STATS="12=-60,16=-40": desplaza stats del preset (índice
+\t// proto.Stat) para pesarlas por debajo de su tope (Tools/modelo_caps.py)
+\tif raw := os.Getenv("SIMX_SW_BONUS_STATS"); raw != "" {{
+\t\tbonus := make([]float64, len(proto.Stat_name))
+\t\tfor _, pair := range strings.Split(raw, ",") {{
+\t\t\tkv := strings.SplitN(pair, "=", 2)
+\t\t\tidx, _ := strconv.Atoi(kv[0])
+\t\t\tbonus[idx], _ = strconv.ParseFloat(kv[1], 64)
+\t\t}}
+\t\tplayer.BonusStats = &proto.UnitStats{{Stats: bonus}}
+\t}}
+
 \tswr := &proto.StatWeightsRequest{{
 \t\tPlayer:    player,
 \t\tRaidBuffs: core.FullRaidBuffs,
@@ -301,6 +315,14 @@ func TestGenStatWeights(t *testing.T) {{
 \t}}
 \tif config.IsTank {{
 \t\tswr.Tanks = append(swr.Tanks, &proto.UnitReference{{Type: proto.UnitReference_Player, Index: 0}})
+\t}}
+\t// SIMX_SW_STATS="StatMeleeHit,StatExpertise": pesar solo esas stats
+\tif raw := os.Getenv("SIMX_SW_STATS"); raw != "" {{
+\t\tswr.StatsToWeigh = nil
+\t\tswr.PseudoStatsToWeigh = nil
+\t\tfor _, name := range strings.Split(raw, ",") {{
+\t\t\tswr.StatsToWeigh = append(swr.StatsToWeigh, proto.Stat(proto.Stat_value[name]))
+\t\t}}
 \t}}
 
 \tresult := core.StatWeights(swr)
