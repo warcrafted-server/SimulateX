@@ -87,6 +87,8 @@ def item_entry(item: dict, rand_points: dict) -> str:
         key = SOCKET_KEYS.get(color)
         if key:
             parts.append(f"{key}=1")
+    if item.get("socket_bonus") and any(c in (2, 4, 8) for c in item["socket_colors"]):
+        parts.append(f"s={item['socket_bonus']}")  # SpellItemEnchantment, en SimulateX_SocketBonus
     if item["random_suffix"]:
         factor = suffix_factor(item, rand_points)
         if factor:
@@ -140,6 +142,14 @@ def main() -> None:
                 stats += [(key, pct) for key, _amount in enchant_stats(enchants[enchant_id])]
         suffixes[suffix_id] = ",".join(f"{key}={pct}" for key, pct in stats)
 
+    # Bonificación de ranura (item_template.socketBonus): mismo formato que
+    # una propiedad aleatoria, indexada por id de encantamiento
+    socket_bonuses = {}
+    for item in items.values():
+        enchant_id = item.get("socket_bonus")
+        if enchant_id and enchant_id in enchants and enchant_id not in socket_bonuses:
+            socket_bonuses[enchant_id] = ",".join(f"{key}={amount}" for key, amount in enchant_stats(enchants[enchant_id]))
+
     used_dist = {item["scaling_stat_distribution"] for item in items.values() if item["scaling_stat_distribution"]}
     dist_lines = ["SimulateX_ScalingDist = {"]
     for dist_id in sorted(used_dist):
@@ -160,6 +170,7 @@ def main() -> None:
     lines += lua_string_table("SimulateX_ItemStats", item_entries)
     lines += lua_string_table("SimulateX_RandomProps", props)
     lines += lua_string_table("SimulateX_RandomSuffixes", suffixes)
+    lines += lua_string_table("SimulateX_SocketBonus", socket_bonuses)
     lines += dist_lines + value_lines
     OUT_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"-> {OUT_PATH} ({sum(1 for v in item_entries.values() if v)} objetos, {len(props)} propiedades, "
