@@ -11,9 +11,9 @@
 
 local unpack = unpack or table.unpack  -- Lua 5.1 (WoW 3.3.5a) trae unpack global
 
-local ICON_SIZE = 34
-local CELL_SIZE = 42
-local TREE_GAP = 22
+local ICON_SIZE = 32  -- el del juego (TALENT_BUTTON_SIZE): sin reescalar el icono
+local CELL_SIZE = 38
+local TREE_GAP = 20
 local TREE_COLUMNS = 4
 local TREE_ROWS = 11
 local NOISE_THRESHOLD_PCT = 0.3  -- mismo umbral que SimulateX.lua
@@ -93,18 +93,10 @@ local function CreateTalentCell(parent)
     -- tiene SetBackdrop nativo en cualquier Frame, sin plantilla.
     cell.border = CreateFrame("Frame", nil, cell)
     cell.border:SetAllPoints()
-    cell.border:SetBackdrop({ edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 2 })
+    cell.border:SetBackdrop({ edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 })
 
-    cell.glow = cell:CreateTexture(nil, "OVERLAY")
-    cell.glow:SetTexture("Interface\\Buttons\\CheckButtonGlow")
-    cell.glow:SetBlendMode("ADD")
-    cell.glow:SetPoint("CENTER")
-    cell.glow:SetWidth(ICON_SIZE * 1.8)
-    cell.glow:SetHeight(ICON_SIZE * 1.8)
-    cell.glow:Hide()
-
-    cell.count = cell:CreateFontString(nil, "OVERLAY", "NumberFontNormalLarge")
-    cell.count:SetPoint("BOTTOMRIGHT", 2, 1)
+    cell.count = cell:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
+    cell.count:SetPoint("BOTTOMRIGHT", 1, 1)
     cell.count:SetText("")
 
     cell:SetScript("OnEnter", function(self)
@@ -250,15 +242,13 @@ local function RenderTree(frame, treeData, digits)
             if rank > 0 then
                 cell.icon:SetDesaturated(false)
                 cell.icon:SetAlpha(1)
-                cell.glow:Show()
-                cell.border:SetBackdropBorderColor(1, 0.82, 0.1, 1)
-                cell.count:SetText(rank .. "/" .. talent.maxRank)
-                cell.count:SetTextColor(1, 0.9, 0.3)
+                cell.border:SetBackdropBorderColor(1, 0.82, 0, 0.55)
+                cell.count:SetText(rank)
+                cell.count:SetTextColor(1, 0.82, 0)
             else
                 cell.icon:SetDesaturated(true)
                 cell.icon:SetAlpha(0.35)
-                cell.glow:Hide()
-                cell.border:SetBackdropBorderColor(0.4, 0.4, 0.4, 0.7)
+                cell.border:SetBackdropBorderColor(0.3, 0.3, 0.3, 0.6)
                 cell.count:SetText("")
             end
             cell:Show()
@@ -284,6 +274,25 @@ end
 -- Desplegable nativo (UIDropDownMenuTemplate) en vez de una fila de
 -- pestañas: no escala cuando el Nivel 3 traiga muchas más variantes por
 -- spec, y así queda consistente con el resto de la UI del juego.
+local METRIC_NAMES = { dps = "DPS", hps = "HPS", tps = "amenaza" }
+
+-- "Estándar (wowsims) · 15962 DPS", con la pérdida frente a la mejor
+-- variante si la diferencia supera el umbral de ruido.
+local function VariantLabel(specData, variant)
+    local metric = specData.metric or "dps"
+    local best = 0
+    for _, other in ipairs(specData.variants) do
+        best = math.max(best, other[metric] or 0)
+    end
+    local value = variant[metric] or 0
+    local text = string.format("%s · %.0f %s", DisplayLabel(variant), value, METRIC_NAMES[metric] or metric)
+    local diff = best > 0 and (value / best - 1) * 100 or 0
+    if math.abs(diff) >= NOISE_THRESHOLD_PCT then
+        text = text .. string.format(" (%.1f %%)", diff)
+    end
+    return text
+end
+
 -- El callback de UIDropDownMenu_Initialize solo se registra UNA vez (en
 -- SimulateX_BuildTalentsPage): la propia función de inicialización, no
 -- llamarla de nuevo, es lo que hay que repetir en cada refresco. Llamar a
@@ -299,7 +308,7 @@ local function BuildVariantDropdownInitializer(page)
         if not specData then return end
         for index, variant in ipairs(specData.variants) do
             local info = UIDropDownMenu_CreateInfo()
-            info.text = DisplayLabel(variant)
+            info.text = VariantLabel(specData, variant)
             info.checked = (index == currentVariantIndex)
             info.func = function()
                 currentVariantIndex = index
@@ -308,40 +317,6 @@ local function BuildVariantDropdownInitializer(page)
             UIDropDownMenu_AddButton(info)
         end
     end
-end
-
-local function RenderSummary(page, specData)
-    local metric = specData.metric or "dps"
-    local best = 0
-    for _, variant in ipairs(specData.variants) do
-        best = math.max(best, variant[metric] or 0)
-    end
-    local current = specData.variants[currentVariantIndex]
-    if not current then return end
-    local value = current[metric] or 0
-    local diff = best > 0 and (value / best - 1) * 100 or 0
-    local isNoise = math.abs(diff) < NOISE_THRESHOLD_PCT
-
-    page.summaryValue:SetText(string.format("%.0f", value))
-    if isNoise then
-        page.summaryDiff:SetText(value >= best and "referencia" or "≈ igual")
-        page.summaryDiff:SetTextColor(0.65, 0.65, 0.65)
-    elseif value >= best then
-        page.summaryDiff:SetText("mejor")
-        page.summaryDiff:SetTextColor(0.3, 1, 0.3)
-    else
-        page.summaryDiff:SetText(string.format("%.1f %%", diff))
-        page.summaryDiff:SetTextColor(1, 0.6, 0.3)
-    end
-
-    local allTied = #specData.variants > 1
-    if allTied then
-        for _, variant in ipairs(specData.variants) do
-            local d = best > 0 and ((variant[metric] or 0) / best - 1) * 100 or 0
-            if math.abs(d) >= NOISE_THRESHOLD_PCT then allTied = false; break end
-        end
-    end
-    if allTied then page.tiedText:Show() else page.tiedText:Hide() end
 end
 
 RenderPage = function(page, spec)
@@ -353,15 +328,13 @@ RenderPage = function(page, spec)
         page.emptyText:SetText("SimulateX no tiene el árbol de talentos de tu clase todavía.")
         page.emptyText:Show()
         page.treesFrame:Hide()
-        page.summaryFrame:Hide()
         page.variantBar:Hide()
         return
     end
 
     if not specData or not specData.variants or #specData.variants == 0 then
-        page.emptyText:SetText("Sin variantes de talentos simuladas todavía para esta especialización.")
+        page.emptyText:SetText("Sin distribuciones simuladas todavía para esta especialización")
         page.emptyText:Show()
-        page.summaryFrame:Hide()
         page.variantBar:Hide()
         -- el árbol se ve igual (nombres/iconos reales), pero sin marcar puntos
         for treeIndex = 1, 3 do
@@ -371,14 +344,11 @@ RenderPage = function(page, spec)
         return
     end
     page.emptyText:Hide()
-    page.summaryFrame:Show()
     page.treesFrame:Show()
 
     if currentVariantIndex > #specData.variants then
         currentVariantIndex = 1
     end
-
-    RenderSummary(page, specData)
 
     local current = specData.variants[currentVariantIndex]
     local blocks = SplitTalentBlocks(current.talents or "")
@@ -391,12 +361,9 @@ RenderPage = function(page, spec)
     -- callback del dropdown, registrado una sola vez (ver SimulateX_BuildTalentsPage).
     page.currentSpec = spec
     page.currentSpecData = specData
-    if #specData.variants > 1 then
-        page.variantBar:Show()
-        UIDropDownMenu_SetText(page.variantDropdown, DisplayLabel(specData.variants[currentVariantIndex]))
-    else
-        page.variantBar:Hide()
-    end
+    -- visible también con una sola variante: es donde se ve su valor
+    page.variantBar:Show()
+    UIDropDownMenu_SetText(page.variantDropdown, VariantLabel(specData, specData.variants[currentVariantIndex]))
 end
 
 --[[----------------------------------------------------------------------
@@ -419,57 +386,36 @@ function SimulateX_BuildTalentsPage(parent)
     line:SetPoint("RIGHT", page, "RIGHT", 0, 0)
 
     page.emptyText = page:CreateFontString(nil, "ARTWORK", "GameFontDisable")
-    page.emptyText:SetPoint("TOPLEFT", line, "BOTTOMLEFT", 0, -12)
-    page.emptyText:SetPoint("RIGHT", 0, 0)
-    page.emptyText:SetJustifyH("LEFT")
+    page.emptyText:SetPoint("BOTTOMRIGHT", line, "TOPRIGHT", 0, 4)
+    page.emptyText:SetJustifyH("RIGHT")
 
-    -- resumen: valor de la variante actual + diferencia contra la mejor
-    page.summaryFrame = CreateFrame("Frame", nil, page)
-    page.summaryFrame:SetPoint("TOPLEFT", line, "BOTTOMLEFT", 0, -8)
-    page.summaryFrame:SetPoint("RIGHT", 0, 0)
-    page.summaryFrame:SetHeight(20)
-
-    page.summaryValue = page.summaryFrame:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
-    page.summaryValue:SetPoint("LEFT", 0, 0)
-    page.summaryDiff = page.summaryFrame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    page.summaryDiff:SetPoint("LEFT", page.summaryValue, "RIGHT", 8, 0)
-
-    page.tiedText = page:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
-    page.tiedText:SetPoint("TOPLEFT", page.summaryFrame, "BOTTOMLEFT", 0, -2)
-    page.tiedText:SetPoint("RIGHT", 0, 0)
-    page.tiedText:SetJustifyH("LEFT")
-    page.tiedText:SetText("Todas rinden igual: los puntos libres de esta build no tienen ningún talento mejor donde ponerlos.")
-    page.tiedText:SetTextColor(0.7, 0.7, 0.5)
-    page.tiedText:Hide()
-
-    -- desplegable de variante (nombre legible), justo encima de los árboles
+    -- desplegable en la misma línea que el título, a la derecha. La barra
+    -- necesita ancho explícito: con ancho 0 el juego no la dibuja.
     page.variantBar = CreateFrame("Frame", nil, page)
-    -- sin RIGHT la barra se queda con ancho 0: el juego no la dibuja, ni
-    -- tampoco los árboles, que van anclados a su borde inferior
-    page.variantBar:SetPoint("TOPLEFT", page.tiedText, "BOTTOMLEFT", -16, -4)
-    page.variantBar:SetPoint("RIGHT", 0, 0)
-    page.variantBar:SetHeight(28)
-
-    local variantLabel = page.variantBar:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-    variantLabel:SetPoint("LEFT", 16, 4)
-    variantLabel:SetText("Distribución:")
-    variantLabel:SetTextColor(0.9, 0.9, 0.9)
+    page.variantBar:SetPoint("BOTTOMRIGHT", line, "TOPRIGHT", 14, -2)
+    page.variantBar:SetWidth(340)
+    page.variantBar:SetHeight(26)
 
     page.variantDropdown = CreateFrame("Frame", "SimulateXTalentVariantDropdown", page.variantBar, "UIDropDownMenuTemplate")
-    page.variantDropdown:SetPoint("LEFT", variantLabel, "RIGHT", -8, -2)
-    UIDropDownMenu_SetWidth(page.variantDropdown, 220)
+    page.variantDropdown:SetPoint("RIGHT", 0, 0)
+    UIDropDownMenu_SetWidth(page.variantDropdown, 230)
     UIDropDownMenu_Initialize(page.variantDropdown, BuildVariantDropdownInitializer(page))
 
-    -- los 3 árboles lado a lado
-    page.treesFrame = CreateFrame("Frame", nil, page)
-    page.treesFrame:SetPoint("TOPLEFT", page.variantBar, "BOTTOMLEFT", 16, -8)
-    page.treesFrame:SetPoint("BOTTOMRIGHT", 0, 0)
+    local variantLabel = page.variantBar:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+    variantLabel:SetPoint("RIGHT", page.variantDropdown, "LEFT", 14, 2)
+    variantLabel:SetText("Distribución:")
+    variantLabel:SetTextColor(0.8, 0.8, 0.8)
 
+    -- los 3 árboles lado a lado, centrados bajo el título
     local treeWidth = TREE_COLUMNS * CELL_SIZE
+    page.treesFrame = CreateFrame("Frame", nil, page)
+    page.treesFrame:SetPoint("TOP", line, "BOTTOM", 0, -8)
+    page.treesFrame:SetWidth(3 * treeWidth + 2 * TREE_GAP)
+    page.treesFrame:SetHeight(TREE_ROWS * CELL_SIZE + 20)
+
     for treeIndex = 1, 3 do
         local frame = CreateTreeFrame(page.treesFrame)
-        frame:SetPoint("TOP", page.treesFrame, "TOP", 0, 0)
-        frame:SetPoint("LEFT", page.treesFrame, "LEFT", (treeIndex - 1) * (treeWidth + TREE_GAP), 0)
+        frame:SetPoint("TOPLEFT", page.treesFrame, "TOPLEFT", (treeIndex - 1) * (treeWidth + TREE_GAP), 0)
         treeFrames[treeIndex] = frame
     end
 
