@@ -39,6 +39,7 @@ local RenderPage  -- forward-declaration: InitializeVariantDropdown la llama
 local VARIANT_LABELS = {
     estandar = "Estándar (wowsims)",
     mas_potp = "Protector de la manada al máximo",
+    nivel3 = "Óptima (búsqueda)",
 }
 
 local function DisplayLabel(variant)
