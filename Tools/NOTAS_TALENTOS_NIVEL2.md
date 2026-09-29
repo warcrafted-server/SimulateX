@@ -137,3 +137,12 @@ Paladín, Sacerdote) y ninguna cambió de resultado.
 
 Mismo patrón que las clases anteriores: sin variante Nivel 2 simple en
 ninguna de las 3 specs.
+
+## Nivel 3 (búsqueda combinatoria, `talentos_nivel3.py`)
+
+- **Feral (feral_druid)**, build p4_apl_rotation_default: 2 rondas, 1 mejora
+  aceptada a 5000 iteraciones. Mueve 1 punto de Líder de la manada mejorado
+  (2/2→1/2) a Agresión feral (4/5→5/5), los dos en Combate feral:
+  `-543202132322010053120030310511-203503012` (16084,4 DPS) →
+  `-553202132322010053110030310511-203503012` (16115,0 DPS, +0,19 %). En la
+  ronda 2 ninguno de los 422 vecinos mejora: es un óptimo local.

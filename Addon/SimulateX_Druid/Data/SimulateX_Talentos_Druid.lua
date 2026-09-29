@@ -20,6 +20,14 @@ SimulateX_Talentos_Druid = {
         tps = 11397.3,
         dtps = 0,
       },
+      {
+        label = "nivel3",
+        talents = "-553202132322010053110030310511-203503012",
+        dps = 16115.0,
+        hps = 0,
+        tps = 11505.8,
+        dtps = 0,
+      },
     },
     glyphs = {
       major = {
