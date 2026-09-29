@@ -11,6 +11,7 @@ SimulateX_DB.lua
 Data\SimulateX_Levels.lua
 Data\SimulateX_ItemTypes.lua
 Data\SimulateX_ItemStats.lua
+Data\SimulateX_GolpeTalentos.lua
 
 SimulateX.lua
 SimulateXOptions.lua

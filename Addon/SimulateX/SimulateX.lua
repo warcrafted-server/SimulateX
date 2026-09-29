@@ -809,6 +809,53 @@ local function PlayerCap(stat, block)
     return block.cap
 end
 
+-- Golpe de talentos: el del jugador, no el del preset (Data/SimulateX_GolpeTalentos.lua,
+-- Tools/generar_golpe_talentos.py). Caché hasta el próximo cambio de talentos.
+local playerTalentHit
+local buildIds = setmetatable({}, { __mode = "k" })
+
+local function PlayerTalentHit(stat)
+    if not playerTalentHit then
+        playerTalentHit = {}
+        local talents = SimulateX_GolpeTalentos and SimulateX_GolpeTalentos.talentos[select(2, UnitClass("player"))]
+        for _, talent in ipairs(talents or {}) do
+            for index = 1, GetNumTalents(talent.tab) do
+                local _, _, tier, column, rank = GetTalentInfo(talent.tab, index)
+                if tier == talent.tier and column == talent.col then
+                    if rank and rank > 0 then
+                        playerTalentHit[talent.stat] = (playerTalentHit[talent.stat] or 0) + talent.rating[rank]
+                    end
+                    break
+                end
+            end
+        end
+    end
+    return playerTalentHit[stat] or 0
+end
+
+local function BuildId(build)
+    if buildIds[build] == nil then
+        local classData = _G[CLASS_DATA_VARS[select(2, UnitClass("player"))] or ""]
+        for id, candidate in pairs(classData or {}) do
+            buildIds[candidate] = id
+        end
+    end
+    return buildIds[build]
+end
+
+-- Golpe que no es de equipo: lo del preset que no son talentos (buffs,
+-- raciales) más los talentos del jugador. wowsims no mete en nonGear los
+-- talentos de golpe por escuela (Enfoque de las Sombras...), de ahí el max.
+local function NonGearRating(stat, block, build)
+    local presets = SimulateX_GolpeTalentos and SimulateX_GolpeTalentos.presets
+    local preset = presets and presets[BuildId(build)]
+    if not preset then
+        return block.nonGear
+    end
+    return math.max(0, block.nonGear - (preset[stat] or 0)) + PlayerTalentHit(stat)
+end
+
+
 -- Lo que hay que sumar a la puntuación (exacta o por pesos) de `link` para
 -- que sus stats con tope valgan lo que le faltan al jugador. removed: lo que
 -- el cambio se quita de encima; simSlots: huecos del preset donde wowsims lo
@@ -823,7 +870,7 @@ local function CapAdjustment(build, link, isExact, removed, simSlots, onlyItemMo
         local key = CAP_ITEM_MOD[stat]
         local amount = (onlyItemMod == nil or onlyItemMod == key) and stats[key] or 0
         if amount > 0 then
-            local current = PlayerRating(stat, build) + block.nonGear
+            local current = PlayerRating(stat, build) + NonGearRating(stat, block, build)
             for _, removedLink in ipairs(removed) do
                 current = current - (GetItemStatsFromData(removedLink)[key] or 0)
             end
@@ -2167,6 +2214,9 @@ local function OnEvent(self, event, ...)
     elseif event == "ADDON_LOADED" and ... == "Blizzard_AuctionUI" then
         HookAuctionFrame()
     elseif event == "PLAYER_EQUIPMENT_CHANGED" or event == "PLAYER_LEVEL_UP" or event == "PLAYER_TALENT_UPDATE" then
+        if event == "PLAYER_TALENT_UPDATE" then
+            playerTalentHit = nil
+        end
         RefreshOpenContainers()
     elseif event == "UPDATE_SHAPESHIFT_FORM" then
         -- humanoide (o cualquier otra forma) no cambia nada: vale la última

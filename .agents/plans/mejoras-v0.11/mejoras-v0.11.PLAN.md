@@ -43,14 +43,9 @@ bajar de modelo.
   Opciones: incluir profesiones (sí), solo mis profesiones (no; lee
   `GetSkillLineInfo`).
 
-**B. Golpe de talentos**
-- `modelo_caps.build_caps` guarda `nonGear` = golpe del preset que no es de
-  equipo (talentos + buffs + raciales), en rating.
-- Generador: por clase, talentos con aura 54 (`MOD_HIT_CHANCE`) / 55
-  (`MOD_SPELL_HIT_CHANCE`) y su % por rango desde `Spell.dbc`; en cada build,
-  `talentHit` del preset en rating. Addon: `nonGear − talentHit(preset) +
-  talentHit(jugador)`, leyendo `GetTalentInfo`. Ojo con talentos limitados a
-  una escuela (dato de `EffectMiscValue`).
+**B. Golpe de talentos**: hecho. `Tools/generar_golpe_talentos.py` →
+`Addon/SimulateX/Data/SimulateX_GolpeTalentos.lua` (auras 54, 55, 199 y 107 con
+SPELLMOD 16 sobre uno mismo). Motor: `max(0, nonGear − preset) + jugador`.
 
 **C. Gemas y topes**
 - `generar_db_addon.ideal_gems` calcula la mejor gema por color con los pesos

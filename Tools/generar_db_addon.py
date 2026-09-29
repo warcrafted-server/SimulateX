@@ -261,6 +261,24 @@ def render_class_lua(class_name: str, entries: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
+def builds_by_build_id(spec: str) -> dict:
+    """build_id de las simulaciones -> build del mapeo. Mismo build_id que
+    simular_builds.py: gear_file solo, o gear_file + sufijo de APL cuando varias
+    builds comparten gear_file (variantes de rotación reales, ver
+    emparejar_builds.py::pick_candidates)."""
+    mapeo_path = BUILDS_DIR / "_mapeo" / f"{spec}.json"
+    mapeo = load_json(mapeo_path) if mapeo_path.exists() else {"builds": []}
+    ok_builds = [b for b in mapeo["builds"] if b["status"] == "ok"]
+    gear_file_counts = collections.Counter(b["gear_file"] for b in ok_builds)
+    result = {}
+    for b in ok_builds:
+        key = b["gear_file"]
+        if gear_file_counts[key] > 1 and b.get("apl"):
+            key = f"{key}_{apl_suffix(b['apl'])}"
+        result[key] = b
+    return result
+
+
 def main() -> None:
     import argparse
     import tempfile
@@ -309,19 +327,7 @@ def main() -> None:
         subprocess.run([sys.executable, str(TOOLS_DIR / "generar_extractores_go.py"), "--spec", spec],
                        check=True, capture_output=True)
 
-        mapeo_path = BUILDS_DIR / "_mapeo" / f"{spec}.json"
-        mapeo = load_json(mapeo_path) if mapeo_path.exists() else {"builds": []}
-        ok_builds = [b for b in mapeo["builds"] if b["status"] == "ok"]
-        # Mismo build_id que simular_builds.py: gear_file solo, o gear_file +
-        # sufijo de APL cuando varias builds comparten gear_file (variantes de
-        # rotación reales, ver emparejar_builds.py::pick_candidates).
-        gear_file_counts = collections.Counter(b["gear_file"] for b in ok_builds)
-        builds_by_gear_file = {}
-        for b in ok_builds:
-            key = b["gear_file"]
-            if gear_file_counts[key] > 1 and b.get("apl"):
-                key = f"{key}_{apl_suffix(b['apl'])}"
-            builds_by_gear_file[key] = b
+        builds_by_gear_file = builds_by_build_id(spec)
 
         try:
             ep_config = extract_ep_config(spec)
