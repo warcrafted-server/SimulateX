@@ -47,13 +47,10 @@ bajar de modelo.
 `Addon/SimulateX/Data/SimulateX_GolpeTalentos.lua` (auras 54, 55, 199 y 107 con
 SPELLMOD 16 sobre uno mismo). Motor: `max(0, nonGear − preset) + jugador`.
 
-**C. Gemas y topes**
-- `generar_db_addon.ideal_gems` calcula la mejor gema por color con los pesos
-  del preset; con el golpe topado en el preset, nunca elige gemas de golpe.
-- Cambio: `build.gems.pool` con las candidatas relevantes (mejores por color
-  + mejor gema por color con cada stat de tope) y en el addon elegir con el
-  peso real (`block.weight` si el jugador está por debajo del tope, 0 si no).
-  Requiere regenerar los datos de clase.
+**C. Gemas y topes**: hecho sin regenerar datos de clase. `Tools/generar_gemas.py`
+→ `Addon/SimulateX/Data/SimulateX_Gemas.lua` (mismo filtro que `ideal_gems`,
+stats en claves ITEM_MOD); `GemValues` en el motor elige por color con los pesos
+reales y los de tope según le falte al jugador. `build.gems` queda de respaldo.
 
 **D. Reliquias**
 - `build.items` ya trae reliquias (p. ej. 50456, 50454 en Druida). Falta

@@ -81,7 +81,7 @@ def load(path):
     lua.execute(code)
 
 for f in ['SimulateX/Data/SimulateX_Levels.lua', 'SimulateX/Data/SimulateX_ItemTypes.lua',
-          'SimulateX/Data/SimulateX_ItemStats.lua', 'SimulateX/Data/SimulateX_GolpeTalentos.lua', f'SimulateX_{CLASS}/Data/SimulateX_Data_{CLASS}.lua',
+          'SimulateX/Data/SimulateX_ItemStats.lua', 'SimulateX/Data/SimulateX_GolpeTalentos.lua', 'SimulateX/Data/SimulateX_Gemas.lua', f'SimulateX_{CLASS}/Data/SimulateX_Data_{CLASS}.lua',
           'SimulateX_Origenes/Data/SimulateX_Origenes.lua',
           'SimulateX/SimulateX.lua', 'SimulateX/UI/Mejoras.lua']:
     load(f)

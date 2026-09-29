@@ -520,8 +520,11 @@ local function SocketBonusValue(itemLink, weights)
     return value
 end
 
+-- Mejor gema por color con los pesos reales (definida tras los topes)
+local GemValues
+
 local function IdealColoredSocketsValue(itemLink, stats, weights, build)
-    local gems = build.gems
+    local gems = GemValues(build, weights)
     local count, matched = 0, 0
     for key, color in pairs(SOCKET_COLOR) do
         local n = stats[key] or 0
@@ -790,7 +793,7 @@ local function CapsActive(build, metricName)
 end
 
 -- Rating que el jugador ya tiene (equipo y auras de rating, lo que da la
--- hoja de personaje); el golpe de talentos lo suma block.nonGear
+-- hoja de personaje); talentos y buffs los suma NonGearRating
 local function PlayerRating(stat, build)
     if stat == "meleeHit" then
         return GetCombatRating(build.spec == "hunter" and (CR_HIT_RANGED or 7) or (CR_HIT_MELEE or 6))
@@ -888,6 +891,51 @@ local function CapAdjustment(build, link, isExact, removed, simSlots, onlyItemMo
         end
     end
     return adjust
+end
+
+-- Gemas ideales (Data/SimulateX_Gemas.lua) valoradas con los pesos que se
+-- pasan, salvo golpe/pericia/penetración: su peso real por debajo del tope si
+-- al jugador le falta, 0 si ya lo tiene. build.gems (pesos del preset) queda
+-- de respaldo. Caché de un segundo: Mejoras evalúa cientos de objetos seguidos.
+local gemValuesCache = setmetatable({}, { __mode = "k" })
+
+GemValues = function(build, weights)
+    if not SimulateX_Gemas then
+        return build.gems
+    end
+    local cached = gemValuesCache[build]
+    if cached and cached.weights == weights and GetTime() - cached.time < 1 then
+        return cached.values
+    end
+
+    local capWeights = {}
+    if build.caps and not SimulateX_DB.capsDisabled and GetEffectivePlayerLevel() >= 80 then
+        for stat, block in pairs(build.caps) do
+            local room = PlayerCap(stat, block) - PlayerRating(stat, build) - NonGearRating(stat, block, build)
+            local key = CAP_ITEM_MOD[stat]
+            -- golpe cuerpo a cuerpo y de hechizo comparten clave (Mejora)
+            capWeights[key] = (capWeights[key] or 0) + (room > 0 and block.weight or 0)
+        end
+    end
+
+    local values = { red = 0, yellow = 0, blue = 0, any = 0, mainMatches = build.gems.mainMatches }
+    local maskBits = { red = 1, yellow = 2, blue = 4 }
+    for _, gem in ipairs(SimulateX_Gemas) do
+        local value = 0
+        for key, amount in pairs(gem.s) do
+            value = value + (capWeights[key] or weights[key] or 0) * amount
+        end
+        for color, bit in pairs(maskBits) do
+            if gem.m % (bit * 2) >= bit and value > values[color] then
+                values[color] = value
+            end
+        end
+        if value > values.any then
+            values.any = value
+        end
+    end
+    gemValuesCache[build] = { weights = weights, time = GetTime(), values = values }
+    return values
 end
 
 -- Corrección total de un objeto: topes, y en datos exactos además las gemas
