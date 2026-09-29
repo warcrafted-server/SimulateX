@@ -42,12 +42,28 @@
     {
       "const_name": "TankHealingTalents",
       "label": "Tank Healing",
-      "talents_string": "-30205033-05005331335010501122331251"
+      "talents_string": "-30205033-05005331335010501122331251",
+      "glyphs": {
+        "major1": 41527,
+        "major2": 45775,
+        "major3": 41535,
+        "minor2": 43386,
+        "minor1": 43385,
+        "minor3": 43725
+      }
     },
     {
       "const_name": "RaidHealingTalents",
       "label": "Raid Healing",
-      "talents_string": "-3020503-50005331335310501122331251"
+      "talents_string": "-3020503-50005331335310501122331251",
+      "glyphs": {
+        "major1": 41517,
+        "major2": 45775,
+        "major3": 41527,
+        "minor2": 43386,
+        "minor1": 43385,
+        "minor3": 43725
+      }
     }
   ]
 }

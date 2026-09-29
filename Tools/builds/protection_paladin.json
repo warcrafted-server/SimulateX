@@ -56,7 +56,15 @@
     {
       "const_name": "GenericAoeTalents",
       "label": "Baseline Example",
-      "talents_string": "-05005135200132311333312321-511302012003"
+      "talents_string": "-05005135200132311333312321-511302012003",
+      "glyphs": {
+        "major1": 43869,
+        "major2": 41100,
+        "major3": 45745,
+        "minor1": 43368,
+        "minor2": 43367,
+        "minor3": 43365
+      }
     }
   ]
 }

@@ -271,27 +271,66 @@
     {
       "const_name": "ArcaneTalents",
       "label": "Arcane",
-      "talents_string": "23000513310033015032310250532-03-023303001"
+      "talents_string": "23000513310033015032310250532-03-023303001",
+      "glyphs": {
+        "major1": 44955,
+        "major2": 42735,
+        "major3": 42751,
+        "minor1": 43364,
+        "minor2": 43360,
+        "minor3": 44920
+      }
     },
     {
       "const_name": "FireTalents",
       "label": "Fire",
-      "talents_string": "23000503110003-0055030012303331053120301351"
+      "talents_string": "23000503110003-0055030012303331053120301351",
+      "glyphs": {
+        "major1": 42739,
+        "major2": 42751,
+        "major3": 45737,
+        "minor1": 43364,
+        "minor2": 43360,
+        "minor3": 44920
+      }
     },
     {
       "const_name": "Phase3FireTalents",
       "label": "Fire Phase 3",
-      "talents_string": "23002303310003-0055030012303330053120300351"
+      "talents_string": "23002303310003-0055030012303330053120300351",
+      "glyphs": {
+        "major1": 42739,
+        "major2": 42751,
+        "major3": 45737,
+        "minor1": 43339,
+        "minor2": 43364
+      }
     },
     {
       "const_name": "FrostfireTalents",
       "label": "Frostfire",
-      "talents_string": "-2305032012303331053120311351-023303031"
+      "talents_string": "-2305032012303331053120311351-023303031",
+      "glyphs": {
+        "major1": 44684,
+        "major2": 42751,
+        "major3": 45737,
+        "minor1": 43364,
+        "minor2": 43360,
+        "minor3": 44920
+      }
     },
     {
       "const_name": "FrostTalents",
       "label": "Frost",
-      "talents_string": "23000503110003--0533030310233100030152231351"
+      "talents_string": "23000503110003--0533030310233100030152231351",
+      "glyphs": {
+        "major1": 42742,
+        "major2": 50045,
+        "major3": 42751,
+        "minor1": 43364,
+        "minor2": 43360,
+        "minor3": 44920
+      }
     }
   ]
 }

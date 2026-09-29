@@ -61,12 +61,28 @@
     {
       "const_name": "StandardTalents",
       "label": "Standard",
-      "talents_string": "05032031--325023051223010323151301351"
+      "talents_string": "05032031--325023051223010323151301351",
+      "glyphs": {
+        "major1": 42407,
+        "major2": 42415,
+        "major3": 45753,
+        "minor1": 43371,
+        "minor2": 43372,
+        "minor3": 43374
+      }
     },
     {
       "const_name": "EnlightenmentTalents",
       "label": "Enlightenment",
-      "talents_string": "05032031303005022--3250230012230101231513011"
+      "talents_string": "05032031303005022--3250230012230101231513011",
+      "glyphs": {
+        "major1": 42407,
+        "major2": 42415,
+        "major3": 42414,
+        "minor1": 43371,
+        "minor2": 43372,
+        "minor3": 43374
+      }
     }
   ]
 }

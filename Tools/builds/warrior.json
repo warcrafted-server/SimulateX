@@ -191,12 +191,28 @@
     {
       "const_name": "ArmsTalents",
       "label": "Arms",
-      "talents_string": "3022032023335100102012213231251-305-2033"
+      "talents_string": "3022032023335100102012213231251-305-2033",
+      "glyphs": {
+        "major1": 43423,
+        "major2": 43421,
+        "major3": 43416,
+        "minor1": 43399,
+        "minor2": 49084,
+        "minor3": 206953
+      }
     },
     {
       "const_name": "FuryTalents",
       "label": "Fury",
-      "talents_string": "32002301233-305053000520310053120500351"
+      "talents_string": "32002301233-305053000520310053120500351",
+      "glyphs": {
+        "major1": 43432,
+        "major2": 43418,
+        "major3": 43416,
+        "minor1": 49084,
+        "minor2": 206953,
+        "minor3": 43397
+      }
     }
   ]
 }

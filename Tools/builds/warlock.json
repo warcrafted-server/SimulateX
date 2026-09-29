@@ -177,17 +177,41 @@
     {
       "const_name": "AfflictionTalents",
       "label": "Affliction",
-      "talents_string": "2350002030023510253500331151--550000051"
+      "talents_string": "2350002030023510253500331151--550000051",
+      "glyphs": {
+        "major1": 50077,
+        "major2": 45785,
+        "major3": 45779,
+        "minor1": 43394,
+        "minor2": 43390,
+        "minor3": 43393
+      }
     },
     {
       "const_name": "DemonologyTalents",
       "label": "Demonology",
-      "talents_string": "-203203301035012530135201351-550000052"
+      "talents_string": "-203203301035012530135201351-550000052",
+      "glyphs": {
+        "major1": 45785,
+        "major2": 50077,
+        "major3": 42459,
+        "minor1": 43394,
+        "minor2": 43390,
+        "minor3": 43393
+      }
     },
     {
       "const_name": "DestructionTalents",
       "label": "Destruction",
-      "talents_string": "-03310030003-05203205210331051335230351"
+      "talents_string": "-03310030003-05203205210331051335230351",
+      "glyphs": {
+        "major1": 42454,
+        "major2": 45785,
+        "major3": 42453,
+        "minor1": 43394,
+        "minor2": 43390,
+        "minor3": 43393
+      }
     }
   ]
 }

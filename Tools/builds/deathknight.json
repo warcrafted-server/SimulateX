@@ -226,37 +226,93 @@
     {
       "const_name": "FrostTalents",
       "label": "Frost BL",
-      "talents_string": "23050005-32005350352203012300033101351"
+      "talents_string": "23050005-32005350352203012300033101351",
+      "glyphs": {
+        "major1": 43547,
+        "major2": 43543,
+        "major3": 45805,
+        "minor1": 43544,
+        "minor2": 43672,
+        "minor3": 43673
+      }
     },
     {
       "const_name": "FrostUnholyTalents",
       "label": "Frost UH",
-      "talents_string": "01-32002350342203012300033101351-230200305003"
+      "talents_string": "01-32002350342203012300033101351-230200305003",
+      "glyphs": {
+        "major1": 43547,
+        "major2": 43543,
+        "major3": 45805,
+        "minor1": 43544,
+        "minor2": 43672,
+        "minor3": 43673
+      }
     },
     {
       "const_name": "UnholyDualWieldTalents",
       "label": "Unholy DW",
-      "talents_string": "-320043500002-2300303050032152000150013133051"
+      "talents_string": "-320043500002-2300303050032152000150013133051",
+      "glyphs": {
+        "major1": 43549,
+        "major2": 43546,
+        "major3": 43542,
+        "minor1": 43544,
+        "minor2": 43672,
+        "minor3": 43673
+      }
     },
     {
       "const_name": "UnholyDualWieldSSTalents",
       "label": "Unholy DW SS",
-      "talents_string": "-320033500002-2301303050032151000150013133151"
+      "talents_string": "-320033500002-2301303050032151000150013133151",
+      "glyphs": {
+        "major1": 43549,
+        "major2": 43546,
+        "major3": 43542,
+        "minor1": 43544,
+        "minor2": 43672,
+        "minor3": 43673
+      }
     },
     {
       "const_name": "Unholy2HTalents",
       "label": "Unholy 2H",
-      "talents_string": "-320050500002-2302003350032052000150013133151"
+      "talents_string": "-320050500002-2302003350032052000150013133151",
+      "glyphs": {
+        "major1": 43549,
+        "major2": 43546,
+        "major3": 45804,
+        "minor1": 43544,
+        "minor2": 43672,
+        "minor3": 43673
+      }
     },
     {
       "const_name": "UnholyAoeTalents",
       "label": "Unholy AOE",
-      "talents_string": "-320050500002-2302303050032052000150013133151"
+      "talents_string": "-320050500002-2302303050032052000150013133151",
+      "glyphs": {
+        "major1": 43549,
+        "major2": 43546,
+        "major3": 43542,
+        "minor1": 43544,
+        "minor2": 43672,
+        "minor3": 43673
+      }
     },
     {
       "const_name": "BloodTalents",
       "label": "Blood DPS",
-      "talents_string": "2305120530003303231023001351--2302003050032"
+      "talents_string": "2305120530003303231023001351--2302003050032",
+      "glyphs": {
+        "major1": 45799,
+        "major2": 43827,
+        "major3": 45805,
+        "minor1": 43544,
+        "minor2": 43672,
+        "minor3": 43673
+      }
     }
   ]
 }

@@ -110,12 +110,28 @@
     {
       "const_name": "DiscTalents",
       "label": "Disc",
-      "talents_string": "0503203130300512301313231251-2351010303"
+      "talents_string": "0503203130300512301313231251-2351010303",
+      "glyphs": {
+        "major1": 42408,
+        "major2": 42400,
+        "major3": 45756,
+        "minor1": 43371,
+        "minor2": 43374,
+        "minor3": 43342
+      }
     },
     {
       "const_name": "HolyTalents",
       "label": "Holy",
-      "talents_string": "05032031103-234051032002152530004311051"
+      "talents_string": "05032031103-234051032002152530004311051",
+      "glyphs": {
+        "major1": 42409,
+        "major2": 42411,
+        "major3": 42396,
+        "minor1": 43371,
+        "minor2": 43374,
+        "minor3": 43342
+      }
     }
   ]
 }

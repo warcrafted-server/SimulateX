@@ -75,22 +75,54 @@
     {
       "const_name": "Phase1Talents",
       "label": "Phase 1",
-      "talents_string": "5032003115331303213305311231--205003012"
+      "talents_string": "5032003115331303213305311231--205003012",
+      "glyphs": {
+        "major1": 44928,
+        "major2": 40919,
+        "major3": 40921,
+        "minor1": 44922,
+        "minor2": 43331,
+        "minor3": 43335
+      }
     },
     {
       "const_name": "Phase2Talents",
       "label": "Phase 2",
-      "talents_string": "5012203115331303213305311231--205003012"
+      "talents_string": "5012203115331303213305311231--205003012",
+      "glyphs": {
+        "major1": 40916,
+        "major2": 40919,
+        "major3": 40921,
+        "minor1": 44922,
+        "minor2": 43331,
+        "minor3": 43335
+      }
     },
     {
       "const_name": "Phase3Talents",
       "label": "Phase 3",
-      "talents_string": "5102223115331303213305311031--205003012"
+      "talents_string": "5102223115331303213305311031--205003012",
+      "glyphs": {
+        "major1": 40916,
+        "major2": 40923,
+        "major3": 40921,
+        "minor1": 44922,
+        "minor2": 43331,
+        "minor3": 43335
+      }
     },
     {
       "const_name": "Phase4Talents",
       "label": "Phase 4",
-      "talents_string": "5102223115331303213305311031--205003012"
+      "talents_string": "5102223115331303213305311031--205003012",
+      "glyphs": {
+        "major1": 44928,
+        "major2": 40919,
+        "major3": 40921,
+        "minor1": 44922,
+        "minor2": 43331,
+        "minor3": 43335
+      }
     }
   ]
 }

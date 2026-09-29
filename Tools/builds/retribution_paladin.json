@@ -56,12 +56,28 @@
     {
       "const_name": "AuraMasteryTalents",
       "label": "Aura Mastery",
-      "talents_string": "050501-05-05232051203331302133231331"
+      "talents_string": "050501-05-05232051203331302133231331",
+      "glyphs": {
+        "major1": 43869,
+        "major2": 41092,
+        "major3": 204385,
+        "minor1": 43368,
+        "minor2": 43367,
+        "minor3": 43365
+      }
     },
     {
       "const_name": "DivineSacTalents",
       "label": "Divine Sacrifice & Guardian",
-      "talents_string": "03-453201002-05222051203331302133201331"
+      "talents_string": "03-453201002-05222051203331302133201331",
+      "glyphs": {
+        "major1": 43869,
+        "major2": 41092,
+        "major3": 204385,
+        "minor1": 43368,
+        "minor2": 43367,
+        "minor3": 43365
+      }
     }
   ]
 }

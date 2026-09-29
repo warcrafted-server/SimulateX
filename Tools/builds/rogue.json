@@ -222,37 +222,72 @@
     {
       "const_name": "CombatHackTalents",
       "label": "Combat Axes/Swords",
-      "talents_string": "00532010414-0252051000035015223100501251"
+      "talents_string": "00532010414-0252051000035015223100501251",
+      "glyphs": {
+        "major1": 45762,
+        "major2": 45767,
+        "major3": 42969
+      }
     },
     {
       "const_name": "CombatCQCTalents",
       "label": "Combat Fists",
-      "talents_string": "00532010414-0252051050035010223100501251"
+      "talents_string": "00532010414-0252051050035010223100501251",
+      "glyphs": {
+        "major1": 45762,
+        "major2": 45767,
+        "major3": 42969
+      }
     },
     {
       "const_name": "AssassinationTalents137",
       "label": "Assassination 13/7",
-      "talents_string": "005303104352100520103331051-005005003-502"
+      "talents_string": "005303104352100520103331051-005005003-502",
+      "glyphs": {
+        "major1": 45768,
+        "major2": 45767,
+        "major3": 45761
+      }
     },
     {
       "const_name": "AssassinationTalents182",
       "label": "Assassination 18/2",
-      "talents_string": "005303104352100520103331051-005005005003-2"
+      "talents_string": "005303104352100520103331051-005005005003-2",
+      "glyphs": {
+        "major1": 45768,
+        "major2": 45767,
+        "major3": 45761
+      }
     },
     {
       "const_name": "AssassinationTalentsBF",
       "label": "Assassination Blade Flurry",
-      "talents_string": "005303104352100520103231-005205005003001-501"
+      "talents_string": "005303104352100520103231-005205005003001-501",
+      "glyphs": {
+        "major1": 45768,
+        "major2": 45767,
+        "major3": 42957
+      }
     },
     {
       "const_name": "SubtletyTalents",
       "label": "Subtlety",
-      "talents_string": "30532010114--5022012030321121350115031151"
+      "talents_string": "30532010114--5022012030321121350115031151",
+      "glyphs": {
+        "major1": 42961,
+        "major2": 42969,
+        "major3": 45767
+      }
     },
     {
       "const_name": "HemoSubtletyTalents",
       "label": "Hemo Sub",
-      "talents_string": "30532010135--502201203032112135011503122"
+      "talents_string": "30532010135--502201203032112135011503122",
+      "glyphs": {
+        "major1": 42961,
+        "major2": 42969,
+        "major3": 45767
+      }
     }
   ]
 }

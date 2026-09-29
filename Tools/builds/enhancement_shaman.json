@@ -82,12 +82,22 @@
     {
       "const_name": "StandardTalents",
       "label": "Standard",
-      "talents_string": "053030152-30405003105021333031131031051"
+      "talents_string": "053030152-30405003105021333031131031051",
+      "glyphs": {
+        "major1": 41530,
+        "major2": 41532,
+        "major3": 45771
+      }
     },
     {
       "const_name": "Phase3Talents",
       "label": "Phase 3",
-      "talents_string": "053030152-30505003105001333031131131051"
+      "talents_string": "053030152-30505003105001333031131131051",
+      "glyphs": {
+        "major1": 41530,
+        "major2": 41532,
+        "major3": 45771
+      }
     }
   ]
 }

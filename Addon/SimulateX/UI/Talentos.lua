@@ -319,6 +319,83 @@ local function BuildVariantDropdownInitializer(page)
     end
 end
 
+--[[----------------------------------------------------------------------
+    GLIFOS de la distribución activa (solo la variante "estandar" los trae,
+    ver Tools/generar_db_talentos.py::find_reference_glyphs): mismo patrón
+    de espera de caché que RefreshCellIcon, para el icono real del glifo.
+------------------------------------------------------------------------]]
+
+local GLYPH_SLOTS = { "major1", "major2", "major3", "minor1", "minor2", "minor3" }
+local GLYPH_ICON_SIZE = 24
+
+local function RefreshGlyphIcon(button)
+    local name, _, icon = GetSpellInfo(button.spellId)
+    if not name then
+        if not button.pendingIcon then
+            button.pendingIcon = true
+            button:SetScript("OnUpdate", function(self, elapsed)
+                self.retryTimer = (self.retryTimer or 0) + elapsed
+                if self.retryTimer < 0.3 then return end
+                self.retryTimer = 0
+                if GetSpellInfo(self.spellId) then
+                    self:SetScript("OnUpdate", nil)
+                    self.pendingIcon = nil
+                    RefreshGlyphIcon(self)
+                end
+            end)
+        end
+        return
+    end
+    button.pendingIcon = nil
+    button:SetScript("OnUpdate", nil)
+    button.icon:SetTexture(icon)
+    button.name = name
+end
+
+local function CreateGlyphBar(parent)
+    local bar = CreateFrame("Frame", nil, parent)
+    bar:SetHeight(GLYPH_ICON_SIZE + 4)
+    bar.buttons = {}
+    for index, slot in ipairs(GLYPH_SLOTS) do
+        local button = CreateFrame("Button", nil, bar)
+        button:SetWidth(GLYPH_ICON_SIZE)
+        button:SetHeight(GLYPH_ICON_SIZE)
+        button:SetPoint("LEFT", (index - 1) * (GLYPH_ICON_SIZE + 6), 0)
+        button.icon = button:CreateTexture(nil, "ARTWORK")
+        button.icon:SetAllPoints()
+        button.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+        button:SetScript("OnEnter", function(self)
+            if not self.name then return end
+            GameTooltip:SetOwner(self, "ANCHOR_TOP")
+            GameTooltip:SetText(self.name)
+            GameTooltip:Show()
+        end)
+        button:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        bar.buttons[slot] = button
+    end
+    return bar
+end
+
+local function RenderGlyphBar(bar, glyphs)
+    if not glyphs then
+        bar:Hide()
+        return
+    end
+    bar:Show()
+    for slot, button in pairs(bar.buttons) do
+        local spellId = glyphs[slot]
+        if spellId then
+            button.spellId = spellId
+            button.name = nil
+            button.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+            RefreshGlyphIcon(button)
+            button:Show()
+        else
+            button:Hide()
+        end
+    end
+end
+
 RenderPage = function(page, spec)
     local data = GetTalentDataForClass()
     local specData = data and data[spec]
@@ -329,6 +406,7 @@ RenderPage = function(page, spec)
         page.emptyText:Show()
         page.treesFrame:Hide()
         page.variantBar:Hide()
+        page.glyphBar:Hide()
         return
     end
 
@@ -336,6 +414,7 @@ RenderPage = function(page, spec)
         page.emptyText:SetText("Sin distribuciones simuladas todavía para esta especialización")
         page.emptyText:Show()
         page.variantBar:Hide()
+        page.glyphBar:Hide()
         -- el árbol se ve igual (nombres/iconos reales), pero sin marcar puntos
         for treeIndex = 1, 3 do
             RenderTree(treeFrames[treeIndex], treeData.trees[treeIndex], "")
@@ -355,6 +434,7 @@ RenderPage = function(page, spec)
     for treeIndex = 1, 3 do
         RenderTree(treeFrames[treeIndex], treeData.trees[treeIndex], blocks[treeIndex - 1])
     end
+    RenderGlyphBar(page.glyphBar, current.glyphs)
 
     -- el desplegable va al final: el árbol ya dibujado no depende de que
     -- esto salga bien. page.currentSpec/currentSpecData son lo que lee el
@@ -418,6 +498,10 @@ function SimulateX_BuildTalentsPage(parent)
         frame:SetPoint("TOPLEFT", page.treesFrame, "TOPLEFT", (treeIndex - 1) * (treeWidth + TREE_GAP), 0)
         treeFrames[treeIndex] = frame
     end
+
+    page.glyphBar = CreateGlyphBar(page)
+    page.glyphBar:SetPoint("TOP", page.treesFrame, "BOTTOM", 0, -6)
+    page.glyphBar:SetWidth(#GLYPH_SLOTS * (GLYPH_ICON_SIZE + 6))
 
     page.refresh = function()
         local classFileName = select(2, UnitClass("player"))

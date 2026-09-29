@@ -56,12 +56,28 @@
     {
       "const_name": "StandardTalents",
       "label": "Standard",
-      "talents_string": "2500030023-302-053351225000012521030113321"
+      "talents_string": "2500030023-302-053351225000012521030113321",
+      "glyphs": {
+        "major1": 43425,
+        "major2": 45793,
+        "major3": 43415,
+        "minor1": 43397,
+        "minor2": 43399,
+        "minor3": 49084
+      }
     },
     {
       "const_name": "UATalents",
       "label": "UA",
-      "talents_string": "35023301230051002020120002-2-05035122500000252"
+      "talents_string": "35023301230051002020120002-2-05035122500000252",
+      "glyphs": {
+        "major1": 43424,
+        "major2": 43418,
+        "major3": 43428,
+        "minor1": 43397,
+        "minor2": 43399,
+        "minor3": 49084
+      }
     }
   ]
 }

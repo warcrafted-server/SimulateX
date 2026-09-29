@@ -168,17 +168,41 @@
     {
       "const_name": "BeastMasteryTalents",
       "label": "Beast Mastery",
-      "talents_string": "51200201505112243120531251-025305101"
+      "talents_string": "51200201505112243120531251-025305101",
+      "glyphs": {
+        "major1": 42902,
+        "major2": 42914,
+        "major3": 42912,
+        "minor1": 43351,
+        "minor2": 43338,
+        "minor3": 43350
+      }
     },
     {
       "const_name": "MarksmanTalents",
       "label": "Marksman",
-      "talents_string": "502-025335101030013233135031051-5000032"
+      "talents_string": "502-025335101030013233135031051-5000032",
+      "glyphs": {
+        "major1": 42912,
+        "major2": 42914,
+        "major3": 45733,
+        "minor1": 43351,
+        "minor2": 43338,
+        "minor3": 43350
+      }
     },
     {
       "const_name": "SurvivalTalents",
       "label": "Survival",
-      "talents_string": "-005305101-5000032500033330531135301331"
+      "talents_string": "-005305101-5000032500033330531135301331",
+      "glyphs": {
+        "major1": 42912,
+        "major2": 45733,
+        "major3": 45732,
+        "minor1": 43351,
+        "minor2": 43338,
+        "minor3": 43350
+      }
     }
   ]
 }

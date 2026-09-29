@@ -42,7 +42,15 @@
     {
       "const_name": "StandardTalents",
       "label": "Standard",
-      "talents_string": "-503232132322010353120300313511-20350001"
+      "talents_string": "-503232132322010353120300313511-20350001",
+      "glyphs": {
+        "major1": 40897,
+        "major2": 46372,
+        "major3": 40896,
+        "minor1": 43334,
+        "minor2": 43332,
+        "minor3": 43331
+      }
     }
   ]
 }
