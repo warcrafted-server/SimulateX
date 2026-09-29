@@ -324,7 +324,8 @@ end
     cada uno, como la ventana de glifos del juego. Nombre e icono vienen ya
     resueltos en los datos (item_template_locale + ItemDisplayInfo.dbc del
     servidor, ver Tools/generar_db_talentos.py): son ids de OBJETO glifo,
-    no de hechizo. Solo la variante "estandar" trae glifos.
+    no de hechizo. Son los de la petición simulada (iguales para todas las
+    distribuciones de la spec), no los de presets.ts.
 ------------------------------------------------------------------------]]
 
 local GLYPH_PANEL_WIDTH = 240
@@ -375,7 +376,7 @@ end
 local function CreateGlyphPanel(parent)
     local panel = CreateFrame("Frame", nil, parent)
     panel:SetWidth(GLYPH_PANEL_WIDTH)
-    panel:SetHeight(28 + 18 + 3 * GLYPH_ROW_HEIGHT + 30)
+    panel:SetHeight(28 + 18 + 3 * GLYPH_ROW_HEIGHT + 44)  -- la nota puede ocupar 3 líneas
 
     local bg = panel:CreateTexture(nil, "BACKGROUND")
     bg:SetAllPoints()
@@ -411,7 +412,7 @@ local function CreateGlyphPanel(parent)
     return panel
 end
 
-local function RenderGlyphPanel(panel, glyphs)
+local function RenderGlyphPanel(panel, glyphs, missing)
     for _, kind in ipairs(GLYPH_KINDS) do
         local entries = glyphs and glyphs[kind.key] or {}
         for row, slot in ipairs(panel.slots[kind.key]) do
@@ -431,8 +432,12 @@ local function RenderGlyphPanel(panel, glyphs)
             end
         end
     end
-    panel.note:SetText(glyphs and "Glifos del preset de wowsims para esta distribución."
-        or "Esta distribución no trae glifos de referencia.")
+    local note = glyphs and "Glifos con los que se simularon estas distribuciones."
+        or "Sin datos de glifos para esta especialización."
+    if missing then
+        note = note .. string.format(" wowsims usó además %d que no existe en este servidor.", missing)
+    end
+    panel.note:SetText(note)
     panel:Show()
 end
 
@@ -474,7 +479,7 @@ RenderPage = function(page, spec)
     for treeIndex = 1, 3 do
         RenderTree(treeFrames[treeIndex], treeData.trees[treeIndex], blocks[treeIndex - 1])
     end
-    RenderGlyphPanel(page.glyphPanel, current.glyphs)
+    RenderGlyphPanel(page.glyphPanel, specData.glyphs, specData.glyphsMissing)
 
     -- el desplegable va al final: el árbol ya dibujado no depende de que
     -- esto salga bien. page.currentSpec/currentSpecData son lo que lee el

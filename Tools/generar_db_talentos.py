@@ -17,8 +17,10 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from generar_db_addon import SPEC_INFO, lua_value
 from rutas_addon import class_data_dir, ensure_class_addon_toc
-from simular_builds import apl_suffix
+from simular_builds import apl_suffix, build_env, run_go_extractor, WOWSIMS_SRC
+from specs_metadata import SPEC_GO_PACKAGES
 from extraer_objetos_bd import run_query
+import tempfile
 
 GLYPH_ITEM_CLASS = 16
 DEFAULT_DBC_DIR = "/home/stark/Servers/acore-playerbots/data/dbc"
@@ -34,13 +36,10 @@ ROLE_METRIC = {"dps": "dps", "healer": "hps", "tank": "tps"}
 
 
 def find_reference_glyphs(spec: str, reference_build: str | None) -> dict:
-    """Glifos de la variante "estandar" (StandardTalents de wowsims, la
-    misma con la que se simuló el gear de referencia): se busca en
-    _mapeo/<spec>.json la build cuyo build_id_for coincide con
-    reference_build, y desde su talent_set se leen los glifos ya
-    extraídos por generar_builds.py en builds/<spec>.json. No se aplica a
-    "mas_potp" ni otras variantes con talentos movidos a mano: sus glifos
-    no están garantizados iguales a los de StandardTalents.
+    """Glifos con los que se simularon las variantes de la spec: los de la
+    petición base de su build de referencia (CharacterSuiteConfig del test
+    de wowsims), que no siempre coinciden con los de presets.ts. Todas las
+    variantes se simulan con esa misma petición, así que valen para todas.
     """
     if not reference_build:
         return {}
@@ -54,21 +53,27 @@ def find_reference_glyphs(spec: str, reference_build: str | None) -> dict:
     # solo, o + sufijo de APL cuando el gear_file se repite (variantes de
     # rotación reales, ver emparejar_builds.py::pick_candidates).
     gear_file_counts = collections.Counter(b["gear_file"] for b in ok_builds)
-    talent_set_name = None
+    reference = None
     for build in ok_builds:
         build_id = build["gear_file"]
         if gear_file_counts[build_id] > 1 and build.get("apl"):
             build_id = f"{build_id}_{apl_suffix(build['apl'])}"
         if build_id == reference_build:
-            talent_set_name = build["talent_set"]
+            reference = build
             break
-    if not talent_set_name:
+    if not reference:
         return {}
     builds_data = json.loads(builds_path.read_text(encoding="utf-8"))
-    for talent_set in builds_data["talent_sets"]:
-        if talent_set["const_name"] == talent_set_name:
-            return talent_set.get("glyphs") or {}
-    return {}
+    talents = {t["const_name"]: t["talents_string"] for t in builds_data["talent_sets"]}.get(reference["talent_set"], "")
+    apl_file = {a["const_name"]: a["apl_file"] for a in builds_data["apl_presets"]}.get(reference.get("apl"))
+    with tempfile.TemporaryDirectory(dir=WOWSIMS_SRC / "sim" / SPEC_GO_PACKAGES[spec]) as tmp:
+        request_path = pathlib.Path(tmp) / "glyphs_request.json"
+        env = build_env(spec, reference["gear_file"], apl_file, None, talents, request_path, 1)
+        if not run_go_extractor(spec, env):
+            print(f"  AVISO: {spec}: no se pudo generar la petición para leer sus glifos")
+            return {}
+        glyphs = json.loads(request_path.read_text(encoding="utf-8"))["raid"]["parties"][0]["players"][0].get("glyphs", {})
+    return {slot: item_id for slot, item_id in glyphs.items() if item_id}
 
 
 def display_icons(display_ids: set) -> dict:
@@ -139,31 +144,35 @@ def load_spec_talents(spec: str) -> dict | None:
     metric = ROLE_METRIC[role]
     reference_build = data.get("reference_build")
     glyphs_by_slot = find_reference_glyphs(spec, reference_build)
-    reference_glyphs = structure_glyphs(glyphs_by_slot, glyph_items(set(glyphs_by_slot.values())))
+    items = glyph_items(set(glyphs_by_slot.values()))
+    reference_glyphs = structure_glyphs(glyphs_by_slot, items)
+    missing = len(set(glyphs_by_slot.values()) - items.keys())
 
     variants = []
     for variant in data["variants"]:
         if variant.get("status") != "ok":
             continue
-        entry = {
+        variants.append({
             "label": variant["label"],
             "talents": variant["talents"],
             "dps": variant.get("dps", 0.0),
             "hps": variant.get("hps", 0.0),
             "tps": variant.get("tps", 0.0),
             "dtps": variant.get("dtps", 0.0),
-        }
-        if variant["label"] == "estandar" and reference_glyphs:
-            entry["glyphs"] = reference_glyphs
-        variants.append(entry)
+        })
     if not variants:
         return None
-    return {
+    entry = {
         "specLabel": SPEC_INFO[spec][2],
         "metric": metric,
         "referenceBuild": reference_build,
         "variants": variants,
     }
+    if reference_glyphs:
+        entry["glyphs"] = reference_glyphs
+    if missing:
+        entry["glyphsMissing"] = missing  # simulados, pero sin objeto en este servidor
+    return entry
 
 
 # generar_db_addon.py::lua_table no soporta listas (las builds de gear no las
