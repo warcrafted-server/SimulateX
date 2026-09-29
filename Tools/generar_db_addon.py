@@ -22,7 +22,7 @@ from mapeo_stats import (
 )
 from simular_builds import (
     build_env, run_go_extractor, run_go_stat_weights, load_json, ITEMS_BD_PATH, WOWSIMS_DB_PATH,
-    base_gear_gem_pool, base_gear_items, load_gem_colors, WOWSIMS_SRC, apl_suffix,
+    base_gear_gem_pool, base_gear_items, load_gem_colors, WOWSIMS_SRC, apl_suffix, META_GEM_COLOR,
 )
 import collections
 from specs_metadata import SPEC_GO_PACKAGES
@@ -144,6 +144,28 @@ def compute_avg_item_level(gear_items: list, items_by_id: dict) -> float:
     return round(sum(levels) / len(levels), 1) if levels else 0.0
 
 
+# Colores de gema (proto.GemColor) que cumplen cada color de hueco
+GEM_COLORS_FOR_SOCKET = {"red": {2, 6, 7, 8}, "yellow": {4, 5, 6, 8}, "blue": {3, 5, 7, 8}}
+
+
+def ideal_gems(gear_items: list, gem_colors: dict, weights_index: dict) -> dict:
+    """Valor de la mejor gema por color de hueco y sin mirar color, con los
+    pesos de la build, más con qué colores encaja la gema principal del
+    preset (la que wowsims puso a cada candidato). Fuera: meta, únicas, de
+    joyero y de calidad inferior a rara."""
+    pool = [g for g in load_json(WOWSIMS_DB_PATH).get("gems", [])
+            if g["color"] != META_GEM_COLOR and g.get("quality", 0) >= 3
+            and not g.get("unique") and not g.get("requiredProfession")]
+    values = [(g["color"], gem_ep_value(g["stats"], weights_index)) for g in pool]
+    result = {socket: round(max((v for c, v in values if c in colors), default=0.0), 2)
+              for socket, colors in GEM_COLORS_FOR_SOCKET.items()}
+    result["any"] = round(max((v for _, v in values), default=0.0), 2)
+    _meta, main_gem = base_gear_gem_pool(gear_items, gem_colors)
+    main_color = gem_colors.get(main_gem)
+    result["mainMatches"] = {socket: main_color in colors for socket, colors in GEM_COLORS_FOR_SOCKET.items()}
+    return result
+
+
 def compute_socket_values(gear_items: list, items_by_id: dict, gem_colors: dict, weights_index: dict) -> tuple:
     meta_gem, main_gem = base_gear_gem_pool(gear_items, gem_colors)
     gems_by_id = {g["id"]: g for g in load_json(WOWSIMS_DB_PATH).get("gems", [])}
@@ -194,6 +216,9 @@ def build_entry(spec: str, build_id: str, sim_result: dict, weights_index: dict,
         "critComponent": crit_component,
         "socketValue": socket_value,
         "metaSocketValue": meta_socket_value,
+        "gems": ideal_gems(gear_items, gem_colors, weights_index),
+        # piezas del set de referencia de wowsims de esta fase (indicador BiS)
+        "bis": {it["id"]: True for it in gear_items if it.get("id")},
         "items": items,
     }
     if spec in FERAL_WEAPON_AP_SPECS and weapon_dps:

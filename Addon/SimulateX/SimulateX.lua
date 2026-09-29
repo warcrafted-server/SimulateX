@@ -313,7 +313,7 @@ local function GetItemStatsFromData(itemLink)
         local scales = fields.x and fields.v and fields.v > 0
         for key, value in pairs(fields) do
             local replacedByScaling = scales and (tonumber(key) or key == "a" or key == "d")
-            if key ~= "f" and key ~= "x" and key ~= "v" and not replacedByScaling then
+            if key ~= "f" and key ~= "x" and key ~= "v" and key ~= "s" and not replacedByScaling then
                 AddStat(stats, key, value)
             end
         end
@@ -341,6 +341,30 @@ local function GetItemStatsFromData(itemLink)
         itemStatsCache[itemLink] = stats
     end
     return stats
+end
+
+-- Estadísticas de la bonificación de ranura (item_template.socketBonus), o
+-- nil. Aparte de GetItemStatsFromData: solo cuentan con los colores cumplidos.
+local socketBonusCache = {}
+local function GetSocketBonusStats(itemLink)
+    local itemId = tonumber(itemLink:match("item:(%-?%d+)"))
+    if not itemId then
+        return nil
+    end
+    local cached = socketBonusCache[itemId]
+    if cached ~= nil then
+        return cached or nil
+    end
+    local data = SimulateX_ItemStats and SimulateX_ItemStats[itemId]
+    local enchantId = data and tonumber(data:match("s=(%d+)"))
+    local bonus = enchantId and SimulateX_SocketBonus and SimulateX_SocketBonus[enchantId]
+    local stats = false
+    if bonus then
+        stats = {}
+        ForEachPair(bonus, function(key, value) AddStat(stats, key, value) end)
+    end
+    socketBonusCache[itemId] = stats
+    return stats or nil
 end
 
 -- ITEM_MOD_* que corresponden 1:1 a un peso de la build (weights de
@@ -446,6 +470,61 @@ local function ScoreWeaponDps(dps, build, hand)
     return weight * dps
 end
 
+--[[----------------------------------------------------------------------
+    GEMAS IDEALES (v0.9, nivel 80): cada hueco de color vale la mejor gema
+    de ese color y la bonificación de ranura, o la mejor gema sin mirar el
+    color y sin bonificación, lo que valga más (la bonificación solo se
+    activa con todos los colores cumplidos). build.gems viene de
+    Tools/generar_db_addon.py (gemas de wowsims, sin únicas ni de joyero).
+    El meta sigue valiendo la meta del preset (metaSocketValue).
+------------------------------------------------------------------------]]
+
+local SOCKET_COLOR = { EMPTY_SOCKET_RED = "red", EMPTY_SOCKET_YELLOW = "yellow", EMPTY_SOCKET_BLUE = "blue" }
+
+local function IdealGemsActive(build)
+    return build.gems and not SimulateX_DB.idealGemsDisabled and GetEffectivePlayerLevel() >= 80
+end
+
+local function SocketBonusValue(itemLink, weights)
+    local bonus = GetSocketBonusStats(itemLink)
+    local value = 0
+    for key, amount in pairs(bonus or {}) do
+        value = value + (weights[key] or 0) * amount
+    end
+    return value
+end
+
+local function IdealColoredSocketsValue(itemLink, stats, weights, build)
+    local gems = build.gems
+    local count, matched = 0, 0
+    for key, color in pairs(SOCKET_COLOR) do
+        local n = stats[key] or 0
+        count = count + n
+        matched = matched + n * (gems[color] or 0)
+    end
+    if count == 0 then
+        return 0
+    end
+    return math.max(matched + SocketBonusValue(itemLink, weights), count * gems.any)
+end
+
+-- Lo que supuso wowsims al simular el objeto (dato exacto): la gema
+-- principal del preset en cada hueco, con bonificación si su color encaja
+local function SimColoredSocketsValue(itemLink, stats, weights, build)
+    local count, allMatch = 0, true
+    for key, color in pairs(SOCKET_COLOR) do
+        local n = stats[key] or 0
+        count = count + n
+        if n > 0 and not build.gems.mainMatches[color] then
+            allMatch = false
+        end
+    end
+    if count == 0 then
+        return 0
+    end
+    return count * (build.socketValue or 0) + (allMatch and SocketBonusValue(itemLink, weights) or 0)
+end
+
 -- Igual que ScoreItem, pero además de la puntuación total devuelve cuánto
 -- aporta cada estadística (clave = misma clave ITEM_MOD_*/"weaponDps"/
 -- "socket", para el desglose del comparador; ver ComparadorBreakdown).
@@ -478,21 +557,24 @@ local function ScoreItemBreakdown(itemLink, weights, build, hand)
         end
     end
 
-    for statKey, count in pairs(stats) do
-        if statKey:match("^EMPTY_SOCKET_") then
-            local socketWeight = statKey == "EMPTY_SOCKET_META" and (build.metaSocketValue or 0) or (build.socketValue or 0)
-            local contribution = socketWeight * count
-            contributions.sockets = (contributions.sockets or 0) + contribution
-            score = score + contribution
+    local socketsValue = (stats.EMPTY_SOCKET_META or 0) * (build.metaSocketValue or 0)
+    if IdealGemsActive(build) then
+        socketsValue = socketsValue + IdealColoredSocketsValue(itemLink, stats, weights, build)
+    else
+        for key in pairs(SOCKET_COLOR) do
+            socketsValue = socketsValue + (stats[key] or 0) * (build.socketValue or 0)
         end
+    end
+    if socketsValue ~= 0 then
+        contributions.sockets = socketsValue
+        score = score + socketsValue
     end
 
     return score, contributions
 end
 
--- Puntuación = Σ peso × stat + DPS de arma + huecos × valor de hueco
--- (socketValue/metaSocketValue de la build). Ignora la bonificación de ranura
--- (igual que el paso 1 al simular: Pawn por defecto tampoco la cuenta).
+-- Puntuación = Σ peso × stat + DPS de arma + huecos (gemas ideales y
+-- bonificación de ranura a nivel 80; si no, la gema del preset por hueco).
 local function ScoreItem(itemLink, weights, build, hand)
     local score = ScoreItemBreakdown(itemLink, weights, build, hand)
     return score
@@ -735,6 +817,25 @@ local function CapAdjustment(build, link, isExact, removed, simSlots, onlyItemMo
     return adjust
 end
 
+-- Corrección total de un objeto: topes, y en datos exactos además las gemas
+-- ideales frente a la gema del preset que usó wowsims (la puntuación por
+-- pesos ya valora las gemas ideales en ScoreItemBreakdown).
+local function Adjustment(build, metricName, link, isExact, removed, simSlots)
+    if not link then
+        return 0
+    end
+    local adjust = 0
+    if CapsActive(build, metricName) then
+        adjust = CapAdjustment(build, link, isExact, removed, simSlots)
+    end
+    if isExact and metricName ~= "surv" and IdealGemsActive(build) then
+        local stats = GetItemStatsFromData(link)
+        adjust = adjust + IdealColoredSocketsValue(link, stats, build.weights, build)
+            - SimColoredSocketsValue(link, stats, build.weights, build)
+    end
+    return adjust
+end
+
 -- Puntúa candidato y equipado con la MISMA fuente de datos (decisión 5: una
 -- comparación nunca mezcla exacto y EP): exacto para ambos solo si los dos
 -- tienen entrada en items; si a cualquiera le falta, EP para ambos.
@@ -753,12 +854,9 @@ local function ComparePair(candLink, candId, equippedLink, equippedId, build, we
         gain = candScore - equippedScore
     end
 
-    if CapsActive(build, metricName) then
-        removed = removed or LinkList(equippedLink)
-        gain = gain + CapAdjustment(build, candLink, isExact, removed, simSlots)
-            - CapAdjustment(build, equippedLink, isExact, removed, simSlots)
-    end
-    return gain
+    removed = removed or LinkList(equippedLink)
+    return gain + Adjustment(build, metricName, candLink, isExact, removed, simSlots)
+        - Adjustment(build, metricName, equippedLink, isExact, removed, simSlots)
 end
 
 -- Puntuación de un solo objeto (slot vacío, o suma de dos slots ya
@@ -774,13 +872,10 @@ local function GetScore(itemLink, itemId, build, weights, metricName, hand)
 end
 
 -- GetScore para un hueco vacío: el objeto entra sin quitar nada
-local function GetScoreWithCaps(itemLink, itemId, build, weights, metricName, hand, simSlots)
+local function GetScoreAdjusted(itemLink, itemId, build, weights, metricName, hand, simSlots)
     local score = GetScore(itemLink, itemId, build, weights, metricName, hand)
-    if CapsActive(build, metricName) then
-        local isExact = itemId ~= nil and GetExactDelta(build, itemId, metricName) ~= nil
-        score = score + CapAdjustment(build, itemLink, isExact, {}, simSlots)
-    end
-    return score
+    local isExact = itemId ~= nil and GetExactDelta(build, itemId, metricName) ~= nil
+    return score + Adjustment(build, metricName, itemLink, isExact, {}, simSlots)
 end
 
 -- Ganancia vs equipado (positiva = mejora). metricName es "dps", "hps",
@@ -815,11 +910,10 @@ local function CompareAgainstEquipped(itemLink, itemId, equipLoc, build, weights
         local equippedOhExact = ohId and GetExactDelta(build, ohId, metricName, "oh")
         local gainOh
         if candOhExact and equippedOhExact then
+            local removed = LinkList(ohLink)
             gainOh = candOhExact - equippedOhExact
-            if CapsActive(build, metricName) then
-                gainOh = gainOh + CapAdjustment(build, itemLink, true, LinkList(ohLink), { 15 })
-                    - CapAdjustment(build, ohLink, true, LinkList(ohLink), { 15 })
-            end
+                + Adjustment(build, metricName, itemLink, true, removed, { 15 })
+                - Adjustment(build, metricName, ohLink, true, removed, { 15 })
         else
             gainOh = ComparePair(itemLink, itemId, ohLink, ohId, build, weights, metricName, "offHand", { 15 })
         end
@@ -841,11 +935,9 @@ local function CompareAgainstEquipped(itemLink, itemId, equipLoc, build, weights
             else
                 gain = ScoreItem(itemLink, weights, build, "offHand") - ScoreItem(mhLink, weights, build, "mainHand")
             end
-            if CapsActive(build, metricName) then
-                gain = gain + CapAdjustment(build, itemLink, isExact, LinkList(mhLink), { 15 })
-                    - CapAdjustment(build, mhLink, isExact, LinkList(mhLink), { 14 })
-            end
-            return gain
+            local removed = LinkList(mhLink)
+            return gain + Adjustment(build, metricName, itemLink, isExact, removed, { 15 })
+                - Adjustment(build, metricName, mhLink, isExact, removed, { 14 })
         end
     end
 
@@ -872,19 +964,16 @@ local function CompareAgainstEquipped(itemLink, itemId, equipLoc, build, weights
                     + (ohLink and ScoreItem(ohLink, weights, build, "offHand") or 0)
                 gain = candScore - equippedScore
             end
-            if CapsActive(build, metricName) then
-                local removed = LinkList(equippedLink, ohLink)
-                gain = gain + CapAdjustment(build, itemLink, isExact, removed, { 14 })
-                    - CapAdjustment(build, equippedLink, isExact, removed, { 14 })
-                    - CapAdjustment(build, ohLink, isExact, removed, { 15 })
-            end
-            return gain
+            local removed = LinkList(equippedLink, ohLink)
+            return gain + Adjustment(build, metricName, itemLink, isExact, removed, { 14 })
+                - Adjustment(build, metricName, equippedLink, isExact, removed, { 14 })
+                - Adjustment(build, metricName, ohLink, isExact, removed, { 15 })
         end
 
         local hand = SLOT_TO_HAND[slotName]
         local simSlots = { SLOT_SIM_INDEX[slotName] }
         if not equippedLink then
-            return GetScoreWithCaps(itemLink, itemId, build, weights, metricName, hand, simSlots)  -- slot vacío: puntuación completa
+            return GetScoreAdjusted(itemLink, itemId, build, weights, metricName, hand, simSlots)  -- slot vacío: puntuación completa
         end
         return ComparePair(itemLink, itemId, equippedLink, equippedId, build, weights, metricName, hand, simSlots)
     end
@@ -896,7 +985,7 @@ local function CompareAgainstEquipped(itemLink, itemId, equipLoc, build, weights
     for _, slotName in ipairs(slots) do
         local equippedLink, equippedId = GetEquippedItemId(slotName)
         if not equippedLink then
-            return GetScoreWithCaps(itemLink, itemId, build, weights, metricName, nil, simSlots)
+            return GetScoreAdjusted(itemLink, itemId, build, weights, metricName, nil, simSlots)
         end
         local equippedScore = GetScore(equippedLink, equippedId, build, weights, metricName)
         if not worstScore or equippedScore < worstScore then
@@ -994,6 +1083,7 @@ local function GetSurvivalBuild(build)
             critComponent = data.critComponent,
             socketValue = data.socketValue,
             metaSocketValue = data.metaSocketValue,
+            gems = false,  -- build.gems se calculó con los pesos de amenaza, no de supervivencia
         }, { __index = build })
         survivalBuilds[build] = survival
     end
@@ -1210,7 +1300,7 @@ end
 -- lo equipado.
 local function ComparisonGain(linkA, idA, linkB, idB, equipLoc, build, weights, metric, hand, againstEmpty)
     if againstEmpty then
-        return GetScoreWithCaps(linkA, idA, build, weights, metric, hand, SimSlotsFor(equipLoc))
+        return GetScoreAdjusted(linkA, idA, build, weights, metric, hand, SimSlotsFor(equipLoc))
     end
     if linkB then
         return CompareDirect(linkA, idA, linkB, idB, equipLoc, build, weights, metric, hand)
@@ -1495,6 +1585,91 @@ local function GetPercentColor(evaluation)
     return 1, 0.3, 0.3
 end
 
+--[[----------------------------------------------------------------------
+    BiS (v0.9): el objeto está en el set de referencia de wowsims de alguna
+    fase (build.bis, Tools/generar_db_addon.py). Solo fases hasta la elegida
+    en el panel (SimulateX_DB.maxPhase: 0 = prerraid, 1-5; nil = todas) y
+    sets de la propia facción cuando wowsims los separa.
+------------------------------------------------------------------------]]
+
+local function BuildPhaseNumber(phase)
+    if phase:match("^preraid") then
+        return 0
+    end
+    return tonumber(phase:match("^p(%d)"))
+end
+
+local function PhaseLabel(n)
+    return n == 0 and "Prerraid" or ("P" .. n)
+end
+
+-- {0, 1, 3, 4} -> "Prerraid-P1, P3-P4"
+local function FormatPhaseRuns(phases)
+    local parts, runStart, previous = {}, nil, nil
+    for _, n in ipairs(phases) do
+        if runStart and n == previous + 1 then
+            previous = n
+        else
+            if runStart then
+                table.insert(parts, runStart == previous and PhaseLabel(runStart)
+                    or (PhaseLabel(runStart) .. "-" .. PhaseLabel(previous)))
+            end
+            runStart, previous = n, n
+        end
+    end
+    if runStart then
+        table.insert(parts, runStart == previous and PhaseLabel(runStart)
+            or (PhaseLabel(runStart) .. "-" .. PhaseLabel(previous)))
+    end
+    return table.concat(parts, ", ")
+end
+
+-- specLabel -> "P3-P4", la spec activa primero
+local function GetBisLines(itemId, classData, activeSpecLabel)
+    local faction = (UnitFactionGroup("player") or ""):lower()
+    local maxPhase = SimulateX_DB.maxPhase
+    local phasesBySpec = {}
+    for _, build in pairs(classData) do
+        local specLabel = build.specLabel or build.spec
+        local phase = build.phase or ""
+        local n = BuildPhaseNumber(phase)
+        local otherFaction = (phase:find("alliance") and faction ~= "alliance")
+            or (phase:find("horde") and faction ~= "horde")
+        local specEnabled = not (SimulateX_DB.disabledSpecs and SimulateX_DB.disabledSpecs[specLabel])
+        if build.bis and build.bis[itemId] and n and not otherFaction and specEnabled
+            and (not maxPhase or n <= maxPhase) then
+            phasesBySpec[specLabel] = phasesBySpec[specLabel] or {}
+            phasesBySpec[specLabel][n] = true
+        end
+    end
+    local lines = {}
+    for specLabel, set in pairs(phasesBySpec) do
+        local phases = {}
+        for n in pairs(set) do table.insert(phases, n) end
+        table.sort(phases)
+        table.insert(lines, { spec = specLabel, phases = FormatPhaseRuns(phases), active = specLabel == activeSpecLabel })
+    end
+    table.sort(lines, function(a, b)
+        if a.active ~= b.active then return a.active end
+        return a.spec < b.spec
+    end)
+    return lines
+end
+
+local function AddBisLines(tooltip, link, activeSpecLabel)
+    if SimulateX_DB.bisTooltipDisabled then
+        return
+    end
+    local classData = _G[CLASS_DATA_VARS[select(2, UnitClass("player"))] or ""]
+    local itemId = tonumber(link:match("item:(%d+)"))
+    if not classData or not itemId then
+        return
+    end
+    for _, line in ipairs(GetBisLines(itemId, classData, activeSpecLabel)) do
+        tooltip:AddDoubleLine("  BiS " .. line.spec, line.phases, 1, 0.82, 0, 1, 0.82, 0)
+    end
+end
+
 local function OnTooltipSetItem(tooltip)
     local link = GetTooltipItemLink(tooltip)
     if not link then
@@ -1535,6 +1710,7 @@ local function OnTooltipSetItem(tooltip)
         local pr, pg, pb = GetPercentColor(evaluation)
         tooltip:AddDoubleLine(label, FormatPercent(evaluation), lr, lg, lb, pr, pg, pb)
     end
+    AddBisLines(tooltip, link, evaluations[1].isActive and evaluations[1].specLabel)
 
     tooltip:Show()
 end

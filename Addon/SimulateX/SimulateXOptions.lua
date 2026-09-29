@@ -231,7 +231,7 @@ function SimulateX_BuildOptions(parent, prefix, textWidth)
         if SimulateX_Comparador_Refresh then SimulateX_Comparador_Refresh() end
     end
 
-    local capsTitle = CreateSectionTitle(parent, "Topes (nivel 80)")
+    local capsTitle = CreateSectionTitle(parent, "Precisión (nivel 80)")
     capsTitle:SetPoint("TOPLEFT", questRewardCheck, "BOTTOMLEFT", 2, -16)
 
     local capsCheck = CreateCheck(parent, prefix .. "CapsCheck",
@@ -250,13 +250,52 @@ function SimulateX_BuildOptions(parent, prefix, textWidth)
         RefreshScores()
     end)
 
+    local gemsCheck = CreateCheck(parent, prefix .. "GemsCheck",
+        "Valorar los huecos con la mejor gema y la bonificación de ranura (si no, la gema del preset)", textWidth)
+    gemsCheck:SetPoint("TOPLEFT", spellDebuffCheck, "BOTTOMLEFT", 0, -2)
+    gemsCheck:SetScript("OnClick", function(self)
+        SimulateX_DB.idealGemsDisabled = not self:GetChecked() or nil
+        RefreshScores()
+    end)
+
+    local bisTitle = CreateSectionTitle(parent, "Best in Slot")
+    bisTitle:SetPoint("TOPLEFT", gemsCheck, "BOTTOMLEFT", 2, -16)
+
+    local bisCheck = CreateCheck(parent, prefix .. "BisCheck",
+        "Indicar en el tooltip si el objeto está en el set de referencia de wowsims de alguna fase", textWidth)
+    bisCheck:SetPoint("TOPLEFT", bisTitle, "BOTTOMLEFT", -2, -8)
+    bisCheck:SetScript("OnClick", function(self)
+        SimulateX_DB.bisTooltipDisabled = not self:GetChecked() or nil
+    end)
+
+    -- 0 = prerraid, 1-5 = fases, 6 = todas (SimulateX_DB.maxPhase = nil).
+    -- Para reinos con mod-individual-progression: no marcar BiS de contenido
+    -- que aún no está abierto.
+    local PHASE_TEXT = { [0] = "Prerraid", "P1 (Naxxramas)", "P2 (Ulduar)", "P3 (Prueba del Cruzado)",
+        "P4 (Ciudadela de la Corona de Hielo)", "P5 (Sagrario Rubí)", "Todas" }
+    local phaseSlider = CreateFrame("Slider", prefix .. "PhaseSlider", parent, "OptionsSliderTemplate")
+    phaseSlider:SetPoint("TOPLEFT", bisCheck, "BOTTOMLEFT", 6, -24)
+    phaseSlider:SetWidth(200)
+    phaseSlider:SetMinMaxValues(0, 6)
+    phaseSlider:SetValueStep(1)
+    _G[phaseSlider:GetName() .. "Text"]:SetText("Fase de contenido abierta")
+    _G[phaseSlider:GetName() .. "Low"]:SetText("Prerraid")
+    _G[phaseSlider:GetName() .. "High"]:SetText("Todas")
+    local phaseValueText = parent:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    phaseValueText:SetPoint("LEFT", phaseSlider, "RIGHT", 10, 0)
+    phaseSlider:SetScript("OnValueChanged", function(self, value)
+        value = math.floor(value + 0.5)
+        SimulateX_DB.maxPhase = value < 6 and value or nil
+        phaseValueText:SetText(PHASE_TEXT[value])
+    end)
+
     -- El número de specs (y por tanto la altura de RebuildSpecCheckboxes)
     -- solo se sabe tras rellenar los checkboxes, así que la altura del
     -- contenido se recalcula aquí, no al construir.
     local function UpdateContentHeight()
         content:SetScript("OnUpdate", function(self)
             self:SetScript("OnUpdate", nil)
-            local bottom = spellDebuffCheck:GetBottom()
+            local bottom = phaseSlider:GetBottom()
             local top = self:GetTop()
             if bottom and top then
                 self:SetHeight(math.max(1, top - bottom + 20))
@@ -281,6 +320,9 @@ function SimulateX_BuildOptions(parent, prefix, textWidth)
         questRewardCheck:SetChecked(not SimulateX_DB.questRewardHintDisabled)
         capsCheck:SetChecked(not SimulateX_DB.capsDisabled)
         spellDebuffCheck:SetChecked(not SimulateX_DB.spellHitDebuffIgnored)
+        gemsCheck:SetChecked(not SimulateX_DB.idealGemsDisabled)
+        bisCheck:SetChecked(not SimulateX_DB.bisTooltipDisabled)
+        phaseSlider:SetValue(SimulateX_DB.maxPhase or 6)
         UpdateContentHeight()
     end
 end
