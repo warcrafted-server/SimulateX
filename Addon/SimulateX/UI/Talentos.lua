@@ -339,7 +339,7 @@ local EMPTY_SLOT_TEXTURE = "Interface\\PaperDoll\\UI-Backpack-EmptySlot"
 -- columna es estrecha. Solo si lo que queda empieza en mayúscula ("Glifo de
 -- lo Salvaje" se queda entero). El tooltip enseña el nombre completo.
 local function ShortGlyphName(name)
-    return name:match("^Glifo del? (%u.*)$") or name
+    return name:match("^Glifo del? (.+)$") or name
 end
 
 local function CreateGlyphSlot(parent)
@@ -377,7 +377,7 @@ end
 local function CreateGlyphPanel(parent)
     local panel = CreateFrame("Frame", nil, parent)
     panel:SetWidth(GLYPH_PANEL_WIDTH)
-    panel:SetHeight(28 + 18 + 3 * GLYPH_ROW_HEIGHT + 44)  -- la nota puede ocupar 3 líneas
+    panel:SetHeight(28 + 18 + 3 * GLYPH_ROW_HEIGHT + 60)  -- la nota puede ocupar 4 líneas
 
     local bg = panel:CreateTexture(nil, "BACKGROUND")
     bg:SetAllPoints()
@@ -405,15 +405,21 @@ local function CreateGlyphPanel(parent)
         end
     end
 
+    -- con solo un ancla abajo el cliente la deja en una línea y la corta
     panel.note = panel:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
-    panel.note:SetPoint("BOTTOMLEFT", 10, 8)
-    panel.note:SetPoint("RIGHT", panel, "RIGHT", -10, 0)
+    panel.note:SetPoint("TOPLEFT", 10, -46 - 3 * GLYPH_ROW_HEIGHT - 4)
+    panel.note:SetPoint("BOTTOMRIGHT", -10, 6)
     panel.note:SetJustifyH("LEFT")
+    panel.note:SetJustifyV("TOP")
     panel.note:SetWordWrap(true)
     return panel
 end
 
 local function RenderGlyphPanel(panel, glyphs, missing)
+    -- los glifos de wowsims que no existen en el servidor (p. ej. los de
+    -- WotLK Classic) dejan huecos sublimes; no se sabe cuál, así que se marcan
+    -- los primeros vacíos
+    local unavailable = missing or 0
     for _, kind in ipairs(GLYPH_KINDS) do
         local entries = glyphs and glyphs[kind.key] or {}
         for row, slot in ipairs(panel.slots[kind.key]) do
@@ -428,15 +434,20 @@ local function RenderGlyphPanel(panel, glyphs, missing)
             else
                 slot.itemId = nil
                 slot.icon:Hide()
-                slot.label:SetText("Vacío")
+                if kind.key == "major" and unavailable > 0 then
+                    unavailable = unavailable - 1
+                    slot.label:SetText("No existe en 3.3.5")
+                else
+                    slot.label:SetText("Sin glifo")
+                end
                 slot.label:SetTextColor(0.5, 0.5, 0.5)
             end
         end
     end
-    local note = glyphs and "Glifos con los que se simularon estas distribuciones."
+    local note = glyphs and "Glifos del preset de wowsims. Los menores casi no cuentan y no siempre los pone."
         or "Sin datos de glifos para esta especialización."
     if missing then
-        note = note .. string.format(" wowsims usó además %d que no existe en este servidor.", missing)
+        note = note .. string.format(" %d no existe en 3.3.5.", missing)
     end
     panel.note:SetText(note)
     panel:Show()

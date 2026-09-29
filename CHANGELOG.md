@@ -31,6 +31,7 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 - Opción en el panel para quitar el icono del minimapa.
 - Opción en el panel para ajustar la opacidad de la ventana del comparador.
 ### Corregido
+- Panel de glifos: la nota de abajo se cortaba en una línea, y los huecos vacíos decían solo "Vacío". Ahora un hueco sublime que wowsims llenó con un glifo que no existe en 3.3.5 (p. ej. Presagio de claridad en Feral, de WotLK Classic) dice "No existe en 3.3.5", y el resto "Sin glifo". Los nombres como "Glifo de lo Salvaje" ya no se cortan.
 - La pestaña Mejoras proponía objetos que exigen una profesión para llevarlos (gafas de ingeniero, anillos de joyería...) a quien no la tiene.
 - El panel de glifos enseñaba los glifos de `presets.ts`, que no siempre son los que wowsims usa al simular (Feral usa otros). Ahora muestra los de la petición simulada, los mismos para todas las distribuciones de la spec, y avisa si wowsims usó alguno que no existe en este servidor.
 - El aviso "Para este hueco solo hay % total…" (anillos/abalorios) y el texto de ayuda del comparador no envolvían línea y se cortaban con ventanas estrechas.
