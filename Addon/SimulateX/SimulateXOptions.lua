@@ -226,13 +226,37 @@ function SimulateX_BuildOptions(parent, prefix, textWidth)
         SimulateX_DB.questRewardHintDisabled = not self:GetChecked()
     end)
 
+    local function RefreshScores()
+        if SimulateX_RefreshIcons then SimulateX_RefreshIcons() end
+        if SimulateX_Comparador_Refresh then SimulateX_Comparador_Refresh() end
+    end
+
+    local capsTitle = CreateSectionTitle(parent, "Topes (nivel 80)")
+    capsTitle:SetPoint("TOPLEFT", questRewardCheck, "BOTTOMLEFT", 2, -16)
+
+    local capsCheck = CreateCheck(parent, prefix .. "CapsCheck",
+        "Golpe, pericia y penetración de armadura dejan de valer al llegar a su tope", textWidth)
+    capsCheck:SetPoint("TOPLEFT", capsTitle, "BOTTOMLEFT", -2, -8)
+    capsCheck:SetScript("OnClick", function(self)
+        SimulateX_DB.capsDisabled = not self:GetChecked() or nil
+        RefreshScores()
+    end)
+
+    local spellDebuffCheck = CreateCheck(parent, prefix .. "SpellDebuffCheck",
+        "Contar el +3% de golpe de hechizo de Miseria / Fuego feérico mejorado (banda)", textWidth)
+    spellDebuffCheck:SetPoint("TOPLEFT", capsCheck, "BOTTOMLEFT", 0, -2)
+    spellDebuffCheck:SetScript("OnClick", function(self)
+        SimulateX_DB.spellHitDebuffIgnored = not self:GetChecked() or nil
+        RefreshScores()
+    end)
+
     -- El número de specs (y por tanto la altura de RebuildSpecCheckboxes)
     -- solo se sabe tras rellenar los checkboxes, así que la altura del
     -- contenido se recalcula aquí, no al construir.
     local function UpdateContentHeight()
         content:SetScript("OnUpdate", function(self)
             self:SetScript("OnUpdate", nil)
-            local bottom = questRewardCheck:GetBottom()
+            local bottom = spellDebuffCheck:GetBottom()
             local top = self:GetTop()
             if bottom and top then
                 self:SetHeight(math.max(1, top - bottom + 20))
@@ -255,6 +279,8 @@ function SimulateX_BuildOptions(parent, prefix, textWidth)
         end
         sellPriceCheck:SetChecked(not SimulateX_DB.sellPriceTooltipDisabled)
         questRewardCheck:SetChecked(not SimulateX_DB.questRewardHintDisabled)
+        capsCheck:SetChecked(not SimulateX_DB.capsDisabled)
+        spellDebuffCheck:SetChecked(not SimulateX_DB.spellHitDebuffIgnored)
         UpdateContentHeight()
     end
 end

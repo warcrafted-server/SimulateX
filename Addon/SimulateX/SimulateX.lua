@@ -633,20 +633,132 @@ local function GetExactDelta(build, itemId, metricName, whichHand)
     return data[metricName]
 end
 
+--[[----------------------------------------------------------------------
+    TOPES (v0.9): golpe, pericia y penetración de armadura dejan de valer al
+    llegar al tope. Los datos exactos y los pesos de wowsims se midieron con
+    el equipo del preset (que suele ir ya topado: ahí wowsims da peso 0 al
+    golpe), así que se corrigen con lo que le falta al jugador. build.caps
+    viene de Tools/modelo_caps.py; solo a nivel 80 y para la métrica del rol.
+------------------------------------------------------------------------]]
+
+local CAP_ITEM_MOD = {
+    meleeHit = "ITEM_MOD_HIT_RATING_SHORT", spellHit = "ITEM_MOD_HIT_RATING_SHORT",
+    expertise = "ITEM_MOD_EXPERTISE_RATING_SHORT", arp = "ITEM_MOD_ARMOR_PENETRATION_RATING_SHORT",
+}
+local CAPPED_ITEM_MODS = {
+    "ITEM_MOD_HIT_RATING_SHORT", "ITEM_MOD_EXPERTISE_RATING_SHORT", "ITEM_MOD_ARMOR_PENETRATION_RATING_SHORT",
+}
+
+-- Hueco de equipo -> posición en el equipo de wowsims (proto.ItemSlot)
+local SLOT_SIM_INDEX = {
+    HeadSlot = 0, NeckSlot = 1, ShoulderSlot = 2, BackSlot = 3, ChestSlot = 4, WristSlot = 5,
+    HandsSlot = 6, WaistSlot = 7, LegsSlot = 8, FeetSlot = 9, Finger0Slot = 10, Finger1Slot = 11,
+    Trinket0Slot = 12, Trinket1Slot = 13, MainHandSlot = 14, SecondaryHandSlot = 15, RangedSlot = 16,
+}
+
+-- {a, b} sin huecos: con un nil delante, ipairs se pararía ahí
+local function LinkList(...)
+    local list = {}
+    for i = 1, select("#", ...) do
+        local link = select(i, ...)
+        if link then
+            table.insert(list, link)
+        end
+    end
+    return list
+end
+
+local function SimSlotsFor(equipLoc)
+    local slots = {}
+    for _, slotName in ipairs(INVTYPE_TO_SLOTS[equipLoc] or {}) do
+        table.insert(slots, SLOT_SIM_INDEX[slotName])
+    end
+    return slots
+end
+
+local function CapsActive(build, metricName)
+    return build.caps ~= nil and metricName ~= "surv" and not SimulateX_DB.capsDisabled
+        and GetEffectivePlayerLevel() >= 80
+end
+
+-- Rating que el jugador ya tiene (equipo y auras de rating, lo que da la
+-- hoja de personaje); el golpe de talentos lo suma block.nonGear
+local function PlayerRating(stat, build)
+    if stat == "meleeHit" then
+        return GetCombatRating(build.spec == "hunter" and (CR_HIT_RANGED or 7) or (CR_HIT_MELEE or 6))
+    elseif stat == "spellHit" then
+        return GetCombatRating(CR_HIT_SPELL or 8)
+    elseif stat == "expertise" then
+        return GetCombatRating(CR_EXPERTISE or 24)
+    end
+    return GetCombatRating(CR_ARMOR_PENETRATION or 25)
+end
+
+local function PlayerCap(stat, block)
+    if stat == "spellHit" and block.debuff and SimulateX_DB.spellHitDebuffIgnored then
+        return block.cap + block.debuff
+    end
+    return block.cap
+end
+
+-- Lo que hay que sumar a la puntuación (exacta o por pesos) de `link` para
+-- que sus stats con tope valgan lo que le faltan al jugador. removed: lo que
+-- el cambio se quita de encima; simSlots: huecos del preset donde wowsims lo
+-- probó (anillos/abalorios: media de los dos, se quedó con el mejor).
+local function CapAdjustment(build, link, isExact, removed, simSlots, onlyItemMod)
+    if not link then
+        return 0
+    end
+    local stats = GetItemStatsFromData(link)
+    local adjust = 0
+    for stat, block in pairs(build.caps) do
+        local key = CAP_ITEM_MOD[stat]
+        local amount = (onlyItemMod == nil or onlyItemMod == key) and stats[key] or 0
+        if amount > 0 then
+            local current = PlayerRating(stat, build) + block.nonGear
+            for _, removedLink in ipairs(removed) do
+                current = current - (GetItemStatsFromData(removedLink)[key] or 0)
+            end
+            local valued = block.weight * math.min(amount, math.max(0, PlayerCap(stat, block) - current))
+            if isExact then
+                local slotContribution = 0
+                for _, simSlot in ipairs(simSlots or {}) do
+                    slotContribution = slotContribution + (block.slots[simSlot] or 0) / #simSlots
+                end
+                local presetRoom = math.max(0, block.cap - (block.preset - slotContribution))
+                adjust = adjust + valued - block.weight * math.min(amount, presetRoom)
+            else
+                adjust = adjust + valued - block.presetWeight * amount
+            end
+        end
+    end
+    return adjust
+end
+
 -- Puntúa candidato y equipado con la MISMA fuente de datos (decisión 5: una
 -- comparación nunca mezcla exacto y EP): exacto para ambos solo si los dos
 -- tienen entrada en items; si a cualquiera le falta, EP para ambos.
-local function ComparePair(candLink, candId, equippedLink, equippedId, build, weights, metricName, hand)
+-- removed: lo que el jugador se quitaría (por defecto, el propio equipado).
+local function ComparePair(candLink, candId, equippedLink, equippedId, build, weights, metricName, hand, simSlots, removed)
     local candExact = candId and GetExactDelta(build, candId, metricName)
     local equippedExact = equippedId and GetExactDelta(build, equippedId, metricName)
+    local isExact = candExact ~= nil and equippedExact ~= nil
 
-    if candExact and equippedExact then
-        return candExact - equippedExact
+    local gain
+    if isExact then
+        gain = candExact - equippedExact
+    else
+        local candScore = candLink and ScoreItem(candLink, weights, build, hand) or 0
+        local equippedScore = equippedLink and ScoreItem(equippedLink, weights, build, hand) or 0
+        gain = candScore - equippedScore
     end
 
-    local candScore = candLink and ScoreItem(candLink, weights, build, hand) or 0
-    local equippedScore = equippedLink and ScoreItem(equippedLink, weights, build, hand) or 0
-    return candScore - equippedScore
+    if CapsActive(build, metricName) then
+        removed = removed or LinkList(equippedLink)
+        gain = gain + CapAdjustment(build, candLink, isExact, removed, simSlots)
+            - CapAdjustment(build, equippedLink, isExact, removed, simSlots)
+    end
+    return gain
 end
 
 -- Puntuación de un solo objeto (slot vacío, o suma de dos slots ya
@@ -659,6 +771,16 @@ local function GetScore(itemLink, itemId, build, weights, metricName, hand)
         end
     end
     return ScoreItem(itemLink, weights, build, hand)
+end
+
+-- GetScore para un hueco vacío: el objeto entra sin quitar nada
+local function GetScoreWithCaps(itemLink, itemId, build, weights, metricName, hand, simSlots)
+    local score = GetScore(itemLink, itemId, build, weights, metricName, hand)
+    if CapsActive(build, metricName) then
+        local isExact = itemId ~= nil and GetExactDelta(build, itemId, metricName) ~= nil
+        score = score + CapAdjustment(build, itemLink, isExact, {}, simSlots)
+    end
+    return score
 end
 
 -- Ganancia vs equipado (positiva = mejora). metricName es "dps", "hps",
@@ -681,11 +803,11 @@ local function CompareAgainstEquipped(itemLink, itemId, equipLoc, build, weights
         local mhEquipLoc = mhLink and select(9, GetItemInfo(mhLink))
 
         if mhEquipLoc == "INVTYPE_2HWEAPON" then
-            return ComparePair(itemLink, itemId, mhLink, mhId, build, weights, metricName, "mainHand")
+            return ComparePair(itemLink, itemId, mhLink, mhId, build, weights, metricName, "mainHand", { 14 })
         end
 
         local ohLink, ohId = GetEquippedItemId("SecondaryHandSlot")
-        local gainMh = ComparePair(itemLink, itemId, mhLink, mhId, build, weights, metricName, "mainHand")
+        local gainMh = ComparePair(itemLink, itemId, mhLink, mhId, build, weights, metricName, "mainHand", { 14 })
 
         -- Mano izquierda: si hay dato exacto de dpsOH para AMBOS lados se usa
         -- (decisión 5), si no EP (que no distingue de mano, mismo score).
@@ -694,8 +816,12 @@ local function CompareAgainstEquipped(itemLink, itemId, equipLoc, build, weights
         local gainOh
         if candOhExact and equippedOhExact then
             gainOh = candOhExact - equippedOhExact
+            if CapsActive(build, metricName) then
+                gainOh = gainOh + CapAdjustment(build, itemLink, true, LinkList(ohLink), { 15 })
+                    - CapAdjustment(build, ohLink, true, LinkList(ohLink), { 15 })
+            end
         else
-            gainOh = ComparePair(itemLink, itemId, ohLink, ohId, build, weights, metricName, "offHand")
+            gainOh = ComparePair(itemLink, itemId, ohLink, ohId, build, weights, metricName, "offHand", { 15 })
         end
 
         return math.max(gainMh, gainOh)
@@ -708,10 +834,18 @@ local function CompareAgainstEquipped(itemLink, itemId, equipLoc, build, weights
         if mhLink and select(9, GetItemInfo(mhLink)) == "INVTYPE_2HWEAPON" then
             local candExact = itemId and GetExactDelta(build, itemId, metricName)
             local mhExact = mhId and GetExactDelta(build, mhId, metricName)
-            if candExact and mhExact then
-                return candExact - mhExact
+            local isExact = candExact ~= nil and mhExact ~= nil
+            local gain
+            if isExact then
+                gain = candExact - mhExact
+            else
+                gain = ScoreItem(itemLink, weights, build, "offHand") - ScoreItem(mhLink, weights, build, "mainHand")
             end
-            return ScoreItem(itemLink, weights, build, "offHand") - ScoreItem(mhLink, weights, build, "mainHand")
+            if CapsActive(build, metricName) then
+                gain = gain + CapAdjustment(build, itemLink, isExact, LinkList(mhLink), { 15 })
+                    - CapAdjustment(build, mhLink, isExact, LinkList(mhLink), { 14 })
+            end
+            return gain
         end
     end
 
@@ -728,37 +862,48 @@ local function CompareAgainstEquipped(itemLink, itemId, equipLoc, build, weights
             local mhExact = equippedId and GetExactDelta(build, equippedId, metricName)
             local ohExact = ohId and GetExactDelta(build, ohId, metricName)
 
-            if candExact and (mhExact or not equippedLink) and (ohExact or not ohLink) then
-                return candExact - (mhExact or 0) - (ohExact or 0)
+            local isExact = candExact ~= nil and (mhExact or not equippedLink) and (ohExact or not ohLink) and true or false
+            local gain
+            if isExact then
+                gain = candExact - (mhExact or 0) - (ohExact or 0)
+            else
+                local candScore = ScoreItem(itemLink, weights, build, "mainHand")
+                local equippedScore = (equippedLink and ScoreItem(equippedLink, weights, build, "mainHand") or 0)
+                    + (ohLink and ScoreItem(ohLink, weights, build, "offHand") or 0)
+                gain = candScore - equippedScore
             end
-
-            local candScore = ScoreItem(itemLink, weights, build, "mainHand")
-            local equippedScore = (equippedLink and ScoreItem(equippedLink, weights, build, "mainHand") or 0)
-                + (ohLink and ScoreItem(ohLink, weights, build, "offHand") or 0)
-            return candScore - equippedScore
+            if CapsActive(build, metricName) then
+                local removed = LinkList(equippedLink, ohLink)
+                gain = gain + CapAdjustment(build, itemLink, isExact, removed, { 14 })
+                    - CapAdjustment(build, equippedLink, isExact, removed, { 14 })
+                    - CapAdjustment(build, ohLink, isExact, removed, { 15 })
+            end
+            return gain
         end
 
         local hand = SLOT_TO_HAND[slotName]
+        local simSlots = { SLOT_SIM_INDEX[slotName] }
         if not equippedLink then
-            return GetScore(itemLink, itemId, build, weights, metricName, hand)  -- slot vacío: puntuación completa
+            return GetScoreWithCaps(itemLink, itemId, build, weights, metricName, hand, simSlots)  -- slot vacío: puntuación completa
         end
-        return ComparePair(itemLink, itemId, equippedLink, equippedId, build, weights, metricName, hand)
+        return ComparePair(itemLink, itemId, equippedLink, equippedId, build, weights, metricName, hand, simSlots)
     end
 
     -- Anillos/abalorios: contra el peor de los dos equipados; con un hueco
     -- vacío iría ahí sin quitar nada, así que cuenta entero.
+    local simSlots = SimSlotsFor(equipLoc)
     local worstLink, worstId, worstScore
     for _, slotName in ipairs(slots) do
         local equippedLink, equippedId = GetEquippedItemId(slotName)
         if not equippedLink then
-            return GetScore(itemLink, itemId, build, weights, metricName)
+            return GetScoreWithCaps(itemLink, itemId, build, weights, metricName, nil, simSlots)
         end
         local equippedScore = GetScore(equippedLink, equippedId, build, weights, metricName)
         if not worstScore or equippedScore < worstScore then
             worstScore, worstLink, worstId = equippedScore, equippedLink, equippedId
         end
     end
-    return ComparePair(itemLink, itemId, worstLink, worstId, build, weights, metricName)
+    return ComparePair(itemLink, itemId, worstLink, worstId, build, weights, metricName, nil, simSlots)
 end
 
 --[[----------------------------------------------------------------------
@@ -1050,18 +1195,25 @@ end
 -- para los dos). A y B son del mismo equipLoc (validado por el llamador), así
 -- que no hace falta la lógica de doble empuñadura/2M/peor-de-dos de
 -- CompareAgainstEquipped: es una comparación directa de dos objetos.
-local function CompareDirect(linkA, idA, linkB, idB, build, weights, metricName, hand)
-    return ComparePair(linkA, idA, linkB, idB, build, weights, metricName, hand)
+-- Topes: A y B sustituirían a lo que el jugador lleva en ese hueco (si es
+-- uno solo; en anillos/abalorios no hay "el" equipado y no se descuenta nada).
+local function CompareDirect(linkA, idA, linkB, idB, equipLoc, build, weights, metricName, hand)
+    local slots = INVTYPE_TO_SLOTS[equipLoc] or {}
+    local removed = {}
+    if #slots == 1 then
+        removed = LinkList((GetEquippedItemId(slots[1])))
+    end
+    return ComparePair(linkA, idA, linkB, idB, build, weights, metricName, hand, SimSlotsFor(equipLoc), removed)
 end
 
 -- Ganancia de A según contra qué se compara: hueco vacío (A entero), B, o
 -- lo equipado.
 local function ComparisonGain(linkA, idA, linkB, idB, equipLoc, build, weights, metric, hand, againstEmpty)
     if againstEmpty then
-        return GetScore(linkA, idA, build, weights, metric, hand)
+        return GetScoreWithCaps(linkA, idA, build, weights, metric, hand, SimSlotsFor(equipLoc))
     end
     if linkB then
-        return CompareDirect(linkA, idA, linkB, idB, build, weights, metric, hand)
+        return CompareDirect(linkA, idA, linkB, idB, equipLoc, build, weights, metric, hand)
     end
     return CompareAgainstEquipped(linkA, idA, equipLoc, build, weights, metric)
 end
@@ -1211,11 +1363,12 @@ local function GetComparisonBreakdown(linkA, linkB, buildId, againstEmpty)
     local denominator = GetPercentDenominator(build.weightsKind, playerLevel, build.base and build.base[metric], weights, build)
 
     local _, contribA = ScoreItemBreakdown(linkA, weights, build, hand)
-    local contribB
+    local contribB, compareLink
     if againstEmpty then
         contribB = {}
     elseif linkB then
         _, contribB = ScoreItemBreakdown(linkB, weights, build, hand)
+        compareLink = linkB
     else
         -- objeto equipado en ese hueco (slot único; anillos/abalorios y armas
         -- con doble empuñadura no tienen un "el equipado" único, se omite el
@@ -1227,8 +1380,19 @@ local function GetComparisonBreakdown(linkA, linkB, buildId, againstEmpty)
         local equippedLink = select(1, GetEquippedItemId(slots[1]))
         if equippedLink then
             _, contribB = ScoreItemBreakdown(equippedLink, weights, build, hand)
+            compareLink = equippedLink
         else
             contribB = {}
+        end
+    end
+
+    -- mismo tope que el % total: la puntería por encima del tope aporta 0
+    if CapsActive(build, metric) then
+        local slots = INVTYPE_TO_SLOTS[equipLoc] or {}
+        local removed = #slots == 1 and LinkList((GetEquippedItemId(slots[1]))) or {}
+        for _, key in ipairs(CAPPED_ITEM_MODS) do
+            contribA[key] = (contribA[key] or 0) + CapAdjustment(build, linkA, false, removed, nil, key)
+            contribB[key] = (contribB[key] or 0) + CapAdjustment(build, compareLink, false, removed, nil, key)
         end
     end
 
