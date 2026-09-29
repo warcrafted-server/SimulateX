@@ -33,7 +33,7 @@ for index, key in ipairs(STAT_ORDER) do STAT_RANK[key] = index end
 local frame, comparePage, configPage, configRefresh, talentsPage, talentsContent
 local cards = {}
 local tabs = {}
-local resultsFrame, breakdownFrame, verdictText, verdictBg
+local resultsFrame, breakdownFrame, verdictText, verdictBg, setNoteText
 local resultRows, breakdownRows, columnHeaders = {}, {}, {}
 
 --[[----------------------------------------------------------------------
@@ -817,10 +817,31 @@ local function LayoutCards(count)
     end
 end
 
+-- Bonus de conjunto que se pierde o se activa, solo contra lo equipado (con
+-- B puesto, A no sustituye a nada que lleves)
+local function RenderSetNote(linkA, targets, multi)
+    local target = targets[1]
+    local againstEquipped = not multi and target and not target.link and not target.empty
+    local notes = (againstEquipped and not SimulateX_DB.setBonusWarningDisabled and SimulateX_API.GetSetBonusNotes)
+        and SimulateX_API.GetSetBonusNotes(linkA) or {}
+    local texts, anyLost = {}, false
+    for _, note in ipairs(notes) do
+        table.insert(texts, note[1])
+        anyLost = anyLost or not note[2]
+    end
+    setNoteText:SetText(table.concat(texts, "  ·  "))
+    if anyLost then
+        setNoteText:SetTextColor(1, 0.35, 0.35)
+    else
+        setNoteText:SetTextColor(0.2, 1, 0.2)
+    end
+end
+
 function SimulateX_Comparador_Refresh()
     if not frame or not frame:IsShown() then
         return
     end
+    setNoteText:SetText("")
 
     if talentsContent and talentsContent.refresh then
         talentsContent.refresh()
@@ -876,6 +897,7 @@ function SimulateX_Comparador_Refresh()
     RenderResults(rows, targets)
     local bestIndex, active = RenderVerdict(rows, targets, linkA, multi)
     RenderBreakdown(linkA, bestIndex and targets[bestIndex], active)
+    RenderSetNote(linkA, targets, multi)
 end
 
 --[[----------------------------------------------------------------------
@@ -961,6 +983,11 @@ local function BuildComparePage()
     verdictText:SetPoint("LEFT", verdictBg, "LEFT", 10, 0)
     verdictText:SetPoint("RIGHT", verdictBg, "RIGHT", -10, 0)
     verdictText:SetJustifyH("LEFT")
+
+    setNoteText = comparePage:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+    setNoteText:SetPoint("TOPLEFT", verdictBg, "BOTTOMLEFT", 10, -4)
+    setNoteText:SetPoint("RIGHT", verdictBg, "RIGHT", -10, 0)
+    setNoteText:SetJustifyH("LEFT")
 
     local columnWidth = (CONTENT_WIDTH - 16) / 2
     local sectionTop = -CARD_HEIGHT - 80

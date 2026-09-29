@@ -258,8 +258,16 @@ function SimulateX_BuildOptions(parent, prefix, textWidth)
         RefreshScores()
     end)
 
+    local setBonusCheck = CreateCheck(parent, prefix .. "SetBonusCheck",
+        "Avisar si un cambio pierde o activa un bonus de conjunto (tooltip y comparador)", textWidth)
+    setBonusCheck:SetPoint("TOPLEFT", gemsCheck, "BOTTOMLEFT", 0, -2)
+    setBonusCheck:SetScript("OnClick", function(self)
+        SimulateX_DB.setBonusWarningDisabled = not self:GetChecked() or nil
+        RefreshScores()
+    end)
+
     local bisTitle = CreateSectionTitle(parent, "Best in Slot")
-    bisTitle:SetPoint("TOPLEFT", gemsCheck, "BOTTOMLEFT", 2, -16)
+    bisTitle:SetPoint("TOPLEFT", setBonusCheck, "BOTTOMLEFT", 2, -16)
 
     local bisCheck = CreateCheck(parent, prefix .. "BisCheck",
         "Indicar en el tooltip si el objeto está en el set de referencia de wowsims de alguna fase", textWidth)
@@ -321,6 +329,7 @@ function SimulateX_BuildOptions(parent, prefix, textWidth)
         capsCheck:SetChecked(not SimulateX_DB.capsDisabled)
         spellDebuffCheck:SetChecked(not SimulateX_DB.spellHitDebuffIgnored)
         gemsCheck:SetChecked(not SimulateX_DB.idealGemsDisabled)
+        setBonusCheck:SetChecked(not SimulateX_DB.setBonusWarningDisabled)
         bisCheck:SetChecked(not SimulateX_DB.bisTooltipDisabled)
         phaseSlider:SetValue(SimulateX_DB.maxPhase or 6)
         UpdateContentHeight()

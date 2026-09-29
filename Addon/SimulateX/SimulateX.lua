@@ -313,7 +313,7 @@ local function GetItemStatsFromData(itemLink)
         local scales = fields.x and fields.v and fields.v > 0
         for key, value in pairs(fields) do
             local replacedByScaling = scales and (tonumber(key) or key == "a" or key == "d")
-            if key ~= "f" and key ~= "x" and key ~= "v" and key ~= "s" and not replacedByScaling then
+            if key ~= "f" and key ~= "x" and key ~= "v" and key ~= "s" and key ~= "t" and not replacedByScaling then
                 AddStat(stats, key, value)
             end
         end
@@ -1670,6 +1670,82 @@ local function AddBisLines(tooltip, link, activeSpecLabel)
     end
 end
 
+--[[----------------------------------------------------------------------
+    BONUS DE CONJUNTO (v0.9): solo aviso, no entra en la puntuación (el
+    efecto del bonus no tiene un peso fiable). Conjunto de cada pieza y
+    umbrales de ItemSet.dbc (SimulateX_ItemStats "t=", SimulateX_ItemSets).
+------------------------------------------------------------------------]]
+
+local function GetItemSetId(link)
+    local itemId = link and tonumber(link:match("item:(%d+)"))
+    local data = itemId and SimulateX_ItemStats and SimulateX_ItemStats[itemId]
+    return data and tonumber(data:match("t=(%d+)"))
+end
+
+local function IsSetThreshold(setId, pieces)
+    for threshold in ((SimulateX_ItemSets and SimulateX_ItemSets[setId]) or ""):gmatch("%d+") do
+        if tonumber(threshold) == pieces then
+            return true
+        end
+    end
+    return false
+end
+
+local function EquippedSetPieces(setId)
+    local count = 0
+    for _, slotName in ipairs(EQUIPPED_SLOTS) do
+        if GetItemSetId((GetEquippedItemId(slotName))) == setId then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+-- Notas {texto, bueno} de lo que cambia en bonus de conjunto si el objeto
+-- sustituye a lo que llevas en su hueco (solo huecos únicos: los conjuntos
+-- no incluyen anillos, abalorios ni armas de una mano)
+local function GetSetBonusNotes(link)
+    local _, _, _, _, _, _, _, _, equipLoc = GetItemInfo(link)
+    local slots = equipLoc and INVTYPE_TO_SLOTS[equipLoc]
+    if not slots or #slots ~= 1 then
+        return {}
+    end
+    local newSet = GetItemSetId(link)
+    local oldSet = GetItemSetId((GetEquippedItemId(slots[1])))
+    if newSet == oldSet then
+        return {}
+    end
+    local notes = {}
+    if oldSet then
+        local pieces = EquippedSetPieces(oldSet)
+        if IsSetThreshold(oldSet, pieces) then
+            table.insert(notes, { string.format("Pierdes el bonus de %d piezas de tu conjunto", pieces), false })
+        end
+    end
+    if newSet then
+        local pieces = EquippedSetPieces(newSet) + 1
+        if IsSetThreshold(newSet, pieces) then
+            table.insert(notes, { string.format("Activa el bonus de %d piezas de su conjunto", pieces), true })
+        end
+    end
+    return notes
+end
+
+SimulateX_API.GetSetBonusNotes = GetSetBonusNotes
+
+local function AddSetBonusLines(tooltip, link)
+    if SimulateX_DB.setBonusWarningDisabled then
+        return
+    end
+    for _, note in ipairs(GetSetBonusNotes(link)) do
+        if note[2] then
+            tooltip:AddLine("  " .. note[1], 0.1, 1, 0.1)
+        else
+            tooltip:AddLine("  " .. note[1], 1, 0.3, 0.3)
+        end
+    end
+end
+
 local function OnTooltipSetItem(tooltip)
     local link = GetTooltipItemLink(tooltip)
     if not link then
@@ -1710,6 +1786,7 @@ local function OnTooltipSetItem(tooltip)
         local pr, pg, pb = GetPercentColor(evaluation)
         tooltip:AddDoubleLine(label, FormatPercent(evaluation), lr, lg, lb, pr, pg, pb)
     end
+    AddSetBonusLines(tooltip, link)
     AddBisLines(tooltip, link, evaluations[1].isActive and evaluations[1].specLabel)
 
     tooltip:Show()

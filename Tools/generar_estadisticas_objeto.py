@@ -74,8 +74,10 @@ def suffix_factor(item: dict, rand_points: dict) -> int:
     return points[offset + slot_index]
 
 
-def item_entry(item: dict, rand_points: dict) -> str:
+def item_entry(item: dict, rand_points: dict, item_sets: dict) -> str:
     parts = [f"{stat}={value}" for stat, value in item["stats"].items()]
+    if item["id"] in item_sets:
+        parts.append(f"t={item_sets[item['id']]}")  # ItemSet.dbc, umbrales en SimulateX_ItemSets
     if item["armor"]:
         parts.append(f"a={item['armor']}")
     if item["block"]:
@@ -124,7 +126,19 @@ def main() -> None:
     scaling_dist = read_wdbc(dbc_dir / "ScalingStatDistribution.dbc")
     scaling_values = read_wdbc(dbc_dir / "ScalingStatValues.dbc")
 
-    item_entries = {item["id"]: item_entry(item, rand_points) for item in items.values()}
+    # Conjuntos (ItemSet.dbc): piezas en campos 18-34, umbrales de bonus en 43-50
+    item_set_of = {}
+    set_thresholds = {}
+    for set_id, row in read_wdbc(dbc_dir / "ItemSet.dbc").items():
+        thresholds = sorted({t for t in row[43:51] if t > 0})
+        if not thresholds:
+            continue
+        set_thresholds[set_id] = ",".join(str(t) for t in thresholds)
+        for item_id in row[18:35]:
+            if item_id:
+                item_set_of[item_id] = set_id
+
+    item_entries = {item["id"]: item_entry(item, rand_points, item_set_of) for item in items.values()}
 
     # Propiedad aleatoria (id positivo en el link): cantidades fijas.
     props = {}
@@ -171,6 +185,7 @@ def main() -> None:
     lines += lua_string_table("SimulateX_RandomProps", props)
     lines += lua_string_table("SimulateX_RandomSuffixes", suffixes)
     lines += lua_string_table("SimulateX_SocketBonus", socket_bonuses)
+    lines += lua_string_table("SimulateX_ItemSets", set_thresholds)
     lines += dist_lines + value_lines
     OUT_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"-> {OUT_PATH} ({sum(1 for v in item_entries.values() if v)} objetos, {len(props)} propiedades, "
