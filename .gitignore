@@ -14,6 +14,7 @@ CLAUDE.md
 # === Dependencias externas compiladas dentro de Tools/ ===
 Tools/wowsimcli-src/
 Tools/wowsimcli
+Tools/simx_stats
 
 # === Archivos de Configuración del Sistema y VS Code ===
 .vscode/
