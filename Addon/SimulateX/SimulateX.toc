@@ -17,3 +17,4 @@ SimulateXOptions.lua
 UI\Talentos.lua
 UI\Comparador.lua
 UI\Lanzadores.lua
+UI\Economia.lua

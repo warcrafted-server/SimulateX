@@ -1681,6 +1681,9 @@ local function OnEvent(self, event, ...)
         if SimulateX_Lanzadores_Init then
             SimulateX_Lanzadores_Init()
         end
+        if SimulateX_Economia_Init then
+            SimulateX_Economia_Init()
+        end
     elseif event == "ADDON_LOADED" and ... == "Blizzard_AuctionUI" then
         HookAuctionFrame()
     elseif event == "PLAYER_EQUIPMENT_CHANGED" or event == "PLAYER_LEVEL_UP" or event == "PLAYER_TALENT_UPDATE" then
