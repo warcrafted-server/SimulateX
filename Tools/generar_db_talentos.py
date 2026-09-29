@@ -7,16 +7,21 @@ No junta specs sin datos: una spec sin Data/talentos/<spec>.json se omite.
 """
 
 import argparse
-import json
-import pathlib
-import sys
-
 import collections
+import json
+import os
+import pathlib
+import struct
+import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from generar_db_addon import SPEC_INFO, lua_value
 from rutas_addon import class_data_dir, ensure_class_addon_toc
 from simular_builds import apl_suffix
+from extraer_objetos_bd import run_query
+
+GLYPH_ITEM_CLASS = 16
+DEFAULT_DBC_DIR = "/home/stark/Servers/acore-playerbots/data/dbc"
 
 TOOLS_DIR = pathlib.Path(__file__).resolve().parent
 DATA_DIR = TOOLS_DIR.parent / "Data"
@@ -66,6 +71,65 @@ def find_reference_glyphs(spec: str, reference_build: str | None) -> dict:
     return {}
 
 
+def display_icons(display_ids: set) -> dict:
+    """displayid -> nombre de icono (campo InventoryIcon_1, índice 5) de
+    ItemDisplayInfo.dbc del servidor."""
+    dbc_dir = pathlib.Path(os.environ.get("SIMX_DBC_DIR", DEFAULT_DBC_DIR))
+    data = (dbc_dir / "ItemDisplayInfo.dbc").read_bytes()
+    _sig, n_records, n_fields, record_size, _ = struct.unpack("<4s4I", data[:20])
+    strings = data[20 + n_records * record_size:]
+    icons = {}
+    for i in range(n_records):
+        offset = 20 + i * record_size
+        row = struct.unpack(f"<{n_fields}i", data[offset:offset + record_size])
+        if row[0] in display_ids:
+            end = strings.index(b"\0", row[5])
+            icons[row[0]] = strings[row[5]:end].decode()
+    return icons
+
+
+def glyph_items(item_ids: set) -> dict:
+    """id -> {name, icon} del objeto glifo, desde item_template(_locale) e
+    ItemDisplayInfo.dbc del servidor. Los valores de los enums de wowsims
+    son ids de OBJETO (el pergamino), no de hechizo: un id que no sea de
+    clase 16 en este servidor se descarta."""
+    if not item_ids:
+        return {}
+    ids = ",".join(str(i) for i in sorted(item_ids))
+    rows = run_query(
+        "SELECT t.entry, t.class, t.displayid, COALESCE(l.Name, t.name) AS nombre "
+        "FROM item_template t LEFT JOIN item_template_locale l "
+        "ON l.ID = t.entry AND l.locale = 'esES' "
+        f"WHERE t.entry IN ({ids})"
+    )
+    rows = [r for r in rows if int(r["class"]) == GLYPH_ITEM_CLASS]
+    icons = display_icons({int(r["displayid"]) for r in rows})
+    items = {}
+    for row in rows:
+        items[int(row["entry"])] = {
+            "name": row["nombre"],
+            "icon": icons.get(int(row["displayid"]), ""),
+        }
+    for missing in item_ids - items.keys():
+        print(f"  AVISO: {missing} no es un objeto glifo en item_template, se omite")
+    return items
+
+
+def structure_glyphs(glyphs_by_slot: dict, items: dict) -> dict:
+    """{"major1": id, ...} -> {"major": [{id, name, icon}, ...], "minor": [...]},
+    en el orden de hueco 1-2-3 de wowsims."""
+    result = {}
+    for kind in ("major", "minor"):
+        entries = []
+        for n in (1, 2, 3):
+            item_id = glyphs_by_slot.get(f"{kind}{n}")
+            if item_id in items:
+                entries.append({"id": item_id, **items[item_id]})
+        if entries:
+            result[kind] = entries
+    return result
+
+
 def load_spec_talents(spec: str) -> dict | None:
     path = TALENTOS_DIR / f"{spec}.json"
     if not path.exists():
@@ -74,7 +138,8 @@ def load_spec_talents(spec: str) -> dict | None:
     role = SPEC_INFO[spec][1]
     metric = ROLE_METRIC[role]
     reference_build = data.get("reference_build")
-    reference_glyphs = find_reference_glyphs(spec, reference_build)
+    glyphs_by_slot = find_reference_glyphs(spec, reference_build)
+    reference_glyphs = structure_glyphs(glyphs_by_slot, glyph_items(set(glyphs_by_slot.values())))
 
     variants = []
     for variant in data["variants"]:

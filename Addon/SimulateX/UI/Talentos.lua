@@ -320,80 +320,120 @@ local function BuildVariantDropdownInitializer(page)
 end
 
 --[[----------------------------------------------------------------------
-    GLIFOS de la distribución activa (solo la variante "estandar" los trae,
-    ver Tools/generar_db_talentos.py::find_reference_glyphs): mismo patrón
-    de espera de caché que RefreshCellIcon, para el icono real del glifo.
+    PANEL DE GLIFOS, a la derecha de los árboles: Sublime / Menor, 3 huecos
+    cada uno, como la ventana de glifos del juego. Nombre e icono vienen ya
+    resueltos en los datos (item_template_locale + ItemDisplayInfo.dbc del
+    servidor, ver Tools/generar_db_talentos.py): son ids de OBJETO glifo,
+    no de hechizo. Solo la variante "estandar" trae glifos.
 ------------------------------------------------------------------------]]
 
-local GLYPH_SLOTS = { "major1", "major2", "major3", "minor1", "minor2", "minor3" }
-local GLYPH_ICON_SIZE = 24
+local GLYPH_PANEL_WIDTH = 240
+local GLYPH_SLOT_SIZE = 30
+local GLYPH_ROW_HEIGHT = 40
+local GLYPH_KINDS = { { key = "major", label = "Sublime" }, { key = "minor", label = "Menor" } }
+local EMPTY_SLOT_TEXTURE = "Interface\\PaperDoll\\UI-Backpack-EmptySlot"
 
-local function RefreshGlyphIcon(button)
-    local name, _, icon = GetSpellInfo(button.spellId)
-    if not name then
-        if not button.pendingIcon then
-            button.pendingIcon = true
-            button:SetScript("OnUpdate", function(self, elapsed)
-                self.retryTimer = (self.retryTimer or 0) + elapsed
-                if self.retryTimer < 0.3 then return end
-                self.retryTimer = 0
-                if GetSpellInfo(self.spellId) then
-                    self:SetScript("OnUpdate", nil)
-                    self.pendingIcon = nil
-                    RefreshGlyphIcon(self)
-                end
-            end)
-        end
-        return
-    end
-    button.pendingIcon = nil
-    button:SetScript("OnUpdate", nil)
-    button.icon:SetTexture(icon)
-    button.name = name
+-- "Glifo de Triturar" -> "Triturar": la cabecera ya dice Glifos, y la
+-- columna es estrecha. Solo si lo que queda empieza en mayúscula ("Glifo de
+-- lo Salvaje" se queda entero). El tooltip enseña el nombre completo.
+local function ShortGlyphName(name)
+    return name:match("^Glifo del? (%u.*)$") or name
 end
 
-local function CreateGlyphBar(parent)
-    local bar = CreateFrame("Frame", nil, parent)
-    bar:SetHeight(GLYPH_ICON_SIZE + 4)
-    bar.buttons = {}
-    for index, slot in ipairs(GLYPH_SLOTS) do
-        local button = CreateFrame("Button", nil, bar)
-        button:SetWidth(GLYPH_ICON_SIZE)
-        button:SetHeight(GLYPH_ICON_SIZE)
-        button:SetPoint("LEFT", (index - 1) * (GLYPH_ICON_SIZE + 6), 0)
-        button.icon = button:CreateTexture(nil, "ARTWORK")
-        button.icon:SetAllPoints()
-        button.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-        button:SetScript("OnEnter", function(self)
-            if not self.name then return end
-            GameTooltip:SetOwner(self, "ANCHOR_TOP")
-            GameTooltip:SetText(self.name)
-            GameTooltip:Show()
-        end)
-        button:SetScript("OnLeave", function() GameTooltip:Hide() end)
-        bar.buttons[slot] = button
-    end
-    return bar
+local function CreateGlyphSlot(parent)
+    local slot = CreateFrame("Button", nil, parent)
+    slot:SetHeight(GLYPH_ROW_HEIGHT)
+
+    slot.background = slot:CreateTexture(nil, "BACKGROUND")
+    slot.background:SetTexture(EMPTY_SLOT_TEXTURE)
+    slot.background:SetWidth(GLYPH_SLOT_SIZE + 8)
+    slot.background:SetHeight(GLYPH_SLOT_SIZE + 8)
+    slot.background:SetPoint("LEFT", -4, 0)
+
+    slot.icon = slot:CreateTexture(nil, "ARTWORK")
+    slot.icon:SetWidth(GLYPH_SLOT_SIZE)
+    slot.icon:SetHeight(GLYPH_SLOT_SIZE)
+    slot.icon:SetPoint("LEFT", 0, 0)
+    slot.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+
+    slot.label = slot:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    slot.label:SetPoint("LEFT", slot.icon, "RIGHT", 6, 0)
+    slot.label:SetPoint("RIGHT", slot, "RIGHT", 0, 0)
+    slot.label:SetJustifyH("LEFT")
+    slot.label:SetWordWrap(true)
+
+    slot:SetScript("OnEnter", function(self)
+        if not self.itemId then return end
+        GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+        GameTooltip:SetHyperlink("item:" .. self.itemId)
+        GameTooltip:Show()
+    end)
+    slot:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    return slot
 end
 
-local function RenderGlyphBar(bar, glyphs)
-    if not glyphs then
-        bar:Hide()
-        return
-    end
-    bar:Show()
-    for slot, button in pairs(bar.buttons) do
-        local spellId = glyphs[slot]
-        if spellId then
-            button.spellId = spellId
-            button.name = nil
-            button.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
-            RefreshGlyphIcon(button)
-            button:Show()
-        else
-            button:Hide()
+local function CreateGlyphPanel(parent)
+    local panel = CreateFrame("Frame", nil, parent)
+    panel:SetWidth(GLYPH_PANEL_WIDTH)
+    panel:SetHeight(28 + 18 + 3 * GLYPH_ROW_HEIGHT + 30)
+
+    local bg = panel:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints()
+    bg:SetTexture(0, 0, 0, 0.45)
+
+    local title = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    title:SetPoint("TOPLEFT", 10, -8)
+    title:SetText("Glifos")
+
+    local columnWidth = (GLYPH_PANEL_WIDTH - 20 - 10) / 2
+    panel.slots = {}
+    for column, kind in ipairs(GLYPH_KINDS) do
+        local x = 10 + (column - 1) * (columnWidth + 10)
+        local header = panel:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+        header:SetPoint("TOPLEFT", x, -30)
+        header:SetText(kind.label)
+        header:SetTextColor(0.35, 0.75, 1)
+
+        panel.slots[kind.key] = {}
+        for row = 1, 3 do
+            local slot = CreateGlyphSlot(panel)
+            slot:SetWidth(columnWidth)
+            slot:SetPoint("TOPLEFT", x + 4, -46 - (row - 1) * GLYPH_ROW_HEIGHT)
+            panel.slots[kind.key][row] = slot
         end
     end
+
+    panel.note = panel:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+    panel.note:SetPoint("BOTTOMLEFT", 10, 8)
+    panel.note:SetPoint("RIGHT", panel, "RIGHT", -10, 0)
+    panel.note:SetJustifyH("LEFT")
+    panel.note:SetWordWrap(true)
+    return panel
+end
+
+local function RenderGlyphPanel(panel, glyphs)
+    for _, kind in ipairs(GLYPH_KINDS) do
+        local entries = glyphs and glyphs[kind.key] or {}
+        for row, slot in ipairs(panel.slots[kind.key]) do
+            local glyph = entries[row]
+            if glyph then
+                slot.itemId = glyph.id
+                slot.icon:SetTexture(glyph.icon ~= "" and ("Interface\\Icons\\" .. glyph.icon)
+                    or "Interface\\Icons\\INV_Misc_QuestionMark")
+                slot.icon:Show()
+                slot.label:SetText(ShortGlyphName(glyph.name))
+                slot.label:SetTextColor(1, 1, 1)
+            else
+                slot.itemId = nil
+                slot.icon:Hide()
+                slot.label:SetText("Vacío")
+                slot.label:SetTextColor(0.5, 0.5, 0.5)
+            end
+        end
+    end
+    panel.note:SetText(glyphs and "Glifos del preset de wowsims para esta distribución."
+        or "Esta distribución no trae glifos de referencia.")
+    panel:Show()
 end
 
 RenderPage = function(page, spec)
@@ -406,7 +446,7 @@ RenderPage = function(page, spec)
         page.emptyText:Show()
         page.treesFrame:Hide()
         page.variantBar:Hide()
-        page.glyphBar:Hide()
+        page.glyphPanel:Hide()
         return
     end
 
@@ -414,7 +454,7 @@ RenderPage = function(page, spec)
         page.emptyText:SetText("Sin distribuciones simuladas todavía para esta especialización")
         page.emptyText:Show()
         page.variantBar:Hide()
-        page.glyphBar:Hide()
+        page.glyphPanel:Hide()
         -- el árbol se ve igual (nombres/iconos reales), pero sin marcar puntos
         for treeIndex = 1, 3 do
             RenderTree(treeFrames[treeIndex], treeData.trees[treeIndex], "")
@@ -434,7 +474,7 @@ RenderPage = function(page, spec)
     for treeIndex = 1, 3 do
         RenderTree(treeFrames[treeIndex], treeData.trees[treeIndex], blocks[treeIndex - 1])
     end
-    RenderGlyphBar(page.glyphBar, current.glyphs)
+    RenderGlyphPanel(page.glyphPanel, current.glyphs)
 
     -- el desplegable va al final: el árbol ya dibujado no depende de que
     -- esto salga bien. page.currentSpec/currentSpecData son lo que lee el
@@ -486,10 +526,11 @@ function SimulateX_BuildTalentsPage(parent)
     variantLabel:SetText("Distribución:")
     variantLabel:SetTextColor(0.8, 0.8, 0.8)
 
-    -- los 3 árboles lado a lado, centrados bajo el título
+    -- los 3 árboles a la izquierda y el panel de glifos a la derecha: con
+    -- 760 px de ancho útil caben los dos (496 + 240), no uno debajo de otro
     local treeWidth = TREE_COLUMNS * CELL_SIZE
     page.treesFrame = CreateFrame("Frame", nil, page)
-    page.treesFrame:SetPoint("TOP", line, "BOTTOM", 0, -8)
+    page.treesFrame:SetPoint("TOPLEFT", line, "BOTTOMLEFT", 0, -8)
     page.treesFrame:SetWidth(3 * treeWidth + 2 * TREE_GAP)
     page.treesFrame:SetHeight(TREE_ROWS * CELL_SIZE + 20)
 
@@ -499,9 +540,9 @@ function SimulateX_BuildTalentsPage(parent)
         treeFrames[treeIndex] = frame
     end
 
-    page.glyphBar = CreateGlyphBar(page)
-    page.glyphBar:SetPoint("TOP", page.treesFrame, "BOTTOM", 0, -6)
-    page.glyphBar:SetWidth(#GLYPH_SLOTS * (GLYPH_ICON_SIZE + 6))
+    page.glyphPanel = CreateGlyphPanel(page)
+    page.glyphPanel:SetPoint("TOPRIGHT", line, "BOTTOMRIGHT", 0, -8)
+    page.glyphPanel:Hide()
 
     page.refresh = function()
         local classFileName = select(2, UnitClass("player"))

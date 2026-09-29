@@ -12,12 +12,40 @@ SimulateX_Talentos_Shaman = {
         tps = 7626.0,
         dtps = 0,
         glyphs = {
-          major1 = 41532,
-          major2 = 45776,
-          major3 = 41536,
-          minor1 = 44923,
-          minor2 = 43386,
-          minor3 = 43725,
+          major = {
+            {
+              id = 41532,
+              name = "Glifo de Arma Lengua de Fuego",
+              icon = "INV_Glyph_MajorShaman",
+            },
+            {
+              id = 45776,
+              name = "Glifo de Tótem de cólera",
+              icon = "INV_Glyph_MajorShaman",
+            },
+            {
+              id = 41536,
+              name = "Glifo de Descarga de relámpagos",
+              icon = "INV_Glyph_MajorShaman",
+            },
+          },
+          minor = {
+            {
+              id = 44923,
+              name = "Glifo de Tormenta de truenos",
+              icon = "INV_Glyph_MinorShaman",
+            },
+            {
+              id = 43386,
+              name = "Glifo de Escudo de agua",
+              icon = "INV_Glyph_MinorShaman",
+            },
+            {
+              id = 43725,
+              name = "Glifo de Lobo fantasmal",
+              icon = "INV_Glyph_MinorShaman",
+            },
+          },
         },
       },
     },
