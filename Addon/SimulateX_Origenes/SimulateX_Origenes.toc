@@ -1,0 +1,9 @@
+## Interface: 30300
+## Title: SimulateX (orígenes de objetos)
+## Notes: Dónde conseguir cada objeto, para la lista de la compra de SimulateX. Se carga al abrir la pestaña Mejoras.
+## Author: WarCrafted
+## Version: 0.7.0
+## Dependencies: SimulateX
+## LoadOnDemand: 1
+
+Data\SimulateX_Origenes.lua
