@@ -981,6 +981,7 @@ local function BuildComparePage()
     resultsFrame.emptyText:SetPoint("TOPLEFT", 4, -8)
     resultsFrame.emptyText:SetPoint("RIGHT", -4, 0)
     resultsFrame.emptyText:SetJustifyH("LEFT")
+    resultsFrame.emptyText:SetWordWrap(true)
 
     breakdownFrame = CreateFrame("Frame", nil, comparePage)
     breakdownFrame:SetPoint("TOPRIGHT", comparePage, "TOPRIGHT", 0, sectionTop)
@@ -1001,6 +1002,7 @@ local function BuildComparePage()
     breakdownFrame.emptyText:SetPoint("TOPLEFT", 4, -22)
     breakdownFrame.emptyText:SetPoint("RIGHT", -4, 0)
     breakdownFrame.emptyText:SetJustifyH("LEFT")
+    breakdownFrame.emptyText:SetWordWrap(true)
 end
 
 local function BuildConfigPage()

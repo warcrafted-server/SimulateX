@@ -2,7 +2,7 @@
 ## Title: SimulateX
 ## Notes: Asistente de tooltips, comparador de equipamiento y guía de mejoras.
 ## Author: WarCrafted
-## Version: 0.6.0
+## Version: 0.7.0
 ## SavedVariables: SimulateX_DB
 ## OptionalDeps: wcdpanel
 

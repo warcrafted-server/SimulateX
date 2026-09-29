@@ -19,6 +19,7 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 - Opción en el panel para quitar el icono del minimapa.
 - Opción en el panel para ajustar la opacidad de la ventana del comparador.
 ### Corregido
+- El aviso "Para este hueco solo hay % total…" (anillos/abalorios) y el texto de ayuda del comparador no envolvían línea y se cortaban con ventanas estrechas.
 - El icono de algunos objetos no aparecía en el comparador: el fondo del hueco vacío se pintaba en la misma capa que el icono y a veces quedaba encima. Además el icono ya no espera a que el objeto esté en la caché del cliente.
 - Con un hueco de anillo o abalorio libre, el tooltip comparaba contra el otro que llevas en vez de contarlo entero.
 - La pestaña Talentos no se actualizaba al cambiar de forma con la ventana abierta (un Druida Feral podía ver el árbol de Feral estando en forma de Oso, en vez del de Guardián).
