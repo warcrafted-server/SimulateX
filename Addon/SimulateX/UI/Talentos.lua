@@ -444,7 +444,10 @@ function SimulateX_BuildTalentsPage(parent)
 
     -- desplegable de variante (nombre legible), justo encima de los árboles
     page.variantBar = CreateFrame("Frame", nil, page)
+    -- sin RIGHT la barra se queda con ancho 0: el juego no la dibuja, ni
+    -- tampoco los árboles, que van anclados a su borde inferior
     page.variantBar:SetPoint("TOPLEFT", page.tiedText, "BOTTOMLEFT", -16, -4)
+    page.variantBar:SetPoint("RIGHT", 0, 0)
     page.variantBar:SetHeight(28)
 
     local variantLabel = page.variantBar:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
@@ -459,7 +462,7 @@ function SimulateX_BuildTalentsPage(parent)
 
     -- los 3 árboles lado a lado
     page.treesFrame = CreateFrame("Frame", nil, page)
-    page.treesFrame:SetPoint("TOPLEFT", page.variantBar, "BOTTOMLEFT", 0, -8)
+    page.treesFrame:SetPoint("TOPLEFT", page.variantBar, "BOTTOMLEFT", 16, -8)
     page.treesFrame:SetPoint("BOTTOMRIGHT", 0, 0)
 
     local treeWidth = TREE_COLUMNS * CELL_SIZE
