@@ -1,6 +1,6 @@
 '''Prueba de la pestaña Mejoras fuera del juego: carga el addon en lupa con la
 API de WoW simulada (personaje sin equipo, UnitStat = 60, nada en caché) y
-lista las mejoras por hueco. Uso: probar_mejoras_lupa.py <Clase> <nivel> <Alliance|Horde>
+lista las mejoras por hueco. Uso: probar_mejoras_lupa.py <Clase> <nivel> <Alliance|Horde> [herreria]
 Requiere: pip install lupa.'''
 
 import pathlib, sys, time
@@ -42,6 +42,10 @@ UnitLevel = function() return PLAYERLEVEL end
 UnitFactionGroup = function() return FACTIONNAME end
 UnitAura = function() return nil end
 UnitStat = function() return 60, 60, 0, 0 end
+GetSpellInfo = function(id) return "Prof" .. id end
+-- Herrería 300 si PROFESION = "herreria"
+GetNumSkillLines = function() return PROFESION and 1 or 0 end
+GetSkillLineInfo = function() return "Prof2018", false, false, 300 end
 GetTalentTabInfo = function(i) return nil, nil, (i == 2 and 51 or 10) end
 GetItemInfo = function() return nil end
 GetItemIcon = function(id) return "icon" .. tostring(id) end
@@ -66,6 +70,7 @@ end })
 g = lua.globals()
 g.CLASSNAME, g.PLAYERLEVEL, g.FACTIONNAME = CLASS, LEVEL, FACTION
 g.SimulateX_DB = lua.table()
+g.PROFESION = (sys.argv[4] == 'herreria') if len(sys.argv) > 4 else None
 
 def load(path):
     code = open(ROOT + path, encoding='utf-8').read()
@@ -88,7 +93,7 @@ t = time.time()
 content.refresh()
 step = parent['_script_OnUpdate']
 frames = 0
-MAXF = int(sys.argv[4]) if len(sys.argv) > 4 else 10**9
+MAXF = 10**9
 rg = lua.eval('rawget')
 while rg(parent, '_script_OnUpdate') and frames < MAXF:
     t0 = time.time()

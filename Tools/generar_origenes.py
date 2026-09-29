@@ -1,4 +1,4 @@
-"""Genera el sub-addon SimulateX_Origenes (v0.10, lista de la compra): de dónde
+"""Genera el sub-addon SimulateX_Origenes (lista de la compra): de dónde
 sale cada objeto equipable (calidad poco común o mejor), con nombres esES.
 
 Orígenes que se incluyen:
@@ -9,6 +9,9 @@ Orígenes que se incluyen:
 - Vendedores con spawn, con coste en oro, honor, arena u objetos
   (ItemExtendedCost.dbc).
 - Recompensas de misión que alguien puede empezar y que no están desactivadas.
+- Profesiones: hechizo que crea el objeto (Spell.dbc), aprendido de instructor
+  o de una receta que a su vez tenga origen (o salga de algún botín de mundo).
+- Bolsas (item_loot_template) con origen propio que contienen el objeto.
 
 Las referencias de botín sin ningún objeto BoP y compartidas por más de
 WORLD_POOL_MIN_USES fuentes son los botines de mundo al azar (BoE): se
@@ -38,6 +41,8 @@ TOC_PATH = OUT_DIR / "SimulateX_Origenes.toc"
 WORLD_POOL_MIN_USES = 5
 MIN_CHANCE_PCT = 0.1
 MAX_VENDORS_PER_ITEM = 3
+# Por debajo, la bolsa es de contenido al azar (decenas de objetos a ~1 %)
+MIN_BAG_CHANCE_PCT = 5
 # Más criaturas que esto soltando lo mismo en un mapa y dificultad: una sola
 # entrada "varias criaturas" en vez de la lista.
 MAX_TRASH_SOURCES = 3
@@ -84,7 +89,11 @@ def ints(rows: list, *keys) -> list:
 # ---------------------------------------------------------------- botín
 
 class Loot:
-    def __init__(self, equip: dict):
+    """wanted: objetos cuyo botín interesa; equip: los que cuentan para decidir
+    si una referencia es un botín de mundo (sin nada BoP)."""
+
+    def __init__(self, wanted: dict, equip: dict):
+        self.wanted = wanted
         self.equip = equip
         self.refs = self._load("reference_loot_template")
         self.ref_uses = collections.Counter()
@@ -125,7 +134,7 @@ class Loot:
             if p <= 0:
                 return
             if not is_ref:
-                if item_or_ref in self.equip:
+                if item_or_ref in self.wanted:
                     miss[item_or_ref] *= 1 - min(1.0, p)
                 return
             for item, sub_p in self.ref_dist(item_or_ref, stack).items():
@@ -212,7 +221,82 @@ def pct(p: float) -> str:
     return str(int(value)) if value == int(value) else str(value)
 
 
+# ---------------------------------------------------------------- profesiones
+
+# Profesiones que fabrican equipo (SkillLine.dbc)
+CRAFT_SKILLS = {164, 165, 197, 202, 755, 773}
+SPELL_EFFECT_CREATE_ITEM = 24
+RECIPE_LEARN_SPELL = 483
+MAX_RECIPES_PER_ITEM = 2
+
+# Spell.dbc (DBCStructure.h::SpellEntry): Effect 71-73, EffectItemType
+# 107-109, SpellName 136 (enUS)
+SPELL_EFFECT_FIELD, SPELL_ITEM_FIELD, SPELL_NAME_FIELD = 71, 107, 136
+
+
+def read_spells(dbc_dir: pathlib.Path) -> tuple:
+    """(hechizo -> objeto que crea, hechizo -> nombre enUS)."""
+    data = (dbc_dir / "Spell.dbc").read_bytes()
+    _, n_records, n_fields, record_size, _ = struct.unpack("<4s4I", data[:20])
+    strings = data[20 + n_records * record_size:]
+    creates, spell_names = {}, {}
+    for i in range(n_records):
+        base = 20 + i * record_size
+        spell = struct.unpack_from("<i", data, base)[0]
+        effects = struct.unpack_from("<3i", data, base + SPELL_EFFECT_FIELD * 4)
+        items = struct.unpack_from("<3i", data, base + SPELL_ITEM_FIELD * 4)
+        for effect, item in zip(effects, items):
+            if effect == SPELL_EFFECT_CREATE_ITEM and item:
+                creates[spell] = item
+        name_offset = struct.unpack_from("<i", data, base + SPELL_NAME_FIELD * 4)[0]
+        if 0 < name_offset < len(strings):
+            spell_names[spell] = strings[name_offset:strings.index(b"\0", name_offset)].decode("utf-8", "replace")
+    return creates, spell_names
+
+
+def read_skill_names(dbc_dir: pathlib.Path) -> dict:
+    data = (dbc_dir / "SkillLine.dbc").read_bytes()
+    _, n_records, n_fields, record_size, _ = struct.unpack("<4s4I", data[:20])
+    strings = data[20 + n_records * record_size:]
+    names = {}
+    for i in range(n_records):
+        row = struct.unpack_from(f"<{n_fields}i", data, 20 + i * record_size)
+        offset = row[3]  # DisplayName enUS
+        if 0 < offset < len(strings):
+            names[row[0]] = strings[offset:strings.index(b"\0", offset)].decode("utf-8", "replace")
+    return names
+
+
+def profession_spells(sla: dict, spell_names: dict, skill_names: dict, skills: set) -> dict:
+    """skillLine -> hechizo de la profesión (el de la línea con el mismo
+    nombre), para que el addon saque el nombre traducido con GetSpellInfo."""
+    result = {}
+    for spell, (skill, _rank) in sorted(sla.items()):
+        if skill in skills and skill not in result and spell_names.get(spell) == skill_names.get(skill):
+            result[skill] = spell
+    return result
+
+
 # ---------------------------------------------------------------- main
+
+def item_attributes(r: dict) -> dict:
+    flags2 = int(r["FlagsExtra"])
+    faction = race_faction(int(r["AllowableRace"]))
+    if flags2 & ITEM_FLAG2_HORDE:
+        faction = 2
+    elif flags2 & ITEM_FLAG2_ALLIANCE:
+        faction = 1
+    return {
+        "name": r["name"], "q": int(r["Quality"]), "inv": int(r["InventoryType"]),
+        "req": int(r["RequiredLevel"]), "bop": r["bonding"] == "1", "faction": faction,
+        "price": int(r["BuyPrice"]), "gold_with_ext": bool(flags2 & ITEM_FLAG2_DONT_IGNORE_BUY_PRICE),
+        "skill": int(r["RequiredSkill"]),
+    }
+
+
+ITEM_COLUMNS = ("entry, name, Quality, InventoryType, RequiredLevel, bonding, AllowableRace, FlagsExtra, "
+                "BuyPrice, RequiredSkill")
+
 
 def main() -> None:
     dbc_dir = os.environ.get("SIMX_DBC_DIR")
@@ -221,21 +305,31 @@ def main() -> None:
     dbc_dir = pathlib.Path(dbc_dir)
 
     equip = {}
-    for r in run_query("SELECT entry, name, Quality, InventoryType, RequiredLevel, bonding, AllowableRace, FlagsExtra, BuyPrice "
-                       "FROM item_template WHERE class IN (2, 4) AND Quality BETWEEN 2 AND 5"):
-        if int(r["InventoryType"]) in NOT_COMPARABLE_INVTYPES:
-            continue
-        flags2 = int(r["FlagsExtra"])
-        faction = race_faction(int(r["AllowableRace"]))
-        if flags2 & ITEM_FLAG2_HORDE:
-            faction = 2
-        elif flags2 & ITEM_FLAG2_ALLIANCE:
-            faction = 1
-        equip[int(r["entry"])] = {
-            "name": r["name"], "q": int(r["Quality"]), "inv": int(r["InventoryType"]),
-            "req": int(r["RequiredLevel"]), "bop": r["bonding"] == "1", "faction": faction,
-            "price": int(r["BuyPrice"]), "gold_with_ext": bool(flags2 & ITEM_FLAG2_DONT_IGNORE_BUY_PRICE),
-        }
+    for r in run_query(f"SELECT {ITEM_COLUMNS} FROM item_template WHERE class IN (2, 4) AND Quality BETWEEN 2 AND 5"):
+        if int(r["InventoryType"]) not in NOT_COMPARABLE_INVTYPES:
+            equip[int(r["entry"])] = item_attributes(r)
+
+    # Intermediarios: recetas que enseñan a fabricar equipo y bolsas con equipo
+    # dentro. Se buscan sus orígenes igual que los del equipo.
+    creates, spell_names = read_spells(dbc_dir)
+    sla = {}
+    for row in read_wdbc(dbc_dir / "SkillLineAbility.dbc").values():
+        sla.setdefault(row[2], (row[1], row[7]))
+    recipes_by_spell = collections.defaultdict(list)
+    intermediates = {}
+    for r in run_query(f"SELECT {ITEM_COLUMNS}, spellid_2, RequiredSkillRank FROM item_template "
+                       f"WHERE class = 9 AND spellid_1 = {RECIPE_LEARN_SPELL} AND spellid_2 > 0"):
+        spell = int(r["spellid_2"])
+        if creates.get(spell) in equip:
+            recipe = int(r["entry"])
+            intermediates[recipe] = item_attributes(r)
+            recipes_by_spell[spell].append((recipe, int(r["RequiredSkillRank"])))
+    item_loot = Loot._load("item_loot_template")
+    containers = [c for c, rows in item_loot.items() if any(row[0] in equip for row in rows)]
+    if containers:
+        for r in run_query(f"SELECT {ITEM_COLUMNS} FROM item_template WHERE entry IN ({','.join(map(str, containers))})"):
+            intermediates[int(r["entry"])] = item_attributes(r)
+    wanted = {**equip, **intermediates}
 
     map_type, diff_label = difficulty_labels(dbc_dir)
     instance_maps = {m for m, t in map_type.items() if t in (1, 2)}
@@ -261,7 +355,7 @@ def main() -> None:
         if enc in encounters:
             boss_map.setdefault(credit, encounters[enc][1])
 
-    loot = Loot(equip)
+    loot = Loot(wanted, equip)
     origins = collections.defaultdict(list)  # objeto -> [(tipo, campos...)]
     names = {"criaturas": {}, "cofres": {}, "misiones": {}}
 
@@ -320,7 +414,7 @@ def main() -> None:
             continue
         dist = loot.template_dist(go_loot.get(loot_id, []))
         # Sin nada BoP es un cofre de botín al azar (BoE), no el de un jefe
-        if not any(equip[item]["bop"] for item in dist):
+        if not any(equip[item]["bop"] for item in dist if item in equip):
             continue
         map_id, label = 0, ""
         if spawns:
@@ -338,7 +432,7 @@ def main() -> None:
     vendors = collections.defaultdict(list)
     for npc, item, ext in ints(run_query("SELECT DISTINCT entry, item, ExtendedCost FROM npc_vendor WHERE item > 0"),
                                "entry", "item", "ExtendedCost"):
-        if item not in equip or npc not in spawn_maps or npc not in creatures:
+        if item not in wanted or npc not in spawn_maps or npc not in creatures:
             continue
         honor = arena = rating = 0
         currencies = []
@@ -348,7 +442,7 @@ def main() -> None:
             currencies = [(row[4 + k], row[9 + k]) for k in range(5) if row[4 + k]]
         faction = npc_faction.get(int(creatures[npc]["faction"]), 0)
         # CreatureData.h, VendorItem::IsGoldRequired
-        copper = equip[item]["price"] if not ext or equip[item]["gold_with_ext"] else 0
+        copper = wanted[item]["price"] if not ext or wanted[item]["gold_with_ext"] else 0
         vendors[item].append(("v", npc, faction, copper, honor, arena, rating, currencies))
     currency_items = set()
     for item, entries in vendors.items():
@@ -380,9 +474,47 @@ def main() -> None:
         faction = race_faction(int(r["AllowableRaces"]))
         for col in reward_cols:
             item = int(r[col])
-            if item in equip:
+            if item in wanted:
                 origins[item].append(("q", quest, level, faction))
                 names["misiones"][quest] = r["LogTitle"]
+
+    # Recetas que no salen de ningún sitio concreto pero sí de algún botín:
+    # botín de mundo al azar, se compran en la subasta
+    anywhere = {row[0] for table in (creature_loot, go_loot, loot.refs, item_loot)
+                for rows in table.values() for row in rows if not row[1]}
+    for recipe in intermediates:
+        if not origins.get(recipe) and recipe in anywhere:
+            origins[recipe].append(("w",))
+
+    # Bolsas: el objeto sale de una bolsa que a su vez tiene orígenes
+    for container, rows in item_loot.items():
+        if not origins.get(container):
+            continue
+        for item, p in loot.template_dist(rows).items():
+            if item in equip and p * 100 >= MIN_BAG_CHANCE_PCT:
+                origins[item].append(("b", container, p))
+
+    # Profesiones: instructor, o receta con algún origen
+    trainer_rank = {spell: rank for spell, rank in ints(run_query(
+        f"SELECT SpellId, MIN(ReqSkillRank) AS req FROM trainer_spell "
+        f"WHERE ReqSkillLine IN ({','.join(map(str, CRAFT_SKILLS))}) GROUP BY SpellId"), "SpellId", "req")}
+    crafted = collections.defaultdict(dict)  # objeto -> (skill, receta|t) -> rango
+    for spell, item in creates.items():
+        skill = sla.get(spell, (0, 0))[0]
+        if item not in equip or skill not in CRAFT_SKILLS:
+            continue
+        if spell in trainer_rank:
+            crafted[item][(skill, "t")] = trainer_rank[spell]
+        known_recipes = [(r, rank) for r, rank in recipes_by_spell.get(spell, ()) if origins.get(r)]
+        for recipe, rank in sorted(known_recipes, key=lambda x: x[1])[:MAX_RECIPES_PER_ITEM]:
+            crafted[item][(skill, recipe)] = rank
+    for item, sources in crafted.items():
+        for (skill, source), rank in sorted(sources.items(), key=lambda kv: kv[1]):
+            origins[item].append(("p", skill, rank, source))
+
+    skill_names = read_skill_names(dbc_dir)
+    used_skills = CRAFT_SKILLS | {e["skill"] for e in equip.values() if e["skill"]}
+    professions = profession_spells(sla, spell_names, skill_names, used_skills)
 
     # Nombres esES (inglés si falta la traducción)
     for r in run_query("SELECT entry, Name FROM creature_template_locale WHERE locale = 'esES'"):
@@ -397,7 +529,12 @@ def main() -> None:
     for r in run_query("SELECT ID, Title FROM quest_template_locale WHERE locale = 'esES'"):
         if int(r["ID"]) in names["misiones"] and present(r["Title"]):
             names["misiones"][int(r["ID"])] = r["Title"]
-    item_names = {item: equip[item]["name"] for item in origins}
+
+    equip_origins = {item: origins[item] for item in equip if origins.get(item)}
+    used_intermediates = {source for sources in equip_origins.values() for o in sources
+                          for source in ((o[1],) if o[0] == "b" else (o[3],) if o[0] == "p" and o[3] != "t" else ())}
+    intermediate_origins = {item: origins[item] for item in used_intermediates}
+    item_names = {item: wanted[item]["name"] for item in (*equip_origins, *intermediate_origins)}
     if currency_items:
         for r in run_query(f"SELECT entry, name FROM item_template WHERE entry IN ({','.join(map(str, currency_items))})"):
             item_names[int(r["entry"])] = r["name"]
@@ -405,11 +542,11 @@ def main() -> None:
         if int(r["ID"]) in item_names and present(r["Name"]):
             item_names[int(r["ID"])] = r["Name"]
 
-    write_lua(origins, equip, names, item_names)
+    write_lua(equip_origins, intermediate_origins, equip, names, item_names, professions)
     TOC_PATH.write_text(TOC_TEMPLATE.format(version=VERSION), encoding="utf-8")
-    kinds = collections.Counter(o[0] for sources in origins.values() for o in sources)
-    print(f"-> {OUT_PATH} ({len(origins)} objetos; orígenes: {dict(kinds)}; "
-          f"{OUT_PATH.stat().st_size // 1024} KB)")
+    kinds = collections.Counter(o[0] for sources in equip_origins.values() for o in sources)
+    print(f"-> {OUT_PATH} ({len(equip_origins)} objetos, {len(intermediate_origins)} recetas y bolsas; "
+          f"orígenes: {dict(kinds)}; {OUT_PATH.stat().st_size // 1024} KB)")
 
 
 def encode(origin: tuple) -> str:
@@ -426,6 +563,12 @@ def encode(origin: tuple) -> str:
         _, npc, faction, copper, honor, arena, rating, currencies = origin
         items = "+".join(f"{c}x{n}" for c, n in currencies)
         return f"v{npc}:{faction}:{copper}:{honor}:{arena}:{rating}:{items}"
+    if kind == "b":
+        return f"b{origin[1]}:{pct(origin[2])}"
+    if kind == "p":
+        return f"p{origin[1]}:{origin[2]}:{origin[3]}"
+    if kind == "w":
+        return "w"
     _, quest, level, faction = origin
     return f"q{quest}:{level}:{faction}"
 
@@ -434,14 +577,20 @@ def lua_str(s: str) -> str:
     return '"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
-def write_lua(origins: dict, equip: dict, names: dict, item_names: dict) -> None:
+def write_lua(origins: dict, intermediates: dict, equip: dict, names: dict, item_names: dict,
+              professions: dict) -> None:
     lines = ["-- Generado por Tools/generar_origenes.py desde acore_world y las DBC del servidor.",
-             "-- id = \"nivel,inventario,calidad,facción|origen;origen...\" (formato en el generador)",
+             "-- id = \"nivel,inventario,calidad,facción,profesión para llevarlo|origen;origen...\"",
              "SimulateX_Origenes = {"]
     for item in sorted(origins):
         e = equip[item]
         sources = ";".join(encode(o) for o in origins[item])
-        lines.append(f'[{item}]="{e["req"]},{e["inv"]},{e["q"]},{e["faction"]}|{sources}",')
+        lines.append(f'[{item}]="{e["req"]},{e["inv"]},{e["q"]},{e["faction"]},{e["skill"]}|{sources}",')
+    lines.append("}")
+    lines.append("-- Recetas y bolsas de las que sale equipo: id = \"origen;origen...\"")
+    lines.append("SimulateX_OrigenesIntermedios = {")
+    for item in sorted(intermediates):
+        lines.append(f'[{item}]="{";".join(encode(o) for o in intermediates[item])}",')
     lines.append("}")
     lines.append("SimulateX_OrigenesNombres = {")
     for key, table in (("objetos", item_names), *names.items()):
@@ -449,6 +598,10 @@ def write_lua(origins: dict, equip: dict, names: dict, item_names: dict) -> None
         for ident in sorted(table):
             lines.append(f"    [{ident}]={lua_str(table[ident])},")
         lines.append("  },")
+    lines.append("}")
+    lines.append("-- Línea de habilidad -> hechizo de la profesión (nombre traducido con GetSpellInfo)")
+    lines.append("SimulateX_OrigenesProfesiones = {")
+    lines.append("  " + ", ".join(f"[{skill}]={spell}" for skill, spell in sorted(professions.items())))
     lines.append("}")
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUT_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")

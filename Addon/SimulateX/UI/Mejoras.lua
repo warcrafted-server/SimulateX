@@ -41,6 +41,7 @@ local HEROIC_LABELS = { H = true, ["10H"] = true, ["25H"] = true }
 local RAID25_LABELS = { ["25"] = true, ["25H"] = true }
 
 local page, statusText, scrollFrame, content
+local playerProfessions = {}  -- línea de habilidad -> rango, al empezar cada cálculo
 local headerRows, itemRows = {}, {}
 local job  -- cálculo en curso
 local results  -- [grupo] = { {id, evaluation, origins}, ... }
@@ -77,7 +78,53 @@ local function ParseOrigin(token)
             honor = tonumber(f[4]), arena = tonumber(f[5]), rating = tonumber(f[6]), currencies = currencies }
     elseif kind == "q" then
         return { kind = kind, id = tonumber(f[1]), level = tonumber(f[2]), faction = tonumber(f[3]) }
+    elseif kind == "p" then
+        return { kind = kind, skill = tonumber(f[1]), rank = tonumber(f[2]), recipe = tonumber(f[3]) }
+    elseif kind == "b" then
+        return { kind = kind, id = tonumber(f[1]), chance = tonumber(f[2]) }
+    elseif kind == "w" then
+        return { kind = kind }
     end
+end
+
+-- Orígenes de una receta o bolsa (SimulateX_OrigenesIntermedios)
+local intermediateCache = {}
+local function IntermediateOrigins(itemId)
+    local cached = intermediateCache[itemId]
+    if not cached then
+        cached = {}
+        local data = SimulateX_OrigenesIntermedios and SimulateX_OrigenesIntermedios[itemId]
+        for _, token in ipairs(data and Split(data, ";") or {}) do
+            table.insert(cached, ParseOrigin(token))
+        end
+        intermediateCache[itemId] = cached
+    end
+    return cached
+end
+
+-- Profesiones del personaje: nombre del cliente (GetSkillLineInfo) casado
+-- con el del hechizo de cada profesión, que el cliente da ya traducido.
+local function ReadPlayerProfessions()
+    local skillByName = {}
+    for skill, spell in pairs(SimulateX_OrigenesProfesiones or {}) do
+        local name = GetSpellInfo(spell)
+        if name then
+            skillByName[name] = skill
+        end
+    end
+    local result = {}
+    for index = 1, GetNumSkillLines() do
+        local name, isHeader, _, rank = GetSkillLineInfo(index)
+        if not isHeader and skillByName[name] then
+            result[skillByName[name]] = rank
+        end
+    end
+    return result
+end
+
+local function ProfessionName(skill)
+    local spell = SimulateX_OrigenesProfesiones and SimulateX_OrigenesProfesiones[skill]
+    return spell and GetSpellInfo(spell) or "Profesión"
 end
 
 local function PlayerFaction()
@@ -88,6 +135,34 @@ end
 local function OriginAllowed(origin, playerFaction)
     local db = SimulateX_DB
     if origin.faction and origin.faction ~= 0 and origin.faction ~= playerFaction and not db.upgradesOtherFaction then
+        return false
+    end
+    if origin.kind == "w" then
+        return true
+    end
+    if origin.kind == "p" then
+        if db.upgradesNoProfessions or (db.upgradesOnlyMyProfessions and not playerProfessions[origin.skill]) then
+            return false
+        end
+        if not origin.recipe then
+            return true  -- instructor
+        end
+        for _, recipeOrigin in ipairs(IntermediateOrigins(origin.recipe)) do
+            if OriginAllowed(recipeOrigin, playerFaction) then
+                return true
+            end
+        end
+        return false
+    end
+    if origin.kind == "b" then
+        if (origin.chance or 0) < (db.upgradesMinChance or 1) then
+            return false
+        end
+        for _, bagOrigin in ipairs(IntermediateOrigins(origin.id)) do
+            if OriginAllowed(bagOrigin, playerFaction) then
+                return true
+            end
+        end
         return false
     end
     if origin.kind == "v" then
@@ -170,8 +245,34 @@ local function OriginText(origin)
         return "Vendedor: " .. Name("criaturas", origin.id) .. " · " .. CostText(origin)
     elseif kind == "q" then
         return string.format("Misión: %s (nivel %d)", Name("misiones", origin.id), origin.level)
+    elseif kind == "p" then
+        local text = string.format("%s (%d)", ProfessionName(origin.skill), origin.rank)
+        local have = playerProfessions[origin.skill]
+        if have and have < origin.rank then
+            text = text .. string.format(" |cffff6060tienes %d|r", have)
+        end
+        if origin.recipe then
+            return text .. " · receta: " .. Name("objetos", origin.recipe)
+        end
+        return text .. " · instructor"
+    elseif kind == "b" then
+        return WithDetails("Dentro de: " .. Name("objetos", origin.id), origin)
+    elseif kind == "w" then
+        return "botín de mundo (subasta)"
     end
     return "?"
+end
+
+-- Líneas extra del tooltip: de dónde sale la receta o la bolsa
+local function IntermediateLines(origin)
+    local itemId = origin.kind == "p" and origin.recipe or origin.kind == "b" and origin.id
+    local lines = {}
+    if itemId then
+        for _, sub in ipairs(IntermediateOrigins(itemId)) do
+            table.insert(lines, OriginText(sub))
+        end
+    end
+    return lines
 end
 
 --[[----------------------------------------------------------------------
@@ -187,10 +288,12 @@ local function CollectCandidates(context)
     local candidates = {}
 
     for itemId, data in pairs(SimulateX_Origenes) do
-        local req, _, _, faction, sources = data:match("^(%d+),(%d+),(%d+),(%d+)|(.*)$")
-        req, faction = tonumber(req), tonumber(faction)
+        local req, _, _, faction, skill, sources = data:match("^(%d+),(%d+),(%d+),(%d+),(%d+)|(.*)$")
+        req, faction, skill = tonumber(req), tonumber(faction), tonumber(skill)
+        -- skill: profesión sin la que no se puede llevar (gafas de ingeniero...)
         if req and req > 0 and req <= maxLevel and req >= level - LEVELS_BEHIND
-            and (faction == 0 or faction == playerFaction or db.upgradesOtherFaction) then
+            and (faction == 0 or faction == playerFaction or db.upgradesOtherFaction)
+            and (skill == 0 or playerProfessions[skill]) then
             local origins = {}
             for _, token in ipairs(Split(sources, ";")) do
                 local origin = ParseOrigin(token)
@@ -275,6 +378,7 @@ function StartJob()
         statusText:SetText("No hay datos de simulación para tu clase.")
         return
     end
+    playerProfessions = ReadPlayerProfessions()
     job = {
         context = context,
         candidates = CollectCandidates(context),
@@ -308,6 +412,9 @@ local function ShowRowTooltip(row)
             GameTooltip:AddLine(OriginText(origin), 0.9, 0.9, 0.9, true)
             if origin.kind == "v" and #origin.currencies > 0 then
                 GameTooltip:AddLine("   " .. CurrencyNames(origin), 0.6, 0.6, 0.6, true)
+            end
+            for _, line in ipairs(IntermediateLines(origin)) do
+                GameTooltip:AddLine("   ← " .. line, 0.6, 0.6, 0.6, true)
             end
         end
     end
@@ -376,7 +483,7 @@ local function FillItemRow(row, entry, level)
 
     local cachedName, _, cachedQuality = GetItemInfo(entry.id)
     local data = SimulateX_Origenes[entry.id]
-    local quality = cachedQuality or (data and tonumber(data:match("^%d+,%d+,(%d+)"))) or 1
+    local quality = cachedQuality or (data and tonumber(data:match("^%d+,%d+,(%d+),"))) or 1
     local color = ITEM_QUALITY_COLORS[quality] or ITEM_QUALITY_COLORS[1]
     local name = cachedName or Name("objetos", entry.id)
     local notes = {}

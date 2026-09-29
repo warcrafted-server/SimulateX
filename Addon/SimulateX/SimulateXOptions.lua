@@ -319,6 +319,8 @@ function SimulateX_BuildOptions(parent, prefix, textWidth)
         { "upgradesNo25", "Incluir botín de bandas de 25 jugadores", true },
         { "upgradesNoVendors", "Incluir objetos de vendedor (oro, emblemas, honor...)", true },
         { "upgradesNoQuests", "Incluir recompensas de misión", true },
+        { "upgradesNoProfessions", "Incluir objetos fabricados con profesiones", true },
+        { "upgradesOnlyMyProfessions", "Solo los de mis profesiones", false },
         { "upgradesNoUnknownOrigin", "Incluir objetos simulados sin origen registrado (profesiones, subasta)", true },
         { "upgradesOtherFaction", "Incluir objetos y vendedores de la otra facción", false },
     }
