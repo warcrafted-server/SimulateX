@@ -4,6 +4,7 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 
 ## Sin publicar
 ### Añadido
+- Zona o instancia en cada origen de Mejoras (v0.11): "Jefe: Príncipe Valanar · Ciudadela de la Corona de Hielo · 25 jug.", "Vendedor: Rafael Langrom (Dalaran)", "Raro: Fenros · Bosque del Ocaso", y la zona de cada misión. Los nombres salen de las DBC del propio cliente esES (`Tools/extraer_dbc_cliente.py`); la zona de cada PNJ, de su posición y los mapas del mundo del servidor.
 - Mejoras solo propone tu tipo de armadura principal (cuero para druida y pícaro, malla desde nivel 40 para cazador y chamán, placas desde 40 para guerrero y paladín...). Antes un Feral veía piezas de tela con índice de crítico, que a nivel bajo puntúan alto. Las capas no cuentan y el tooltip sigue dando el valor real. Opción para volver a incluir el resto.
 - Profesiones en la pestaña Mejoras (v0.11): los objetos fabricados salen con la profesión y la habilidad necesaria, y si la receta se aprende del instructor o de una receta (con de dónde sale la receta al pasar el ratón; "botín de mundo" si solo cae al azar). Si tienes la profesión pero te falta habilidad, lo indica. Dos opciones: incluir objetos fabricados (activada) y solo los de mis profesiones. El nombre de la profesión lo da el propio cliente.
 - Bolsas de recompensa como origen en Mejoras (v0.11): si un objeto sale de una bolsa (p. ej. una recompensa de misión), se indica la bolsa y de dónde sale. Las bolsas de contenido al azar (decenas de objetos a ~1 %) no cuentan.

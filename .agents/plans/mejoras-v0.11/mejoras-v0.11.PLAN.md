@@ -70,10 +70,10 @@ equipables con `RandomProperty`/`RandomSuffix`.
 
 **F. Bolsas**: 823 objetos equipables en 80 contenedores de `item_loot_template`.
 
-**G. Nombres de instancia**: las DBC extraídas del cliente de
-`~/Documentos/Wow 3.3.5 IceTracks` con `map_extractor` salen en inglés
-(idénticas a las del servidor). Probar a leer `DBFilesClient\Map.dbc` directamente
-del `locale-esES.MPQ`; si también está en inglés, se descarta.
+**G. Nombres de zona e instancia**: hecho. `Tools/extraer_dbc_cliente.py` lee
+`Map.dbc`/`AreaTable.dbc` de los MPQ esES del cliente (esES en el campo 11/17);
+zona de cada PNJ por posición con `WorldMapArea.dbc` (+ `DungeonMap.dbc` para
+Dalaran).
 
 ## Pruebas
 

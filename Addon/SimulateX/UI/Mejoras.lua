@@ -72,11 +72,14 @@ local function ParseOrigin(token)
     local kind, rest = token:sub(1, 1), token:sub(2)
     local f = Split(rest, ":")
     if kind == "j" or kind == "c" then
-        return { kind = kind, id = tonumber(f[1]), label = f[3], chance = tonumber(f[4]) }
+        return { kind = kind, id = tonumber(f[1]), map = tonumber(f[2]), label = f[3], chance = tonumber(f[4]),
+            zone = tonumber(f[5]) }
     elseif kind == "m" then
-        return { kind = kind, id = tonumber(f[1]), label = f[3], chance = tonumber(f[4]), count = tonumber(f[5]) }
+        return { kind = kind, id = tonumber(f[1]), map = tonumber(f[2]), label = f[3], chance = tonumber(f[4]),
+            count = tonumber(f[5]), zone = tonumber(f[6]) }
     elseif kind == "r" then
-        return { kind = kind, id = tonumber(f[1]), label = "", chance = tonumber(f[3]) }
+        return { kind = kind, id = tonumber(f[1]), map = tonumber(f[2]), label = "", chance = tonumber(f[3]),
+            zone = tonumber(f[4]) }
     elseif kind == "v" then
         local currencies = {}
         for _, pair in ipairs(f[7] ~= "" and Split(f[7], "+") or {}) do
@@ -84,9 +87,11 @@ local function ParseOrigin(token)
             table.insert(currencies, { tonumber(itemId), tonumber(count) })
         end
         return { kind = kind, id = tonumber(f[1]), faction = tonumber(f[2]), copper = tonumber(f[3]),
-            honor = tonumber(f[4]), arena = tonumber(f[5]), rating = tonumber(f[6]), currencies = currencies }
+            honor = tonumber(f[4]), arena = tonumber(f[5]), rating = tonumber(f[6]), currencies = currencies,
+            zone = tonumber(f[8]) }
     elseif kind == "q" then
-        return { kind = kind, id = tonumber(f[1]), level = tonumber(f[2]), faction = tonumber(f[3]) }
+        return { kind = kind, id = tonumber(f[1]), level = tonumber(f[2]), faction = tonumber(f[3]),
+            zone = tonumber(f[4]) }
     elseif kind == "p" then
         return { kind = kind, skill = tonumber(f[1]), rank = tonumber(f[2]), recipe = tonumber(f[3]) }
     elseif kind == "b" then
@@ -195,8 +200,20 @@ local function Name(kind, id)
     return list and list[id] or "?"
 end
 
+-- Instancia (por el mapa) o zona del mundo, en esES del cliente; nil si no se sabe
+local function PlaceName(origin)
+    local names = SimulateX_OrigenesNombres
+    if not names then return nil end
+    return (origin.map and names.mapas and names.mapas[origin.map])
+        or (origin.zone and origin.zone > 0 and names.zonas and names.zonas[origin.zone]) or nil
+end
+
 local function WithDetails(text, origin)
     local parts = { text }
+    local place = PlaceName(origin)
+    if place then
+        table.insert(parts, place)
+    end
     if origin.label and DIFFICULTY_TEXT[origin.label] then
         table.insert(parts, DIFFICULTY_TEXT[origin.label])
     end
@@ -251,9 +268,13 @@ local function OriginText(origin)
     elseif kind == "c" then
         return WithDetails("Cofre: " .. Name("cofres", origin.id), origin)
     elseif kind == "v" then
-        return "Vendedor: " .. Name("criaturas", origin.id) .. " · " .. CostText(origin)
+        local place = PlaceName(origin)
+        return "Vendedor: " .. Name("criaturas", origin.id) .. (place and (" (" .. place .. ")") or "")
+            .. " · " .. CostText(origin)
     elseif kind == "q" then
+        local place = PlaceName(origin)
         return string.format("Misión: %s (nivel %d)", Name("misiones", origin.id), origin.level)
+            .. (place and (" · " .. place) or "")
     elseif kind == "p" then
         local text = string.format("%s (%d)", ProfessionName(origin.skill), origin.rank)
         local have = playerProfessions[origin.skill]

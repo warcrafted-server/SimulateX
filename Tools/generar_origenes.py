@@ -35,6 +35,9 @@ from extraer_objetos_bd import run_query
 from rutas_addon import ADDON_ROOT, VERSION
 
 OUT_DIR = ADDON_ROOT / "SimulateX_Origenes"
+# Map.dbc y AreaTable.dbc del cliente esES (Tools/extraer_dbc_cliente.py)
+CLIENT_DBC_DIR = pathlib.Path(__file__).resolve().parent.parent / "Data" / "dbc_cliente"
+ES_NAME_FIELD = {"Map.dbc": 11, "AreaTable.dbc": 17}
 OUT_PATH = OUT_DIR / "Data" / "SimulateX_Origenes.lua"
 TOC_PATH = OUT_DIR / "SimulateX_Origenes.toc"
 
@@ -221,6 +224,61 @@ def pct(p: float) -> str:
     return str(int(value)) if value == int(value) else str(value)
 
 
+# ---------------------------------------------------------------- zonas
+
+def client_names(file_name: str) -> dict:
+    """id -> nombre esES, o {} si no se ha extraído la DBC del cliente."""
+    path = CLIENT_DBC_DIR / file_name
+    if not path.exists():
+        return {}
+    data = path.read_bytes()
+    _, n_records, n_fields, record_size, _ = struct.unpack("<4s4I", data[:20])
+    strings = data[20 + n_records * record_size:]
+    field = ES_NAME_FIELD[file_name]
+    names = {}
+    for i in range(n_records):
+        row_id, offset = struct.unpack_from("<i", data, 20 + i * record_size)[0], \
+            struct.unpack_from("<i", data, 20 + i * record_size + field * 4)[0]
+        if 0 < offset < len(strings):
+            names[row_id] = strings[offset:strings.index(b"\0", offset)].decode("utf-8", "replace")
+    return names
+
+
+def zone_locator(dbc_dir: pathlib.Path):
+    """Función (mapa, x, y) -> zona de AreaTable, con los rectángulos de
+    WorldMapArea.dbc (DBCStructure.h::WorldMapAreaEntry: 1 mapa, 2 zona,
+    4-7 y1, y2, x1, x2); si hay varios, el más pequeño. Las zonas con
+    rectángulo 0 (Dalaran) lo tienen en DungeonMap.dbc (campo 9): 3-6 como
+    y mín, y máx, x mín, x máx, comprobado con PNJ de Dalaran."""
+    dungeon_maps = {}
+    data = (dbc_dir / "DungeonMap.dbc").read_bytes()
+    _, n_records, _, record_size, _ = struct.unpack("<4s4I", data[:20])
+    for i in range(n_records):
+        base = 20 + i * record_size
+        dungeon_maps[struct.unpack_from("<i", data, base)[0]] = struct.unpack_from("<4f", data, base + 12)
+    data = (dbc_dir / "WorldMapArea.dbc").read_bytes()
+    _, n_records, _, record_size, _ = struct.unpack("<4s4I", data[:20])
+    by_map = collections.defaultdict(list)
+    for i in range(n_records):
+        base = 20 + i * record_size
+        map_id, area = struct.unpack_from("<2i", data, base + 4)
+        y1, y2, x1, x2 = struct.unpack_from("<4f", data, base + 16)
+        dungeon_map = struct.unpack_from("<i", data, base + 36)[0]
+        if not (y1 or y2 or x1 or x2) and dungeon_map in dungeon_maps:
+            y1, y2, x1, x2 = dungeon_maps[dungeon_map]
+        if area:
+            by_map[map_id].append(((y1 - y2) * (x1 - x2), area, min(y1, y2), max(y1, y2), min(x1, x2), max(x1, x2)))
+    for rects in by_map.values():
+        rects.sort()
+
+    def locate(map_id: int, x: float, y: float) -> int:
+        for _size, area, y_min, y_max, x_min, x_max in by_map.get(map_id, ()):
+            if y_min <= y <= y_max and x_min <= x <= x_max:
+                return area
+        return 0
+    return locate
+
+
 # ---------------------------------------------------------------- profesiones
 
 # Profesiones que fabrican equipo (SkillLine.dbc)
@@ -355,6 +413,16 @@ def main() -> None:
         if enc in encounters:
             boss_map.setdefault(credit, encounters[enc][1])
 
+    locate = zone_locator(dbc_dir)
+    npc_zone, go_zone = {}, {}
+    for r in run_query("SELECT id, map, position_x, position_y FROM creature ORDER BY guid"):
+        npc_zone.setdefault(int(r["id"]), (int(r["map"]), float(r["position_x"]), float(r["position_y"])))
+    for r in run_query("SELECT id, map, position_x, position_y FROM gameobject ORDER BY guid"):
+        go_zone.setdefault(int(r["id"]), (int(r["map"]), float(r["position_x"]), float(r["position_y"])))
+    npc_zone = {npc: locate(*pos) for npc, pos in npc_zone.items()}
+    go_zone = {go: locate(*pos) for go, pos in go_zone.items()}
+    quest_zone = {}
+
     loot = Loot(wanted, equip)
     origins = collections.defaultdict(list)  # objeto -> [(tipo, campos...)]
     names = {"criaturas": {}, "cofres": {}, "misiones": {}}
@@ -465,9 +533,13 @@ def main() -> None:
         "UNION SELECT startquest AS quest FROM item_template WHERE startquest > 0"), "quest")}
     disabled = {q for (q,) in ints(run_query("SELECT entry FROM disables WHERE sourceType = 1"), "entry")}
     reward_cols = [f"RewardItem{i}" for i in range(1, 5)] + [f"RewardChoiceItemID{i}" for i in range(1, 7)]
-    for r in run_query(f"SELECT ID, LogTitle, QuestLevel, MinLevel, AllowableRaces, {', '.join(reward_cols)} "
-                       f"FROM quest_template"):
+    starter_npc = {q: npc for npc, q in ints(run_query("SELECT id, quest FROM creature_queststarter"), "id", "quest")}
+    for r in run_query(f"SELECT ID, LogTitle, QuestLevel, MinLevel, AllowableRaces, QuestSortID, "
+                       f"{', '.join(reward_cols)} FROM quest_template"):
         quest = int(r["ID"])
+        # QuestSortID > 0 es la zona; < 0, una categoría (clase, profesión, fiesta)
+        sort_id = int(r["QuestSortID"])
+        quest_zone[quest] = sort_id if sort_id > 0 else npc_zone.get(starter_npc.get(quest), 0)
         if quest not in startable or quest in disabled:
             continue
         level = int(r["QuestLevel"]) if int(r["QuestLevel"]) > 0 else int(r["MinLevel"])
@@ -542,27 +614,40 @@ def main() -> None:
         if int(r["ID"]) in item_names and present(r["Name"]):
             item_names[int(r["ID"])] = r["Name"]
 
-    write_lua(equip_origins, intermediate_origins, equip, names, item_names, professions)
+    zones = {"npc": npc_zone, "go": go_zone, "quest": quest_zone, "instances": instance_maps}
+    encoded = [encode(o, zones) for sources in (*equip_origins.values(), *intermediate_origins.values()) for o in sources]
+    used_zones = {int(token.rsplit(":", 1)[1]) for token in encoded if token[0] in "jmcrvq"}
+    used_maps = {int(token.split(":")[1]) for token in encoded if token[0] in "jmc"} & instance_maps
+    area_names, map_names = client_names("AreaTable.dbc"), client_names("Map.dbc")
+    if not area_names:
+        print(f"AVISO: sin {CLIENT_DBC_DIR}/AreaTable.dbc (Tools/extraer_dbc_cliente.py): orígenes sin zona")
+    names["zonas"] = {z: area_names[z] for z in used_zones if z in area_names}
+    names["mapas"] = {m: map_names[m] for m in used_maps if m in map_names}
+
+    write_lua(equip_origins, intermediate_origins, equip, names, item_names, professions, zones)
     TOC_PATH.write_text(TOC_TEMPLATE.format(version=VERSION), encoding="utf-8")
     kinds = collections.Counter(o[0] for sources in equip_origins.values() for o in sources)
     print(f"-> {OUT_PATH} ({len(equip_origins)} objetos, {len(intermediate_origins)} recetas y bolsas; "
           f"orígenes: {dict(kinds)}; {OUT_PATH.stat().st_size // 1024} KB)")
 
 
-def encode(origin: tuple) -> str:
+def encode(origin: tuple, zones: dict) -> str:
+    """El último campo de j/m/c/r/v/q es la zona de AreaTable (0 si se sabe
+    por el mapa, que es una instancia, o si no se ha podido ubicar)."""
     kind = origin[0]
     if kind in ("j", "c"):
         _, ident, map_id, label, p = origin
-        return f"{kind}{ident}:{map_id}:{label}:{pct(p)}"
+        zone = 0 if map_id in zones["instances"] else zones["npc" if kind == "j" else "go"].get(ident, 0)
+        return f"{kind}{ident}:{map_id}:{label}:{pct(p)}:{zone}"
     if kind == "m":
-        extra = f":{origin[5]}" if len(origin) > 5 else ""
-        return f"m{origin[1]}:{origin[2]}:{origin[3]}:{pct(origin[4])}{extra}"
+        count = origin[5] if len(origin) > 5 else ""
+        return f"m{origin[1]}:{origin[2]}:{origin[3]}:{pct(origin[4])}:{count}:0"
     if kind == "r":
-        return f"r{origin[1]}:{origin[2]}:{pct(origin[3])}"
+        return f"r{origin[1]}:{origin[2]}:{pct(origin[3])}:{zones['npc'].get(origin[1], 0)}"
     if kind == "v":
         _, npc, faction, copper, honor, arena, rating, currencies = origin
         items = "+".join(f"{c}x{n}" for c, n in currencies)
-        return f"v{npc}:{faction}:{copper}:{honor}:{arena}:{rating}:{items}"
+        return f"v{npc}:{faction}:{copper}:{honor}:{arena}:{rating}:{items}:{zones['npc'].get(npc, 0)}"
     if kind == "b":
         return f"b{origin[1]}:{pct(origin[2])}"
     if kind == "p":
@@ -570,7 +655,7 @@ def encode(origin: tuple) -> str:
     if kind == "w":
         return "w"
     _, quest, level, faction = origin
-    return f"q{quest}:{level}:{faction}"
+    return f"q{quest}:{level}:{faction}:{zones['quest'].get(quest, 0)}"
 
 
 def lua_str(s: str) -> str:
@@ -578,19 +663,19 @@ def lua_str(s: str) -> str:
 
 
 def write_lua(origins: dict, intermediates: dict, equip: dict, names: dict, item_names: dict,
-              professions: dict) -> None:
+              professions: dict, zones: dict) -> None:
     lines = ["-- Generado por Tools/generar_origenes.py desde acore_world y las DBC del servidor.",
              "-- id = \"nivel,inventario,calidad,facción,profesión para llevarlo|origen;origen...\"",
              "SimulateX_Origenes = {"]
     for item in sorted(origins):
         e = equip[item]
-        sources = ";".join(encode(o) for o in origins[item])
+        sources = ";".join(encode(o, zones) for o in origins[item])
         lines.append(f'[{item}]="{e["req"]},{e["inv"]},{e["q"]},{e["faction"]},{e["skill"]}|{sources}",')
     lines.append("}")
     lines.append("-- Recetas y bolsas de las que sale equipo: id = \"origen;origen...\"")
     lines.append("SimulateX_OrigenesIntermedios = {")
     for item in sorted(intermediates):
-        lines.append(f'[{item}]="{";".join(encode(o) for o in intermediates[item])}",')
+        lines.append(f'[{item}]="{";".join(encode(o, zones) for o in intermediates[item])}",')
     lines.append("}")
     lines.append("SimulateX_OrigenesNombres = {")
     for key, table in (("objetos", item_names), *names.items()):
