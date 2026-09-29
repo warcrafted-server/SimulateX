@@ -155,6 +155,32 @@ local function GetItemIdFromLink(itemLink)
     return tonumber(itemLink:match("item:(%d+)"))
 end
 
+-- item_template.InventoryType -> equipLoc de GetItemInfo
+local INVTYPE_BY_ID = {
+    [1] = "INVTYPE_HEAD", [2] = "INVTYPE_NECK", [3] = "INVTYPE_SHOULDER", [5] = "INVTYPE_CHEST",
+    [6] = "INVTYPE_WAIST", [7] = "INVTYPE_LEGS", [8] = "INVTYPE_FEET", [9] = "INVTYPE_WRIST",
+    [10] = "INVTYPE_HAND", [11] = "INVTYPE_FINGER", [12] = "INVTYPE_TRINKET", [13] = "INVTYPE_WEAPON",
+    [14] = "INVTYPE_SHIELD", [15] = "INVTYPE_RANGED", [16] = "INVTYPE_CLOAK", [17] = "INVTYPE_2HWEAPON",
+    [20] = "INVTYPE_ROBE", [21] = "INVTYPE_WEAPONMAINHAND", [22] = "INVTYPE_WEAPONOFFHAND",
+    [23] = "INVTYPE_HOLDABLE", [25] = "INVTYPE_THROWN", [26] = "INVTYPE_RANGEDRIGHT", [28] = "INVTYPE_RELIC",
+}
+
+-- Nivel requerido y equipLoc de un objeto: del cliente si lo tiene en caché,
+-- si no de SimulateX_Origenes (la lista de la compra evalúa objetos que el
+-- jugador nunca ha visto).
+local function GetItemBasics(itemLink)
+    local _, _, _, _, minLevel, _, _, _, equipLoc = GetItemInfo(itemLink)
+    if equipLoc then
+        return minLevel, equipLoc
+    end
+    local itemId = GetItemIdFromLink(itemLink)
+    local data = itemId and SimulateX_Origenes and SimulateX_Origenes[itemId]
+    if data then
+        local req, inv = data:match("^(%d+),(%d+),")
+        return tonumber(req), INVTYPE_BY_ID[tonumber(inv)]
+    end
+end
+
 -- nil si el objeto no está en la tabla de tipos (anillos, capas, ...).
 local function IsProficient(itemLink)
     local itemId = GetItemIdFromLink(itemLink)
@@ -188,7 +214,7 @@ end
 -- true si la clase puede llevarlo pero aún no tiene el nivel: el dato se
 -- muestra (aparecerá al subir de nivel), la flecha no.
 local function IsBlockedByLevelOnly(itemLink)
-    local minLevel = select(5, GetItemInfo(itemLink))
+    local minLevel = GetItemBasics(itemLink)
     return IsItemUsable(itemLink) and minLevel ~= nil and minLevel > UnitLevel("player")
 end
 
@@ -444,7 +470,7 @@ local SLOT_TO_HAND = { MainHandSlot = "mainHand", SecondaryHandSlot = "offHand",
 local RANGED_EQUIP_LOCS = { INVTYPE_RANGED = true, INVTYPE_RANGEDRIGHT = true, INVTYPE_THROWN = true }
 
 local function GetDefaultHand(itemLink)
-    local equipLoc = select(9, GetItemInfo(itemLink))
+    local _, equipLoc = GetItemBasics(itemLink)
     if RANGED_EQUIP_LOCS[equipLoc] then
         return "ranged"
     end
@@ -1233,7 +1259,7 @@ local function GetItemEvaluations(itemLink)
     end
 
     local itemId = tonumber(itemLink:match("item:(%d+)"))
-    local _, _, _, _, _, _, _, _, equipLoc = GetItemInfo(itemLink)
+    local _, equipLoc = GetItemBasics(itemLink)
     if not equipLoc or equipLoc == "" then
         return nil
     end
@@ -1271,6 +1297,39 @@ local function GetItemEvaluations(itemLink)
         return a.specLabel < b.specLabel
     end)
     return results
+end
+
+-- Lista de la compra (v0.10): la build de la spec activa se elige una vez y
+-- se evalúan contra ella miles de objetos, sin repetir GetBestBuildPerSpec.
+local function GetActiveSpecContext()
+    local classFileName = select(2, UnitClass("player"))
+    local gameClassName = CLASS_FILE_TO_GAME_CLASS[classFileName]
+    local dataVarName = CLASS_DATA_VARS[classFileName]
+    local classData = dataVarName and _G[dataVarName]
+    if not classData or not gameClassName then
+        return nil
+    end
+    local bestBySpec = GetBestBuildPerSpec(classData)
+    local entry = bestBySpec[GetActiveSpecKey(bestBySpec, classFileName)]
+    if not entry then
+        return nil
+    end
+    return {
+        buildId = entry.buildId,
+        build = entry.build,
+        specLabel = entry.build.specLabel or entry.build.spec,
+        playerLevel = GetEffectivePlayerLevel(),
+        gameClassName = gameClassName,
+    }
+end
+
+local function EvaluateForContext(context, itemLink)
+    local _, equipLoc = GetItemBasics(itemLink)
+    if not equipLoc or equipLoc == "" then
+        return nil
+    end
+    return EvaluateBuild(itemLink, GetItemIdFromLink(itemLink), equipLoc, context.buildId, context.build,
+        context.playerLevel, context.gameClassName)
 end
 
 --[[----------------------------------------------------------------------
@@ -1520,6 +1579,10 @@ SimulateX_API = {
     CLASS_DATA_VARS = CLASS_DATA_VARS,
     GetBestBuildPerSpec = GetBestBuildPerSpec,
     GetActiveSpecKey = GetActiveSpecKey,
+    GetItemBasics = GetItemBasics,
+    GetActiveSpecContext = GetActiveSpecContext,
+    EvaluateForContext = EvaluateForContext,
+    CLASS_MASK_BITS = CLASS_MASK_BITS,
 }
 
 --[[----------------------------------------------------------------------

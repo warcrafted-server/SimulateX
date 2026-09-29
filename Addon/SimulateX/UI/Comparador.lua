@@ -1,7 +1,7 @@
 --[[----------------------------------------------------------------------
     Ventana de SimulateX: pestaña Comparador (A contra B, o contra lo
-    equipado; anillos y abalorios contra los dos equipados) y pestaña
-    Configuración. El cálculo sale siempre de SimulateX_API (SimulateX.lua).
+    equipado; anillos y abalorios contra los dos equipados), Mejoras
+    (UI/Mejoras.lua), Talentos y Configuración. El cálculo sale siempre de SimulateX_API (SimulateX.lua).
 ------------------------------------------------------------------------]]
 
 local PANEL_WIDTH = 940
@@ -30,7 +30,7 @@ local STAT_ORDER = {
 local STAT_RANK = {}
 for index, key in ipairs(STAT_ORDER) do STAT_RANK[key] = index end
 
-local frame, comparePage, configPage, configRefresh, talentsPage, talentsContent
+local frame, comparePage, configPage, configRefresh, talentsPage, talentsContent, upgradesPage, upgradesContent
 local cards = {}
 local tabs = {}
 local resultsFrame, breakdownFrame, verdictText, verdictBg, setNoteText
@@ -918,20 +918,35 @@ local function SelectTab(index)
         tab.label:SetTextColor(selected and 1 or 0.7, selected and 1 or 0.7, selected and 1 or 0.7)
         SetShown(tab.page, selected)
     end
-    if index == 2 and talentsContent and talentsContent.refresh then
-        talentsContent.refresh()
-    end
-    if index == 3 and configRefresh then
-        configRefresh()
+    if tabs[index] and tabs[index].onSelect then
+        tabs[index].onSelect()
     end
 end
 
-local function CreateTab(index, text, icon, page)
+-- La pestaña Mejoras se puede ocultar desde la configuración: las visibles
+-- se recolocan sin dejar hueco.
+function SimulateX_Comparador_LayoutTabs()
+    if not frame then
+        return
+    end
+    local position = 0
+    for _, tab in ipairs(tabs) do
+        local visible = not (tab.isOptional and SimulateX_DB.upgradesTabDisabled)
+        SetShown(tab, visible)
+        if visible then
+            tab:SetPoint("TOPLEFT", 12, -HEADER_HEIGHT - 8 - position * 34)
+            position = position + 1
+        end
+    end
+end
+
+local function CreateTab(index, text, icon, page, onSelect)
     local tab = CreateFrame("Button", nil, frame)
     tab:SetWidth(SIDEBAR_WIDTH - 16)
     tab:SetHeight(30)
     tab:SetPoint("TOPLEFT", 12, -HEADER_HEIGHT - 8 - (index - 1) * 34)
     tab.page = page
+    tab.onSelect = onSelect
 
     tab.bg = tab:CreateTexture(nil, "BACKGROUND")
     tab.bg:SetTexture(1, 0.82, 0, 0.14)
@@ -1039,6 +1054,13 @@ local function BuildConfigPage()
     configRefresh = SimulateX_BuildOptions(configPage, "SimulateXComparadorConfig", 440)
 end
 
+local function BuildUpgradesPage()
+    upgradesPage = CreateFrame("Frame", nil, frame)
+    upgradesPage:SetPoint("TOPLEFT", CONTENT_LEFT, -HEADER_HEIGHT - 8)
+    upgradesPage:SetPoint("BOTTOMRIGHT", -CONTENT_RIGHT, 14)
+    upgradesContent = SimulateX_BuildUpgradesPage(upgradesPage)
+end
+
 local function BuildTalentsPage()
     talentsPage = CreateFrame("Frame", nil, frame)
     talentsPage:SetPoint("TOPLEFT", CONTENT_LEFT, -HEADER_HEIGHT - 8)
@@ -1101,11 +1123,21 @@ local function BuildFrame()
     divider:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", SIDEBAR_WIDTH, 12)
 
     BuildComparePage()
+    BuildUpgradesPage()
     BuildTalentsPage()
     BuildConfigPage()
     CreateTab(1, "Comparador", "Interface\\Addons\\SimulateX\\Media\\SimulateX", comparePage)
-    CreateTab(2, "Talentos", "Interface\\Icons\\Spell_Nature_ProtectionformNature", talentsPage)
-    CreateTab(3, "Configuración", "Interface\\Icons\\INV_Misc_Gear_01", configPage)
+    CreateTab(2, "Mejoras", "Interface\\Icons\\INV_Misc_Bag_10", upgradesPage, function()
+        upgradesContent.refresh()
+    end)
+    tabs[2].isOptional = true
+    CreateTab(3, "Talentos", "Interface\\Icons\\Spell_Nature_ProtectionformNature", talentsPage, function()
+        if talentsContent and talentsContent.refresh then talentsContent.refresh() end
+    end)
+    CreateTab(4, "Configuración", "Interface\\Icons\\INV_Misc_Gear_01", configPage, function()
+        if configRefresh then configRefresh() end
+    end)
+    SimulateX_Comparador_LayoutTabs()
     SelectTab(1)
 
     frame:SetScript("OnHide", function()

@@ -297,13 +297,95 @@ function SimulateX_BuildOptions(parent, prefix, textWidth)
         phaseValueText:SetText(PHASE_TEXT[value])
     end)
 
+    local function UpgradesChanged()
+        if SimulateX_Mejoras_MarkDirty then SimulateX_Mejoras_MarkDirty() end
+    end
+
+    local upgradesTitle = CreateSectionTitle(parent, "Mejoras (lista de la compra)")
+    upgradesTitle:SetPoint("TOPLEFT", phaseSlider, "BOTTOMLEFT", -6, -28)
+
+    local upgradesTabCheck = CreateCheck(parent, prefix .. "UpgradesTabCheck",
+        "Mostrar la pestaña Mejoras en la ventana de SimulateX", textWidth)
+    upgradesTabCheck:SetPoint("TOPLEFT", upgradesTitle, "BOTTOMLEFT", -2, -8)
+    upgradesTabCheck:SetScript("OnClick", function(self)
+        SimulateX_DB.upgradesTabDisabled = not self:GetChecked() or nil
+        if SimulateX_Comparador_LayoutTabs then SimulateX_Comparador_LayoutTabs() end
+    end)
+
+    -- { clave en SimulateX_DB, texto, true si la clave desactiva }
+    local upgradeChecks = {}
+    local upgradeCheckDefs = {
+        { "upgradesNoHeroic", "Incluir botín de modos heroicos", true },
+        { "upgradesNo25", "Incluir botín de bandas de 25 jugadores", true },
+        { "upgradesNoVendors", "Incluir objetos de vendedor (oro, emblemas, honor...)", true },
+        { "upgradesNoQuests", "Incluir recompensas de misión", true },
+        { "upgradesNoUnknownOrigin", "Incluir objetos simulados sin origen registrado (profesiones, subasta)", true },
+        { "upgradesOtherFaction", "Incluir objetos y vendedores de la otra facción", false },
+    }
+    local previous = upgradesTabCheck
+    for index, def in ipairs(upgradeCheckDefs) do
+        local key, text, inverted = def[1], def[2], def[3]
+        local check = CreateCheck(parent, prefix .. "UpgradesCheck" .. index, text, textWidth)
+        check:SetPoint("TOPLEFT", previous, "BOTTOMLEFT", 0, -2)
+        check:SetScript("OnClick", function(self)
+            if inverted then
+                SimulateX_DB[key] = not self:GetChecked() or nil
+            else
+                SimulateX_DB[key] = self:GetChecked() or nil
+            end
+            UpgradesChanged()
+        end)
+        check.refresh = function()
+            if inverted then
+                check:SetChecked(not SimulateX_DB[key])
+            else
+                check:SetChecked(SimulateX_DB[key])
+            end
+        end
+        upgradeChecks[index] = check
+        previous = check
+    end
+
+    local function CreateUpgradesSlider(name, anchor, text, minValue, maxValue, low, high, key, default, format)
+        local slider = CreateFrame("Slider", prefix .. name, parent, "OptionsSliderTemplate")
+        slider:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 6, -24)
+        slider:SetWidth(200)
+        slider:SetMinMaxValues(minValue, maxValue)
+        slider:SetValueStep(1)
+        _G[slider:GetName() .. "Text"]:SetText(text)
+        _G[slider:GetName() .. "Low"]:SetText(low)
+        _G[slider:GetName() .. "High"]:SetText(high)
+        local valueText = parent:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+        valueText:SetPoint("LEFT", slider, "RIGHT", 10, 0)
+        slider:SetScript("OnValueChanged", function(self, value)
+            value = math.floor(value + 0.5)
+            valueText:SetText(format(value))
+            if SimulateX_DB[key] ~= value then
+                SimulateX_DB[key] = value
+                UpgradesChanged()
+            end
+        end)
+        slider.refresh = function()
+            slider:SetValue(SimulateX_DB[key] or default)
+        end
+        return slider
+    end
+
+    local perSlotSlider = CreateUpgradesSlider("UpgradesPerSlotSlider", previous, "Mejoras por hueco",
+        1, 5, "1", "5", "upgradesPerSlot", 3, function(v) return tostring(v) end)
+    local aheadSlider = CreateUpgradesSlider("UpgradesAheadSlider", perSlotSlider, "Niveles por delante del tuyo",
+        0, 5, "0", "5", "upgradesLevelsAhead", 2, function(v) return "+" .. v end)
+    local chanceSlider = CreateUpgradesSlider("UpgradesChanceSlider", aheadSlider, "Probabilidad mínima de botín",
+        0, 10, "0 %", "10 %", "upgradesMinChance", 1, function(v) return v == 0 and "cualquiera" or (v .. " %") end)
+    local upgradeSliders = { perSlotSlider, aheadSlider, chanceSlider }
+
     -- El número de specs (y por tanto la altura de RebuildSpecCheckboxes)
     -- solo se sabe tras rellenar los checkboxes, así que la altura del
     -- contenido se recalcula aquí, no al construir.
     local function UpdateContentHeight()
         content:SetScript("OnUpdate", function(self)
             self:SetScript("OnUpdate", nil)
-            local bottom = phaseSlider:GetBottom()
+            local bottom = chanceSlider:GetBottom()
             local top = self:GetTop()
             if bottom and top then
                 self:SetHeight(math.max(1, top - bottom + 20))
@@ -332,6 +414,9 @@ function SimulateX_BuildOptions(parent, prefix, textWidth)
         setBonusCheck:SetChecked(not SimulateX_DB.setBonusWarningDisabled)
         bisCheck:SetChecked(not SimulateX_DB.bisTooltipDisabled)
         phaseSlider:SetValue(SimulateX_DB.maxPhase or 6)
+        upgradesTabCheck:SetChecked(not SimulateX_DB.upgradesTabDisabled)
+        for _, check in ipairs(upgradeChecks) do check.refresh() end
+        for _, slider in ipairs(upgradeSliders) do slider.refresh() end
         UpdateContentHeight()
     end
 end

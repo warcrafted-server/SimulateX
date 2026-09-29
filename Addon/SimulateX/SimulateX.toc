@@ -15,6 +15,7 @@ Data\SimulateX_ItemStats.lua
 SimulateX.lua
 SimulateXOptions.lua
 UI\Talentos.lua
+UI\Mejoras.lua
 UI\Comparador.lua
 UI\Lanzadores.lua
 UI\Economia.lua

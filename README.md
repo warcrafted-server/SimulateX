@@ -11,7 +11,7 @@ El proyecto está diseñado para transformar por completo la forma en que los ju
 *   **Datos Reales por Especialización y Nivel:** Los pesos de cada estadística salen de simulaciones de combate reales por especialización (motor WowSims), con el escalado por nivel calculado desde las tablas del propio servidor: no son aproximaciones genéricas.
 *   **Indicadores de Mejora en Tooltips:** Visualiza de forma inmediata el rendimiento real que ganarás o perderás al pasar el ratolí sobre cualquier pieza de equipo (ej. `Feral (tu spec) +3.2 %`), con una línea por cada especialización de tu clase.
 *   **Comparador Visual de Equipamiento:** Pon dos objetos (arrastrando o con Mayús+clic) y compáralos entre sí, o contra lo que llevas puesto, con el desglose de qué estadística marca la diferencia. Cada objeto se ve con sus estadísticas, nivel, tipo y requisitos; los anillos y abalorios se comparan con los dos que llevas y te dice cuál cambiar. La misma ventana tiene una pestaña de Configuración. Accesible desde `/simulatex comparar`, un botón en la hoja de personaje, el minimapa o la barra de **wcdpanel**.
-*   **Asistente de Búsqueda (Lista de la Compra):** Una guía visual que te indica de forma ordenada qué objetos necesitas buscar para mejorar tu personaje y qué jefes de banda, mazmorras o intendentes los proporcionan.
+*   **Lista de la Compra (pestaña Mejoras):** Para cada hueco, las mejores mejoras para tu especialización y dónde conseguirlas: jefe y dificultad, cofre, criaturas de mazmorra, raros del mundo, vendedor (con su coste en oro, emblemas u honor) o misión, con la probabilidad de botín. Funciona también mientras subes de nivel y con objetos que nunca has visto. Filtros en la configuración: mejoras por hueco, heroicos, bandas de 25, vendedores, misiones, facción y probabilidad mínima.
 *   **Diseño Vanguardista:** Interfaz fluida y reactiva, alejada de la estética tosca y obsoleta de los addons clásicos.
 
 ## Estructura del Repositorio
@@ -26,9 +26,11 @@ Addon/
 │   ├── SimulateX_DB.lua
 │   ├── Data/                # Solo datos comunes (niveles, tipos y estadísticas de objeto)
 │   └── UI/
-└── SimulateX_<Clase>/       # Un sub-addon por clase (LoadOnDemand): datos de
-                              # simulación y talentos de esa clase. SimulateX
-                              # carga solo el de tu clase al iniciar sesión.
+├── SimulateX_<Clase>/       # Un sub-addon por clase (LoadOnDemand): datos de
+│                             # simulación y talentos de esa clase. SimulateX
+│                             # carga solo el de tu clase al iniciar sesión.
+└── SimulateX_Origenes/      # Dónde se consigue cada objeto (LoadOnDemand): se
+                              # carga al abrir la pestaña Mejoras.
 ```
 
 *Nota: Todas las herramientas automatizadas de extracción de datos, motores de cálculo externos y scripts de sincronización se ejecutan de forma local y privada para mantener el repositorio limpio y enfocado exclusivamente en el rendimiento in-game.*
@@ -36,7 +38,7 @@ Addon/
 ## Instalación
 
 1. Descarga el contenido de la carpeta `Addon/`.
-2. Copia **todas** las carpetas que empiezan por `SimulateX` (`SimulateX` y cada `SimulateX_<Clase>`) dentro de `World of Warcraft/Interface/AddOns/`. El addon solo carga en memoria los datos de tu clase; los sub-addons de las demás clases se quedan inactivos aunque estén instalados.
+2. Copia **todas** las carpetas que empiezan por `SimulateX` (`SimulateX`, `SimulateX_Origenes` y cada `SimulateX_<Clase>`) dentro de `World of Warcraft/Interface/AddOns/`. El addon solo carga en memoria los datos de tu clase; los sub-addons de las demás clases se quedan inactivos aunque estén instalados.
 3. Asegúrate de tener los addons activos en la pantalla de selección de personaje e inicia el juego.
 
 ## Créditos y Licencia

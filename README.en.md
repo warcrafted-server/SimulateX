@@ -11,7 +11,7 @@ The project is designed to completely transform how players evaluate their gear,
 *   **Real Data Per Spec and Level:** Each stat's weight comes from real combat simulations per specialization (WowSims engine), with level scaling calculated from the server's own tables: no generic approximations.
 *   **Tooltip Upgrade Indicators:** Instantly see the actual performance delta when hovering over any piece of gear (e.g., `Feral (tu spec) +3.2 %`), with one line per specialization of your class.
 *   **Visual Gear Comparator:** Put two items (drag them in or Shift-click) and compare them against each other, or against what you're wearing, with a breakdown of which stat makes the difference. Each item shows its stats, level, type and requirements; rings and trinkets are compared against both of the ones you're wearing, and it tells you which one to swap. The same window has a Settings tab. Available via `/simulatex comparar`, a button on the character sheet, the minimap, or the **wcdpanel** bar.
-*   **Upgrade Guide (Shopping List):** A visual guide showing you exactly which items to look for to upgrade your character and which raid bosses, dungeons, or quartermasters drop them.
+*   **Shopping List (Upgrades tab):** For each slot, the best upgrades for your spec and where to get them: boss and difficulty, chest, dungeon creatures, world rares, vendor (with its cost in gold, emblems or honor) or quest, with the drop chance. It also works while levelling and for items you've never seen. Filters in the settings: upgrades per slot, heroic modes, 25-player raids, vendors, quests, faction and minimum drop chance.
 *   **Modern UI Aesthetics:** A smooth and responsive user interface, moving away from the clunky and outdated look of classic addons.
 
 ## Repository Structure
@@ -26,9 +26,11 @@ Addon/
 │   ├── SimulateX_DB.lua
 │   ├── Data/                # Shared data only (levels, item types, item stats)
 │   └── UI/
-└── SimulateX_<Class>/       # One sub-addon per class (LoadOnDemand): that
-                              # class's simulation and talent data. SimulateX
-                              # loads only your own class's addon at login.
+├── SimulateX_<Class>/       # One sub-addon per class (LoadOnDemand): that
+│                             # class's simulation and talent data. SimulateX
+│                             # loads only your own class's addon at login.
+└── SimulateX_Origenes/      # Where each item comes from (LoadOnDemand):
+                              # loaded when you open the Upgrades tab.
 ```
 
 *Note: All automated data extraction tools, external calculation engines, and synchronization scripts run locally and privately to keep the repository focused purely on in-game performance.*
@@ -36,7 +38,7 @@ Addon/
 ## Installation
 
 1. Download the contents of the `Addon/` folder.
-2. Copy **every** folder starting with `SimulateX` (`SimulateX` and each `SimulateX_<Class>`) into `World of Warcraft/Interface/AddOns/`. The addon only loads your own class's data into memory; the other classes' sub-addons stay inactive even if installed.
+2. Copy **every** folder starting with `SimulateX` (`SimulateX`, `SimulateX_Origenes` and each `SimulateX_<Class>`) into `World of Warcraft/Interface/AddOns/`. The addon only loads your own class's data into memory; the other classes' sub-addons stay inactive even if installed.
 3. Make sure the addon is enabled in your character selection screen and launch the game.
 
 ## Credits and License
