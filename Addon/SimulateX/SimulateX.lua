@@ -1638,9 +1638,22 @@ SimulateX_RefreshIcons = RefreshOpenContainers  -- para el panel de opciones
     invalidan las comparaciones ya hechas).
 ------------------------------------------------------------------------]]
 
+-- v0.8: datos de clase repartidos en sub-addons LoadOnDemand
+-- (Addon/SimulateX_<Clase>/) para no cargar las 10 clases en cada personaje.
+local function LoadClassDataAddon()
+    local _, classFileName = UnitClass("player")
+    local gameClassName = CLASS_FILE_TO_GAME_CLASS[classFileName]
+    if not gameClassName then return end
+    local subAddon = "SimulateX_" .. gameClassName
+    if GetAddOnInfo(subAddon) then
+        LoadAddOn(subAddon)
+    end
+end
+
 local function OnEvent(self, event, ...)
     if event == "ADDON_LOADED" and ... == ADDON_NAME then
         SimulateX_DB = SimulateX_DB or {}
+        LoadClassDataAddon()
         GameTooltip:HookScript("OnTooltipSetItem", OnTooltipSetItem)
 
         if ContainerFrame_Update then

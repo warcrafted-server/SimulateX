@@ -1,7 +1,7 @@
 """Vuelca la estructura completa de los árboles de talentos (fila, columna,
 máximo de rango, prerrequisito, spellId por rango) a
-Addon/SimulateX/Data/SimulateX_ArbolTalentos_<Clase>.lua, para que la pestaña
-Talentos dibuje el árbol real en vez de una tabla de comparación.
+Addon/SimulateX_<Clase>/Data/SimulateX_ArbolTalentos_<Clase>.lua, para que la
+pestaña Talentos dibuje el árbol real en vez de una tabla de comparación.
 
 Fuente: Tools/talentos_referencia/talents_wotlk_335_esES.json (Talent.dbc/
 TalentTab.dbc reales del servidor). El icono de cada talento lo saca el
@@ -16,9 +16,9 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from generar_db_addon import SPEC_INFO, lua_value
 from validar_talentos import REFERENCE_PATH, CLASS_ID_TO_GAME_CLASS
+from rutas_addon import class_data_dir, ensure_class_addon_toc
 
 TOOLS_DIR = pathlib.Path(__file__).resolve().parent
-ADDON_DATA_DIR = TOOLS_DIR.parent / "Addon" / "SimulateX" / "Data"
 
 # game_class de wowsims (SPEC_INFO) -> class_id de Talent.dbc
 GAME_CLASS_TO_CLASS_ID = {v: k for k, v in CLASS_ID_TO_GAME_CLASS.items()}
@@ -93,7 +93,6 @@ def main() -> None:
     if args.clase:
         game_classes = {args.clase} if args.clase in game_classes else set()
 
-    ADDON_DATA_DIR.mkdir(parents=True, exist_ok=True)
     for game_class in sorted(game_classes):
         class_id = GAME_CLASS_TO_CLASS_ID.get(game_class)
         if class_id is None:
@@ -101,8 +100,11 @@ def main() -> None:
             continue
         tree = build_class_tree(reference, class_id)
         talent_count = sum(len(t["talents"]) for t in tree["trees"])
-        out_path = ADDON_DATA_DIR / f"SimulateX_ArbolTalentos_{game_class}.lua"
+        out_dir = class_data_dir(game_class)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_path = out_dir / f"SimulateX_ArbolTalentos_{game_class}.lua"
         out_path.write_text(render_class_lua(game_class, tree), encoding="utf-8")
+        ensure_class_addon_toc(game_class)
         print(f"{game_class}: {talent_count} talentos -> {out_path}")
 
 

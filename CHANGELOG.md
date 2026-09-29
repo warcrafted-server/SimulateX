@@ -4,6 +4,7 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 
 ## Sin publicar
 ### Añadido
+- Carga bajo demanda por clase (v0.8): los datos de simulación y talentos de cada clase viven ahora en un sub-addon aparte (`SimulateX_<Clase>`, `LoadOnDemand`), y SimulateX carga solo el de tu clase al iniciar sesión. Antes se cargaban las 10 clases en cualquier personaje.
 - Pestaña Talentos (v0.7, en marcha): dibuja los 3 árboles de tu clase con los iconos del juego a su tamaño real, las líneas de dependencia entre talentos y un marco dorado fino en los que tienen puntos, con su rango. El desplegable, a la derecha del título, elige qué distribución ya simulada se marca y muestra el DPS/HPS/amenaza de cada una, y la diferencia con la mejor cuando la hay. Es un desplegable, no pestañas, para que aguante muchas más opciones cuando llegue el Nivel 3.
 - `Tools/generar_arbol_talentos.py`: vuelca la estructura completa de los árboles (fila, columna, máximo de rango, prerrequisitos) desde las DBC reales del servidor, para las 10 clases.
 - `Tools/validar_talentos.py`: valida cualquier cadena de talentos contra `Tools/talentos_referencia/` (extracción real de Talent.dbc/TalentTab.dbc del servidor: máximos de rango, prerrequisitos y orden real fila/columna), antes de simular nada. Ninguna variante se construye a ojo.

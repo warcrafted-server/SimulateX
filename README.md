@@ -20,10 +20,15 @@ Este repositorio contiene exclusivamente el código fuente del Addon oficial par
 
 ```text
 Addon/
-├── SimulateX.toc        # Índice y configuración nativa del juego
-├── SimulateX.lua        # Lògica principal de la interfaz y tooltips
-├── SimulateX_DB.lua     # Base de datos local optimizada de rendimiento
-└── UI/                  # Diseños de interfaz, marcos y elementos visuales
+├── SimulateX/              # Addon principal: lógica, UI y datos comunes (todas las clases)
+│   ├── SimulateX.toc
+│   ├── SimulateX.lua
+│   ├── SimulateX_DB.lua
+│   ├── Data/                # Solo datos comunes (niveles, tipos y estadísticas de objeto)
+│   └── UI/
+└── SimulateX_<Clase>/       # Un sub-addon por clase (LoadOnDemand): datos de
+                              # simulación y talentos de esa clase. SimulateX
+                              # carga solo el de tu clase al iniciar sesión.
 ```
 
 *Nota: Todas las herramientas automatizadas de extracción de datos, motores de cálculo externos y scripts de sincronización se ejecutan de forma local y privada para mantener el repositorio limpio y enfocado exclusivamente en el rendimiento in-game.*
@@ -31,7 +36,7 @@ Addon/
 ## Instalación
 
 1. Descarga el contenido de la carpeta `Addon/`.
-2. Copia la carpeta interna `SimulateX` dentro del directorio de tu juego: `World of Warcraft/Interface/AddOns/`.
+2. Copia **todas** las carpetas que empiezan por `SimulateX` (`SimulateX` y cada `SimulateX_<Clase>`) dentro de `World of Warcraft/Interface/AddOns/`. El addon solo carga en memoria los datos de tu clase; los sub-addons de las demás clases se quedan inactivos aunque estén instalados.
 3. Asegúrate de tener los addons activos en la pantalla de selección de personaje e inicia el juego.
 
 ## Créditos y Licencia

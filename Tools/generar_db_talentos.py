@@ -1,7 +1,7 @@
 """Consolida Data/talentos/<spec>.json en
-Addon/SimulateX/Data/SimulateX_Talentos_<Clase>.lua (v0.7, Nivel 1/2): una
-tabla por clase, indexada por spec, con las variantes de talentos ya
-simuladas (UI/Talentos.lua las lee vía SimulateX_TalentDataVars).
+Addon/SimulateX_<Clase>/Data/SimulateX_Talentos_<Clase>.lua (v0.7, Nivel
+1/2): una tabla por clase, indexada por spec, con las variantes de talentos
+ya simuladas (UI/Talentos.lua las lee vía SimulateX_TalentDataVars).
 
 No junta specs sin datos: una spec sin Data/talentos/<spec>.json se omite.
 """
@@ -13,11 +13,11 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from generar_db_addon import SPEC_INFO, lua_value
+from rutas_addon import class_data_dir, ensure_class_addon_toc
 
 TOOLS_DIR = pathlib.Path(__file__).resolve().parent
 DATA_DIR = TOOLS_DIR.parent / "Data"
 TALENTOS_DIR = DATA_DIR / "talentos"
-ADDON_DATA_DIR = TOOLS_DIR.parent / "Addon" / "SimulateX" / "Data"
 
 # metric por rol, igual que ROLE_METRIC del addon (SimulateX.lua): una sola
 # cifra para comparar variantes, la misma que ya usa el tooltip/comparador.
@@ -102,10 +102,12 @@ def main() -> None:
         print("sin datos de talentos consolidados para ninguna clase pedida")
         return
 
-    ADDON_DATA_DIR.mkdir(parents=True, exist_ok=True)
     for game_class, specs in by_class.items():
-        out_path = ADDON_DATA_DIR / f"SimulateX_Talentos_{game_class}.lua"
+        out_dir = class_data_dir(game_class)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_path = out_dir / f"SimulateX_Talentos_{game_class}.lua"
         out_path.write_text(render_class_lua(game_class, specs), encoding="utf-8")
+        ensure_class_addon_toc(game_class)
         variant_count = sum(len(e["variants"]) for e in specs.values())
         print(f"{game_class}: {len(specs)} spec(s), {variant_count} variante(s) -> {out_path}")
 

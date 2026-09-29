@@ -1,4 +1,5 @@
-"""Consolida los datos de cada spec en Addon/SimulateX/Data/SimulateX_Data_<Clase>.lua
+"""Consolida los datos de cada spec en
+Addon/SimulateX_<Clase>/Data/SimulateX_Data_<Clase>.lua
 (paso 5 del plan datos-completos-v0.4): por cada build (spec + fase) con datos
 en Data/sims/<spec>/<build>.json, calcula sus pesos (TestGenStatWeights o
 epWeights preset, según la decisión 3), el nivel de objeto medio del gearset,
@@ -25,12 +26,12 @@ from simular_builds import (
 import collections
 from specs_metadata import SPEC_GO_PACKAGES
 from emparejar_builds import dominant_talent_tree
+from rutas_addon import class_data_dir, ensure_class_addon_toc
 
 TOOLS_DIR = pathlib.Path(__file__).resolve().parent
 DATA_DIR = TOOLS_DIR.parent / "Data"
 SIMS_DIR = DATA_DIR / "sims"
 BUILDS_DIR = TOOLS_DIR / "builds"
-ADDON_DATA_DIR = TOOLS_DIR.parent / "Addon" / "SimulateX" / "Data"
 
 ITEM_SLOT_MAIN_HAND = 14
 INVTYPE_2HWEAPON = 17
@@ -349,10 +350,12 @@ def main() -> None:
             print(f"*** AVISO: [{spec}] 0/{len(sim_files)} builds consolidados, la spec entera "
                   f"queda fuera de SimulateX_Data_{game_class}.lua ***")
 
-    ADDON_DATA_DIR.mkdir(parents=True, exist_ok=True)
     for class_name, entries in entries_by_class.items():
-        out_path = ADDON_DATA_DIR / f"SimulateX_Data_{class_name}.lua"
+        out_dir = class_data_dir(class_name)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_path = out_dir / f"SimulateX_Data_{class_name}.lua"
         out_path.write_text(render_class_lua(class_name, entries), encoding="utf-8")
+        ensure_class_addon_toc(class_name)
         print(f"-> {out_path} ({len(entries)} builds)")
 
 
