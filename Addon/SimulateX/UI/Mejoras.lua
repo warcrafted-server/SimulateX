@@ -33,6 +33,15 @@ end
 -- INVTYPE_WEAPONOFFHAND solo se lleva con doble empuñadura
 local DUAL_WIELD_CLASSES = { WARRIOR = true, ROGUE = true, HUNTER = true, DEATHKNIGHT = true, SHAMAN = true }
 
+-- Tipo de armadura principal (códigos de SimulateX_ItemTypes: 401 tela, 402
+-- cuero, 403 malla, 404 placas): { antes de 40, desde 40 }
+local MAIN_ARMOR = {
+    WARRIOR = { 403, 404 }, PALADIN = { 403, 404 }, DEATHKNIGHT = { 404, 404 },
+    HUNTER = { 402, 403 }, SHAMAN = { 402, 403 }, ROGUE = { 402, 402 }, DRUID = { 402, 402 },
+    PRIEST = { 401, 401 }, MAGE = { 401, 401 }, WARLOCK = { 401, 401 },
+}
+local ARMOR_TYPE_CODES = { [401] = true, [402] = true, [403] = true, [404] = true }
+
 local DIFFICULTY_TEXT = {
     N = "normal", H = "heroico",
     ["10"] = "10 jug.", ["25"] = "25 jug.", ["10H"] = "10 jug. heroico", ["25H"] = "25 jug. heroico",
@@ -342,7 +351,10 @@ local function StepJob(self)
         local link = "item:" .. candidate.id .. ":0:0:0:0:0:0:0"
         local _, equipLoc = SimulateX_API.GetItemBasics(link)
         local group = equipLoc and GROUP_OF_EQUIPLOC[equipLoc]
-        if group and (equipLoc ~= "INVTYPE_WEAPONOFFHAND" or job.dualWield) then
+        local typeCode = SimulateX_ItemTypes and SimulateX_ItemTypes[candidate.id]
+        local wrongArmor = job.mainArmor and equipLoc ~= "INVTYPE_CLOAK"
+            and ARMOR_TYPE_CODES[typeCode] and typeCode ~= job.mainArmor
+        if group and not wrongArmor and (equipLoc ~= "INVTYPE_WEAPONOFFHAND" or job.dualWield) then
             local evaluation = SimulateX_API.EvaluateForContext(job.context, link)
             if evaluation and evaluation.gain > 0 and not evaluation.isNoise then
                 job.results[group] = job.results[group] or {}
@@ -387,6 +399,10 @@ function StartJob()
         limit = SimulateX_DB.upgradesPerSlot or 3,
         dualWield = DUAL_WIELD_CLASSES[select(2, UnitClass("player"))],
     }
+    local armor = MAIN_ARMOR[select(2, UnitClass("player"))]
+    if armor and not SimulateX_DB.upgradesAnyArmor then
+        job.mainArmor = context.playerLevel >= 40 and armor[2] or armor[1]
+    end
     results = nil
     dirty = false
     Render()

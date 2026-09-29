@@ -322,6 +322,7 @@ function SimulateX_BuildOptions(parent, prefix, textWidth)
         { "upgradesNoProfessions", "Incluir objetos fabricados con profesiones", true },
         { "upgradesOnlyMyProfessions", "Solo los de mis profesiones", false },
         { "upgradesNoUnknownOrigin", "Incluir objetos simulados sin origen registrado (profesiones, subasta)", true },
+        { "upgradesAnyArmor", "Incluir armaduras que no son de tu tipo principal (p. ej. tela para un druida)", false },
         { "upgradesOtherFaction", "Incluir objetos y vendedores de la otra facción", false },
     }
     local previous = upgradesTabCheck
