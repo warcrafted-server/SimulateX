@@ -33,7 +33,8 @@ esperar feedback del usuario.
 ## En marcha en segundo plano (comprobar con pgrep)
 
 1. **Regeneración de datos v0.9** (`generar_db_addon.py --clase X`), orden
-   Hunter ✔, Paladin ✔, Priest (en curso 21:32), Shaman, Druid, Mage.
+   Hunter ✔, Paladin ✔, Priest ✔, Shaman ✔, Druid ✔, Mage (en curso ~22:30).
+   Driver: `regen_v09.sh` en el scratchpad de la sesión 743ad89d (log `regen_v09.log`).
    Al terminar cada clase: comprobar `caps/gems/bis` en el `.lua`, validar
    sintaxis y commit "Datos de <Clase> con topes, gemas ideales y BiS (v0.9)".
    Relanzar las que falten (una por una, con `nice -n 10`):
@@ -46,8 +47,8 @@ esperar feedback del usuario.
    Al terminar cada clase: `generar_db_addon.py --clase <Clase>` (regenera
    solo el test Go y se niega si la spec aún se simula) + commit de datos.
 3. **Talentos Nivel 3 de Feral** `Tools/talentos_nivel3.py --spec feral_druid`
-   (79 simulaciones, 1 mejora aceptada a las 21:40). Estado en
-   `Data/talentos_n3/feral_druid.json`. Relanzar (reanuda):
+   (1 mejora aceptada a las 21:40). Estado en `Data/talentos_n3/feral_druid.json`
+   (el log sale vacío por el búfer de Python: mirar `history`/`current` del JSON). Relanzar (reanuda):
    `cd Tools && nohup nice -n 19 bash -c 'source ~/.simx_env; python3 -u talentos_nivel3.py --spec feral_druid' > /tmp/n3_feral.log 2>&1 &`
    Al terminar escribe la variante `nivel3` en `Data/talentos/feral_druid.json`:
    entonces `python3 generar_db_talentos.py --clase Druid`, commit, y
@@ -61,14 +62,17 @@ esperar feedback del usuario.
    que vayan saliendo del lote). Tanques y sanadores fuera (ver diseño).
 3. Nivel 1/2 de talentos para las clases nuevas (Mago, Cazador...) si hace
    falta; el Nivel 3 lo cubre en la práctica para specs DPS.
-4. **v0.10 lista de la compra**: implementar según
-   `mejoras-v0.8/lista-compra-v0.10.DISEÑO.md` (proponer modelo antes).
-   Pregunta abierta al usuario: ¿solo jefes y cofres, o también drops de
-   criaturas normales?
-5. Documentación: `CLAUDE.md` roadmap (marcar v0.8 y v0.9 hechas; está en
+4. **v0.10 lista de la compra**: hecha en código (commits 958ecef y 7966ebd,
+   sin push). Orígenes: jefes (rank 3 o `instance_encounters`), criaturas de
+   instancia, raros del mundo, cofres con algo BoP, vendedores y misiones
+   (`Tools/generar_origenes.py`). Probada con lupa (arnés en el scratchpad de
+   la sesión cf6ce5f6, `test_mejoras.py <Clase> <nivel> <facción>`); falta
+   probarla en juego. Sin nombres de mazmorra: las DBC del cliente también
+   están en inglés.
+5. Documentación: `CLAUDE.md` roadmap (marcar v0.8, v0.9 y v0.10 hechas; está en
    `.gitignore`, no se commitea; editar con la skill `compact-docs-writer`,
    diff y aprobación del usuario) y lista de funciones de `README.md` /
-   `README.en.md` (no mencionan v0.8/v0.9).
+   `README.en.md` (no mencionan v0.8/v0.9; v0.10 ya está).
 6. Limitaciones conocidas (no bloquean): las gemas usan el peso del preset,
    así que con el golpe topado en el preset no se proponen gemas de golpe;
    los topes no cuentan golpe de talentos distintos de los del preset.
