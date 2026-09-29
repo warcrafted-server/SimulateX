@@ -39,12 +39,29 @@ local function CreateSectionTitle(parent, text)
     return title
 end
 
--- Monta los controles de configuración en parent. Los usan el panel de
--- Interfaz > AddOns y la pestaña Configuración del comparador: prefix separa
--- los nombres globales que piden las plantillas ($parentText...). Devuelve la
--- función que relee SimulateX_DB, a llamar cada vez que se muestre.
+-- Monta los controles de configuración en parent, dentro de un ScrollFrame
+-- (cada vez hay más secciones y no siempre caben en el panel de Interfaz >
+-- AddOns ni en la pestaña Configuración del comparador, de alto fijo). Lo
+-- usan ambos: prefix separa los nombres globales que piden las plantillas
+-- ($parentText...). Devuelve la función que relee SimulateX_DB, a llamar
+-- cada vez que se muestre.
 function SimulateX_BuildOptions(parent, prefix, textWidth)
     textWidth = textWidth or 380
+
+    local scrollFrame = CreateFrame("ScrollFrame", prefix .. "Scroll", parent, "UIPanelScrollFrameTemplate")
+    scrollFrame:SetPoint("TOPLEFT", 0, -34)  -- deja sitio arriba (p. ej. el botón "Abrir comparador")
+    scrollFrame:SetPoint("BOTTOMRIGHT", -26, 0)
+    scrollFrame:EnableMouseWheel(true)
+    scrollFrame:SetScript("OnMouseWheel", function(self, delta)
+        local bar = _G[self:GetName() .. "ScrollBar"]
+        bar:SetValue(bar:GetValue() - delta * 40)
+    end)
+
+    local content = CreateFrame("Frame", prefix .. "ScrollContent", scrollFrame)
+    content:SetWidth(textWidth + 40)
+    content:SetHeight(1)  -- se ajusta al final, según el último control
+    scrollFrame:SetScrollChild(content)
+    local parent = content  -- todo lo de abajo se ancla dentro del scroll
 
     local generalTitle = CreateSectionTitle(parent, "Tooltip y flechas")
     generalTitle:SetPoint("TOPLEFT", 16, -16)
@@ -102,6 +119,11 @@ function SimulateX_BuildOptions(parent, prefix, textWidth)
 
     local specCheckboxes = {}
 
+    -- número de filas de specs de la última RebuildSpecCheckboxes: lo que
+    -- va debajo (economyTitle) se reancla a esto en el refresh, porque
+    -- varía con la clase (1-8 specs).
+    local specRowCount = 0
+
     local function RebuildSpecCheckboxes()
         for _, checkbox in ipairs(specCheckboxes) do
             checkbox:Hide()
@@ -111,11 +133,15 @@ function SimulateX_BuildOptions(parent, prefix, textWidth)
         local dataVarName = SimulateX_ClassDataVars and SimulateX_ClassDataVars[classFileName]
         local classData = dataVarName and _G[dataVarName]
         if not classData then
+            specRowCount = 0
             return
         end
 
+        local labels = GetAllSpecLabelsForClass(classData)
+        specRowCount = math.ceil(#labels / 2)
+
         -- los checkbox se reciclan: los nombres globales no se pueden liberar
-        for index, specLabel in ipairs(GetAllSpecLabelsForClass(classData)) do
+        for index, specLabel in ipairs(labels) do
             local checkbox = specCheckboxes[index]
             if not checkbox then
                 checkbox = CreateCheck(parent, prefix .. "SpecCheck" .. index, "", 200)
@@ -138,12 +164,98 @@ function SimulateX_BuildOptions(parent, prefix, textWidth)
         end
     end
 
+    local economyTitle = CreateSectionTitle(parent, "Economía en el vendedor")
+    economyTitle:SetPoint("TOPLEFT", specsTitle, "BOTTOMLEFT", 6, -28)  -- reancla en refresh según specRowCount
+
+    local sellGreysCheck = CreateCheck(parent, prefix .. "SellGreysCheck",
+        "Vender objetos grises automáticamente al abrir un vendedor", textWidth)
+    sellGreysCheck:SetPoint("TOPLEFT", economyTitle, "BOTTOMLEFT", -2, -8)
+    sellGreysCheck:SetScript("OnClick", function(self)
+        SimulateX_DB.autoSellGreysEnabled = self:GetChecked() or nil
+    end)
+
+    local whitelistHint = parent:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+    whitelistHint:SetPoint("TOPLEFT", sellGreysCheck, "BOTTOMLEFT", 24, -4)
+    whitelistHint:SetPoint("RIGHT", parent, "RIGHT", -16, 0)
+    whitelistHint:SetJustifyH("LEFT")
+    whitelistHint:SetWordWrap(true)
+    whitelistHint:SetText("Ctrl+clic en un objeto gris de la bolsa lo protege (o lo vuelve a permitir): nunca se vende solo aunque sea gris.")
+
+    local repairTitle = CreateSectionTitle(parent, "Reparación automática")
+    repairTitle:SetPoint("TOPLEFT", whitelistHint, "BOTTOMLEFT", -22, -20)
+
+    local repairModes = {
+        { value = "off", label = "Desactivada" },
+        { value = "self", label = "Con mi dinero" },
+        { value = "guild", label = "Con el banco de hermandad (si puedo)" },
+    }
+    local repairRadios = {}
+    for index, mode in ipairs(repairModes) do
+        local radio = CreateFrame("CheckButton", prefix .. "RepairRadio" .. index, parent, "UIRadioButtonTemplate")
+        local label = _G[radio:GetName() .. "Text"]
+        label:SetText(mode.label)
+        label:SetWidth(textWidth - 20)
+        label:SetJustifyH("LEFT")
+        radio:SetPoint("TOPLEFT", repairTitle, "BOTTOMLEFT", -4, -8 - (index - 1) * 22)
+        radio:SetScript("OnClick", function()
+            SimulateX_DB.repairMode = mode.value
+            for _, other in ipairs(repairRadios) do
+                other:SetChecked(other == radio)
+            end
+        end)
+        repairRadios[index] = radio
+    end
+
+    local sellPriceTitle = CreateSectionTitle(parent, "Tooltip")
+    sellPriceTitle:SetPoint("TOPLEFT", repairTitle, "BOTTOMLEFT", 6, -8 - #repairModes * 22 - 16)
+
+    local sellPriceCheck = CreateCheck(parent, prefix .. "SellPriceCheck",
+        "Precio de venta al vendedor en el tooltip (útil si no tienes addon de subastas)", textWidth)
+    sellPriceCheck:SetPoint("TOPLEFT", sellPriceTitle, "BOTTOMLEFT", -2, -8)
+    sellPriceCheck:SetScript("OnClick", function(self)
+        SimulateX_DB.sellPriceTooltipDisabled = not self:GetChecked()
+    end)
+
+    local questRewardTitle = CreateSectionTitle(parent, "Recompensas de misión")
+    questRewardTitle:SetPoint("TOPLEFT", sellPriceCheck, "BOTTOMLEFT", 2, -16)
+
+    local questRewardCheck = CreateCheck(parent, prefix .. "QuestRewardCheck",
+        "Marcar la mejor recompensa para tu especialización (o, si ninguna mejora, la de más valor)", textWidth)
+    questRewardCheck:SetPoint("TOPLEFT", questRewardTitle, "BOTTOMLEFT", -2, -8)
+    questRewardCheck:SetScript("OnClick", function(self)
+        SimulateX_DB.questRewardHintDisabled = not self:GetChecked()
+    end)
+
+    -- El número de specs (y por tanto la altura de RebuildSpecCheckboxes)
+    -- solo se sabe tras rellenar los checkboxes, así que la altura del
+    -- contenido se recalcula aquí, no al construir.
+    local function UpdateContentHeight()
+        content:SetScript("OnUpdate", function(self)
+            self:SetScript("OnUpdate", nil)
+            local bottom = questRewardCheck:GetBottom()
+            local top = self:GetTop()
+            if bottom and top then
+                self:SetHeight(math.max(1, top - bottom + 20))
+            end
+        end)
+    end
+
     return function()
         lowLevelCheck:SetChecked(not SimulateX_DB.lowLevelEstimateDisabled)
         otherArrowCheck:SetChecked(not SimulateX_DB.otherSpecArrowDisabled)
         minimapCheck:SetChecked(not SimulateX_DB.minimapHidden)
         opacitySlider:SetValue(SimulateX_DB.comparadorOpacity or DEFAULT_OPACITY)
         RebuildSpecCheckboxes()
+        economyTitle:ClearAllPoints()
+        economyTitle:SetPoint("TOPLEFT", specsTitle, "BOTTOMLEFT", 6, -8 - specRowCount * 26 - 20)
+        sellGreysCheck:SetChecked(SimulateX_DB.autoSellGreysEnabled)
+        local currentRepairMode = SimulateX_DB.repairMode or "off"
+        for index, mode in ipairs(repairModes) do
+            repairRadios[index]:SetChecked(mode.value == currentRepairMode)
+        end
+        sellPriceCheck:SetChecked(not SimulateX_DB.sellPriceTooltipDisabled)
+        questRewardCheck:SetChecked(not SimulateX_DB.questRewardHintDisabled)
+        UpdateContentHeight()
     end
 end
 
