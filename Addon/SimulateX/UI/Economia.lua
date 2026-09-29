@@ -22,11 +22,17 @@ local function ToggleWhitelist(itemId)
     end
 end
 
+-- id desde el link: GetContainerItemLink sí existe en 3.3.5a, GetContainerItemID no consta
+local function GetBagItemId(bagId, slot)
+    local link = GetContainerItemLink(bagId, slot)
+    return link and tonumber(link:match("item:(%d+)"))
+end
+
 local function HandleBagItemClick(self, button)
     if button ~= "LeftButton" or not IsControlKeyDown() then
         return
     end
-    local itemId = self.simulateXBagId and GetContainerItemID(self.simulateXBagId, self:GetID())
+    local itemId = self.simulateXBagId and GetBagItemId(self.simulateXBagId, self:GetID())
     if itemId then
         ToggleWhitelist(itemId)
     end
@@ -45,7 +51,7 @@ local function SellGreyItems()
     local totalCopper, totalCount = 0, 0
     for bagId = 0, NUM_BAG_SLOTS do
         for slot = 1, (GetContainerNumSlots(bagId) or 0) do
-            local itemId = GetContainerItemID and GetContainerItemID(bagId, slot)
+            local itemId = GetBagItemId(bagId, slot)
             if itemId and not whitelist[itemId] then
                 local _, _, quality, _, _, _, _, _, _, _, sellPrice = GetItemInfo(itemId)
                 if quality == 0 then
