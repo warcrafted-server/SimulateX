@@ -54,7 +54,18 @@ esperar feedback del usuario.
    entonces `python3 generar_db_talentos.py --clase Druid`, commit, y
    anotar el resultado en `Tools/NOTAS_TALENTOS_NIVEL2.md`.
 
-## Pendiente, en orden
+## Estado a 30-09 03:55 (antes del reinicio de las 04:00)
+
+- Regeneración v0.9 terminada y con commit en todas las clases con datos
+  (Hunter, Paladin, Priest, Shaman, Druid, Mage). Nivel 3 de Feral hecho.
+- Lote: warlock simulado a las 03:51, **falta consolidarlo**
+  (`generar_db_addon.py --clase Warlock` + commit). El reinicio corta el lote:
+  relanzarlo (comando de arriba), sigue con rogue, warrior, protection_warrior,
+  deathknight, tank_deathknight.
+- v0.11: hechas las fases A (profesiones), B, C, F, G del plan
+  `.agents/plans/mejoras-v0.11/`; quedan D (reliquias) y E (sufijos) con Opus
+  medio, y H (documentación) con Sonnet. Push hecho hasta 8836877.
+
 
 1. Terminar 1-3 de arriba (commits por clase).
 2. Nivel 3 de `balance_druid`, luego cada spec DPS con datos (hunter, mage,
