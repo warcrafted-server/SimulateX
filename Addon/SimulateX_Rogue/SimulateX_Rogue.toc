@@ -6,4 +6,5 @@
 ## Dependencies: SimulateX
 ## LoadOnDemand: 1
 
+Data\SimulateX_Data_Rogue.lua
 Data\SimulateX_ArbolTalentos_Rogue.lua
