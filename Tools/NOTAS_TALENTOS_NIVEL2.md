@@ -150,3 +150,5 @@ ninguna de las 3 specs.
   `5102223115331303213305311031--205003012` (14190,1 DPS): 3 rondas, 2 mejoras
   aceptadas a 5000 iteraciones. Resultado
   `5102233105331303213315301031--205003012` (14480,0 DPS, +2,04 %).
+
+- **Cazador (hunter)**, build de partida `502-025335101030013233135031051-5000032` (14547,6 DPS): 4 rondas, 3 mejoras en 5000 iteraciones. Resultado `502-035305101230013233035031151-5000032` (14748,9 DPS, +1,38 %).
