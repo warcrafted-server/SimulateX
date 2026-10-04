@@ -1,4 +1,45 @@
 SimulateX_Talentos_Druid = {
+  ["balance_druid"] = {
+    specLabel = "Equilibrio",
+    metric = "dps",
+    referenceBuild = "p4_alliance_p3",
+    variants = {
+      {
+        label = "nivel3",
+        talents = "5102233105331303213315301031--205003012",
+        dps = 14480.0,
+        hps = 0,
+        tps = 14203.7,
+        dtps = 0,
+      },
+    },
+    glyphs = {
+      major = {
+        {
+          id = 40916,
+          name = "Glifo de Fuego estelar",
+          icon = "INV_Glyph_MajorDruid",
+        },
+        {
+          id = 40919,
+          name = "Glifo de Enjambre de insectos",
+          icon = "INV_Glyph_MajorDruid",
+        },
+        {
+          id = 40921,
+          name = "Glifo de Lluvia de estrellas",
+          icon = "INV_Glyph_MajorDruid",
+        },
+      },
+      minor = {
+        {
+          id = 44922,
+          name = "Glifo de Tifón",
+          icon = "INV_Glyph_MinorDruid",
+        },
+      },
+    },
+  },
   ["feral_druid"] = {
     specLabel = "Feral",
     metric = "dps",

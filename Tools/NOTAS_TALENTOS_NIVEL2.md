@@ -146,3 +146,7 @@ ninguna de las 3 specs.
   `-543202132322010053120030310511-203503012` (16084,4 DPS) →
   `-553202132322010053110030310511-203503012` (16115,0 DPS, +0,19 %). En la
   ronda 2 ninguno de los 422 vecinos mejora: es un óptimo local.
+- **Equilibrio (balance_druid)**, build de partida
+  `5102223115331303213305311031--205003012` (14190,1 DPS): 3 rondas, 2 mejoras
+  aceptadas a 5000 iteraciones. Resultado
+  `5102233105331303213315301031--205003012` (14480,0 DPS, +2,04 %).
