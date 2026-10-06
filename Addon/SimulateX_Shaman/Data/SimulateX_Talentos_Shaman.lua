@@ -33,4 +33,38 @@ SimulateX_Talentos_Shaman = {
       },
     },
   },
+  ["enhancement_shaman"] = {
+    specLabel = "Mejora",
+    metric = "dps",
+    referenceBuild = "p4_ft",
+    variants = {
+      {
+        label = "nivel3",
+        talents = "053032052-10505033005001333031131031051-",
+        dps = 13018.5,
+        hps = 0,
+        tps = 8195.8,
+        dtps = 0,
+      },
+    },
+    glyphs = {
+      major = {
+        {
+          id = 41530,
+          name = "Glifo de Nova de Fuego",
+          icon = "INV_Glyph_MajorShaman",
+        },
+        {
+          id = 41532,
+          name = "Glifo de Arma Lengua de Fuego",
+          icon = "INV_Glyph_MajorShaman",
+        },
+        {
+          id = 45771,
+          name = "Glifo de Espíritu feral",
+          icon = "INV_Glyph_MajorShaman",
+        },
+      },
+    },
+  },
 }
