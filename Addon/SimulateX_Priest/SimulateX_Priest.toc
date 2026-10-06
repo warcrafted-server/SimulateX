@@ -7,4 +7,5 @@
 ## LoadOnDemand: 1
 
 Data\SimulateX_Data_Priest.lua
+Data\SimulateX_Talentos_Priest.lua
 Data\SimulateX_ArbolTalentos_Priest.lua
