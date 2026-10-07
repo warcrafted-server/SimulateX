@@ -3,10 +3,10 @@ transcribir a mano, qué estadísticas pesar (epStats/epPseudoStats) y contra
 cuál referencia (epReferenceStat) usa cada spec para calcular EP — necesario
 para generar TestGenStatWeights (paso 3 del plan datos-completos-v0.4).
 
-Specs de la decisión 3 del plan (sanador sin rotación en wowsims:
-restoration_druid, holy_paladin, y restoration_shaman si aplica) no se
-simulan: se usa directamente epWeights, el preset de EP por defecto que trae
-la propia spec en sim.ts (weightsKind = "preset" en el addon).
+Specs de la decisión 3 del plan que carecen de rotación de sanación
+(restoration_druid y holy_paladin) usan el epWeights de su preset. El chamán
+Restauración tiene APL, pero también conserva el preset porque sus pesos HPS no
+son fiables.
 """
 
 import pathlib
@@ -20,7 +20,11 @@ UI_DIR = WOWSIMS_SRC / "ui"
 # da 0 HPS en la simulación real (comprobado: 0 de 302 deltas ≠ 0 para
 # restoration_druid). No se simulan: se usa epWeights (preset) siempre, aunque
 # epStats exista.
-SPECS_SIN_ROTACION = {"restoration_druid", "holy_paladin", "restoration_shaman"}
+SPECS_SIN_ROTACION = {"restoration_druid", "holy_paladin"}
+
+# El chamán Restauración ya produce HPS con su APL propio, pero sus pesos HPS
+# simulados tienen mucho ruido y celeridad negativa; se conserva epWeights.
+SPECS_PESOS_NO_FIABLES = {"restoration_shaman"}
 
 EP_STATS_RE = re.compile(r"epStats:\s*\[(.*?)\]", re.DOTALL)
 EP_PSEUDO_STATS_RE = re.compile(r"epPseudoStats:\s*\[(.*?)\]", re.DOTALL)
@@ -35,12 +39,12 @@ def extract_ep_config(spec: str) -> dict:
     """Devuelve {stats_to_weigh, pseudo_stats_to_weigh, ep_reference_stat} (los
     nombres de constante Go tal como aparecen en el enum del proto, sin el
     prefijo Stat_/PseudoStat_) leídos de epStats/epPseudoStats/epReferenceStat,
-    o {epWeights: {nombre_stat: peso}} si la spec no tiene epStats propio
-    (decisión 3: sanadores sin rotación en wowsims, solo preset)."""
+    o {epWeights: {nombre_stat: peso}} si la spec debe conservar sus pesos
+    preset por no tener APL simulado o por falta de fiabilidad en HPS."""
     sim_ts_path = UI_DIR / spec / "sim.ts"
     text = sim_ts_path.read_text(encoding="utf-8")
 
-    ep_stats_match = None if spec in SPECS_SIN_ROTACION else EP_STATS_RE.search(text)
+    ep_stats_match = None if spec in (SPECS_SIN_ROTACION | SPECS_PESOS_NO_FIABLES) else EP_STATS_RE.search(text)
     if ep_stats_match:
         stats_to_weigh = STAT_ENTRY_RE.findall(ep_stats_match.group(1))
         pseudo_match = EP_PSEUDO_STATS_RE.search(text)

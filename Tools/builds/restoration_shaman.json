@@ -37,7 +37,14 @@
       "faction": null
     }
   ],
-  "apl_presets": [],
+  "apl_presets": [
+    {
+      "const_name": "ROTATION_PRESET_RESTORATION",
+      "label": "Restauración",
+      "apl_file": "restoration_shaman",
+      "talent_trees": []
+    }
+  ],
   "talent_sets": [
     {
       "const_name": "TankHealingTalents",

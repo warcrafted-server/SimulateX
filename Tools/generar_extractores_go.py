@@ -81,6 +81,7 @@ PACKAGE_LINE_RE = re.compile(r"^package \w+\n")
 
 GEARSET_FIELD_RE = re.compile(r"GearSet:\s*core\.GetGearSet\(([^,]+),\s*([^)]+)\)")
 ROTATION_FIELD_RE = re.compile(r"Rotation:\s*core\.GetAplRotation\(([^,]+),\s*([^)]+)\)")
+DEFAULT_ROTATION_FIELD_RE = re.compile(r"Rotation:\s*core\.RotationCombo\{[^}]*\}")
 TALENTS_FIELD_RE = re.compile(r"Talents:\s*(\w+),")
 
 
@@ -91,16 +92,20 @@ def extract_first_config_block(test_source: str) -> str:
     return match.group(1)
 
 
-def parameterize_config_block(config_block: str) -> str:
+def parameterize_config_block(config_block: str, spec: str) -> str:
     """Sustituye los literales de gear/rotación/talentos del preset por
     defecto por variables que se leen de argumentos de línea de comandos, para
     poder generar cada build de la matriz sin recompilar el binario por build."""
     config_block = GEARSET_FIELD_RE.sub(
         "GearSet: core.GetGearSet(gearDir, gearFile)", config_block, count=1
     )
-    config_block = ROTATION_FIELD_RE.sub(
+    config_block, rotation_count = ROTATION_FIELD_RE.subn(
         "Rotation: core.GetAplRotation(aplDir, aplFile)", config_block, count=1
     )
+    if not rotation_count and spec == "restoration_shaman":
+        config_block = DEFAULT_ROTATION_FIELD_RE.sub(
+            "Rotation: core.GetAplRotation(aplDir, aplFile)", config_block, count=1
+        )
     config_block = TALENTS_FIELD_RE.sub("Talents: talentsOverride,", config_block, count=1)
     return config_block
 
@@ -109,12 +114,14 @@ PACKAGE_NAME_RE = re.compile(r"^package (\w+)\n")
 
 
 def generate_main_go(spec: str, test_source: str, rel_ui_prefix: str) -> str:
-    config_block = parameterize_config_block(extract_first_config_block(test_source))
+    config_block = parameterize_config_block(extract_first_config_block(test_source), spec)
     package_match = PACKAGE_NAME_RE.search(test_source)
     package_name = package_match.group(1) if package_match else "main"
 
     import_match = IMPORT_BLOCK_RE.search(test_source)
     imports = import_match.group(1) if import_match else ""
+    # El test del chamán Restauración no marca IsHealer aunque necesita el muñeco de sanación.
+    healer_condition = "config.IsHealer || config.Class == proto.Class_ClassShaman" if spec == "restoration_shaman" else "config.IsHealer"
 
     # Se genera como fichero _test.go del MISMO paquete (no un binario `main`
     # aparte): así los identificadores del preset (consumibles, opciones de
@@ -190,7 +197,7 @@ func TestGenExtractor(t *testing.T) {{
 \tif config.IsTank {{
 \t\tdefaultRaid.Tanks = append(defaultRaid.Tanks, &proto.UnitReference{{Type: proto.UnitReference_Player, Index: 0}})
 \t}}
-\tif config.IsHealer {{
+\tif {healer_condition} {{
 \t\tdefaultRaid.TargetDummies = 1
 \t}}
 
@@ -224,7 +231,7 @@ def generate_stat_weights_go(spec: str, test_source: str, ep_config: dict) -> st
     volcando el resultado (pesos brutos, no EP) a JSON. stats_to_weigh/
     pseudo_stats_to_weigh/ep_reference_stat vienen de ep_config (parseados de
     ui/<spec>/sim.ts por extraer_ep_stats.py, no transcritos a mano)."""
-    config_block = parameterize_config_block(extract_first_config_block(test_source))
+    config_block = parameterize_config_block(extract_first_config_block(test_source), spec)
     package_match = PACKAGE_NAME_RE.search(test_source)
     package_name = package_match.group(1) if package_match else "main"
 

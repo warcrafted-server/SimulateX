@@ -76,6 +76,21 @@ def load_json(path: pathlib.Path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def load_apl_file(spec: str, apl_file: str | None) -> None:
+    """Copia los APL propios versionados al ui/<spec>/apls que lee wowsims."""
+    if not apl_file:
+        return
+
+    source = TOOLS_DIR / "apls_propios" / f"{spec}.apl.json"
+    if apl_file != spec or not source.exists():
+        return
+
+    target = WOWSIMS_SRC / "ui" / spec / "apls" / f"{apl_file}.apl.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if not target.exists() or target.read_bytes() != source.read_bytes():
+        target.write_bytes(source.read_bytes())
+
+
 def build_env(spec: str, gear_file: str, apl_file: str, apl_subdir: str, talents_string: str,
               out_file: pathlib.Path, iterations: int = 300):
     prefix = ui_relative_prefix(spec)
@@ -88,6 +103,7 @@ def build_env(spec: str, gear_file: str, apl_file: str, apl_subdir: str, talents
         "SIMX_ITERATIONS": str(iterations),
     }
     if apl_file:
+        load_apl_file(spec, apl_file)
         env["SIMX_APL_DIR"] = f"{ui_spec_dir}/apls"
         env["SIMX_APL_FILE"] = apl_file
     else:
@@ -357,6 +373,7 @@ def simulate_build(spec: str, build: dict, talents_string: str, work_dir: pathli
 
     return {
         "build_id": build_id,
+        "apl": build.get("apl"),
         "status": "ok",
         "base_dps": round(base_metrics["dps"], 1),
         "base_hps": round(base_metrics["hps"], 1),
@@ -439,7 +456,9 @@ def main() -> None:
                 if not args.force and out_path.exists():
                     existing = load_json(out_path)
                     # sin "iterations": resultados de antes de guardarlo, todos a 300
-                    if existing.get("status") == "ok" and existing.get("iterations", 300) >= args.iterations:
+                    if (existing.get("status") == "ok"
+                            and ("apl" not in existing or existing.get("apl") == build.get("apl"))
+                            and existing.get("iterations", 300) >= args.iterations):
                         print(f"[{spec}/{build_id}] ya simulado, se salta (--force para repetir)")
                         continue
 
