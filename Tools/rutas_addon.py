@@ -6,7 +6,7 @@ import pathlib
 
 TOOLS_DIR = pathlib.Path(__file__).resolve().parent
 ADDON_ROOT = TOOLS_DIR.parent / "Addon"
-VERSION = "0.12.0"
+VERSION = "0.13.0"
 
 _TOC_TEMPLATE = """## Interface: 30300
 ## Title: SimulateX (datos de {class_name})

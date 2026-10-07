@@ -1,6 +1,6 @@
 # TODO de SimulateX
 
-Estado tras la auditoría del 2026-10-07 (versión 0.12.0). Lo marcado «hecho» se quita de aquí al cerrarlo.
+Estado tras la auditoría del 2026-10-07 (versión 0.13.0). Lo marcado «hecho» se quita de aquí al cerrarlo.
 
 ## Pendiente confirmado (camino a la 1.0)
 
@@ -18,18 +18,17 @@ Estado tras la auditoría del 2026-10-07 (versión 0.12.0). Lo marcado «hecho»
 - [ ] **Fórmula de nivel bajo** para 19 specs y relanzar simulaciones pendientes (ver el mismo plan).
 - [ ] **Tres «Pendiente» en `Tools/NOTAS_TALENTOS_NIVEL2.md`** (líneas ~93, 102, 106): revisar si siguen vigentes.
 - [ ] `Addon/SimulateX/Media/SimulateX.tga`: comprobar que se usa.
+- [ ] Encantamientos: no se indica la reputación o el pergamino necesarios (cabeza y hombros); solo se valoran niveles 80; sin estadísticas no se puntúan.
 
 ## Mejoras propuestas (pendientes de estudio y confirmación)
 
 Ninguna se empieza sin confirmación. Por orden de valor estimado, no medido.
 
-1. **Encantamientos y gemas recomendados por hueco** en la lista de la compra y en el tooltip: qué encantamiento falta en cada pieza equipada y cuánto aporta a la spec. Encaja con el objetivo de «guía de mejoras». Requiere simular o derivar el valor de cada encantamiento con los mismos pesos EP.
-2. **Simulación real de HPS para sanadores** (hoy pesos del preset): wowsims los soporta en parte; habría que estudiar qué specs son viables.
-3. **Nivel 3 también para tanques** con una métrica que no sacrifique la supervivencia (amenaza con límite de mitigación). Hoy excluidos a propósito.
-4. **Recetas ya aprendidas** (hoy «fuera de alcance»): marcar en Mejoras las profesiones que el jugador ya sabe fabricar. Necesita leer la lista de recetas con la API 3.3.5a.
-5. **Importar/exportar configuración** y perfiles por personaje.
-6. **Aviso de objetos mejores en la bolsa** al abrirla (resumen: «tienes 2 mejoras sin equipar»).
-7. **Comparador contra el equipo de otro jugador/bot** (hoy «inspección de bots» fuera de alcance): valorar si compensa.
-8. **Pruebas automáticas** (CI local): ejecutar `probar_mejoras_lupa.py` para las 10 clases y validar sintaxis Lua en cada commit.
-9. **Localización a otros idiomas** de la interfaz del addon (hoy solo esES).
-10. **Revisar los porcentajes inflados a nivel bajo** (hueco vacío = comparación contra nada): mostrar «hueco libre» en lugar de un % enorme.
+1. **Simulación real de HPS para sanadores** (hoy pesos del preset): wowsims los soporta en parte; habría que estudiar qué specs son viables.
+2. **Nivel 3 también para tanques** con una métrica que no sacrifique la supervivencia (amenaza con límite de mitigación). Hoy excluidos a propósito.
+3. **Recetas ya aprendidas** (hoy «fuera de alcance»): marcar en Mejoras las profesiones que el jugador ya sabe fabricar. Necesita leer la lista de recetas con la API 3.3.5a.
+4. **Importar/exportar configuración** y perfiles por personaje.
+5. **Aviso de objetos mejores en la bolsa** al abrirla (resumen: «tienes 2 mejoras sin equipar»).
+6. **Comparador contra el equipo de otro jugador/bot** (hoy «inspección de bots» fuera de alcance): valorar si compensa.
+7. **Localización a otros idiomas** de la interfaz del addon (hoy solo esES).
+8. **Revisar los porcentajes inflados a nivel bajo** (hueco vacío = comparación contra nada): mostrar «hueco libre» en lugar de un % enorme.

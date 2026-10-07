@@ -2,9 +2,10 @@
 
 Todos los cambios notables de este proyecto serán documentados en este archivo.
 
-## [Sin publicar]
+## [0.13.0] - 2026-10-07
 ### Añadido
-- Mejoras recomienda encantamientos por hueco para la especialización activa, solo a nivel 80 y solo cuando conoce el valor del encantamiento equipado. Los encantamientos de efecto sin estadísticas no se puntúan; se puede desactivar con la casilla «Recomendar encantamientos» del panel.
+- Mejoras recomienda encantamientos por hueco para la especialización activa, solo a nivel 80 y solo cuando conoce el valor del encantamiento equipado. Los datos salen de la base de datos de wowsims y se comprueban contra las DBC del servidor (`Tools/generar_encantamientos.py`); los encantamientos de efecto o proc sin estadísticas no se puntúan, no se propone nada si el encantamiento actual no se conoce, las profesiones solo cuentan si el jugador las tiene y no se indica la reputación que puedan exigir algunos (arcanos de cabeza y hombros). Se puede desactivar con la casilla «Recomendar encantamientos» del panel.
+- `Tools/probar_todo.sh`: ejecuta todas las pruebas con lupa y valida la sintaxis de los .lua.
 
 ## [0.12.0] - 2026-10-07
 ### Añadido
