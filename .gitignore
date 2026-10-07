@@ -46,3 +46,5 @@ __pycache__/
 # Documentos de referencia pegados a mano (builds de talentos, capturas...),
 # no para publicar tal cual.
 /Tools/talentos_referencia/
+agentrelay.config.json
+.agentrelay/
