@@ -152,3 +152,15 @@ ninguna de las 3 specs.
   `5102233105331303213315301031--205003012` (14480,0 DPS, +2,04 %).
 
 - **Cazador (hunter)**, build de partida `502-025335101030013233135031051-5000032` (14547,6 DPS): 4 rondas, 3 mejoras en 5000 iteraciones. Resultado `502-035305101230013233035031151-5000032` (14748,9 DPS, +1,38 %).
+- **Elemental (elemental_shaman)**, build p4_default: ninguna mejora
+  aceptada. Build de partida `0533001523213351322301351-005050031`
+  (13037,0 DPS): óptimo local, sin cambios.
+- **Mago (mage)**, build p4_arcane_alliance: ninguna mejora aceptada. Build
+  de partida `23000513310033015032310250532-03-023303001` (14527,6 DPS):
+  óptimo local, sin cambios.
+- **Paladín Represalias (retribution_paladin)**, build p5_default: ninguna
+  mejora aceptada. Build de partida `050501-05-05232051203331302133231331`
+  (14824,3 DPS): óptimo local, sin cambios.
+- **Caballero de la Muerte (deathknight)**, build p4_blood: ninguna mejora
+  aceptada. Build de partida `2305120530003303231023001351--2302003050032`
+  (14979,8 DPS): óptimo local, sin cambios.
