@@ -12,7 +12,24 @@ The project is designed to completely transform how players evaluate their gear,
 *   **Tooltip Upgrade Indicators:** Instantly see the actual performance delta when hovering over any piece of gear (e.g., `Feral (tu spec) +3.2 %`), with one line per specialization of your class.
 *   **Visual Gear Comparator:** Put two items (drag them in or Shift-click) and compare them against each other, or against what you're wearing, with a breakdown of which stat makes the difference. Each item shows its stats, level, type and requirements; rings and trinkets are compared against both of the ones you're wearing, and it tells you which one to swap. The same window has a Settings tab. Available via `/simulatex comparar`, a button on the character sheet, the minimap, or the **wcdpanel** bar.
 *   **Shopping List (Upgrades tab):** For each slot, the best upgrades for your spec and where to get them: boss and difficulty, chest, dungeon creatures, world rares, vendor (with its cost in gold, emblems or honor) or quest, with the drop chance. It also works while levelling and for items you've never seen. Filters in the settings: upgrades per slot, heroic modes, 25-player raids, vendors, quests, faction and minimum drop chance.
+*   **Talents and Glyphs:** The Talents tab shows all three trees, simulated variants and their results, including Level 3, alongside the major and minor glyphs for each build.
+*   **More Accurate Scoring:** At level 80, hit, expertise and armor penetration stop contributing past their caps. Ideal gems and socket bonuses are included, and tooltips identify items that are BiS for a phase.
+*   **Set Bonuses:** A notice shows when a gear change activates or removes a set bonus.
+*   **More Upgrade Details:** Sources include their zone or instance; professions and reward bags are also shown. The list filters by armor type.
+*   **Vendor:** Grey items can be sold automatically using a whitelist, repairs can be automatic, and tooltips can show the sale price. Each option can be configured.
+*   **Settings:** The options panel scrolls to make all settings accessible, and the gear comparator includes a Settings tab.
 *   **Modern UI Aesthetics:** A smooth and responsive user interface, moving away from the clunky and outdated look of classic addons.
+
+## Commands
+
+*   `/simulatex`: restore automatic build detection.
+*   `/simulatex comparar`: open or close the gear comparator.
+*   `/simulatex debug [link]`: show debug details for the linked item; without a link, it asks you to paste one.
+*   `/simulatex nivel <n>`: force a level for the current session; without a valid number, disable the forced level.
+*   `/simulatex <build>`: force the specified build; `/simulatex` with no arguments restores automatic detection.
+*   `/simulatexconfig`: open the SimulateX options.
+
+Project: [portal.warcrafted.com](https://portal.warcrafted.com/).
 
 ## Repository Structure
 
