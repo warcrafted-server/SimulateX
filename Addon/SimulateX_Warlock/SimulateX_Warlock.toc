@@ -7,4 +7,5 @@
 ## LoadOnDemand: 1
 
 Data\SimulateX_Data_Warlock.lua
+Data\SimulateX_Talentos_Warlock.lua
 Data\SimulateX_ArbolTalentos_Warlock.lua
