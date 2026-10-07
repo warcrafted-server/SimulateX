@@ -673,7 +673,7 @@ local function FillItemRow(row, entry, level)
     end
     row.name:SetText(color.hex .. name .. "|r")
 
-    row.percent:SetText(string.format("%+.1f %%", entry.evaluation.percent))
+    row.percent:SetText(SimulateX_API.FormatPercent(entry.evaluation))
     row.percent:SetTextColor(0.2, 1, 0.2)
 
     local texts = {}

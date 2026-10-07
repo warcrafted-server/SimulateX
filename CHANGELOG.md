@@ -6,6 +6,9 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 ### Añadido
 - `/simulatex bolsas` lista los objetos de las bolsas que mejoran el equipo para la especialización activa; al iniciar sesión puede avisar una vez si hay mejoras, con una opción para desactivarlo.
 
+### Corregido
+- Al comparar un objeto con un hueco de equipo vacío, los porcentajes superiores al 100 % ahora dicen «hueco libre»; los porcentajes menores conservan su valor e indican que el hueco está libre.
+
 ## [0.13.0] - 2026-10-07
 ### Añadido
 - Mejoras recomienda encantamientos por hueco para la especialización activa, solo a nivel 80 y solo cuando conoce el valor del encantamiento equipado. Los datos salen de la base de datos de wowsims y se comprueban contra las DBC del servidor (`Tools/generar_encantamientos.py`); los encantamientos de efecto o proc sin estadísticas no se puntúan, no se propone nada si el encantamiento actual no se conoce, las profesiones solo cuentan si el jugador las tiene y no se indica la reputación que puedan exigir algunos (arcanos de cabeza y hombros). Se puede desactivar con la casilla «Recomendar encantamientos» del panel.

@@ -1006,8 +1006,9 @@ local function ComparePair(candLink, candId, equippedLink, equippedId, build, we
     end
 
     removed = removed or LinkList(equippedLink)
-    return gain + Adjustment(build, metricName, candLink, isExact, removed, simSlots)
+    local adjustedGain = gain + Adjustment(build, metricName, candLink, isExact, removed, simSlots)
         - Adjustment(build, metricName, equippedLink, isExact, removed, simSlots)
+    return adjustedGain, equippedLink == nil and #removed == 0
 end
 
 -- Puntuación de un solo objeto (slot vacío, o suma de dos slots ya
@@ -1062,23 +1063,28 @@ local function CompareAgainstEquipped(itemLink, itemId, equipLoc, build, weights
         end
 
         local ohLink, ohId = GetEquippedItemId("SecondaryHandSlot")
-        local gainMh = ComparePair(itemLink, itemId, mhLink, mhId, build, weights, metricName, "mainHand", { 14 })
+        local gainMh, emptyMh = ComparePair(itemLink, itemId, mhLink, mhId, build, weights, metricName, "mainHand", { 14 })
 
         -- Mano izquierda: si hay dato exacto de dpsOH para AMBOS lados se usa
         -- (decisión 5), si no EP (que no distingue de mano, mismo score).
         local candOhExact = itemId and GetExactDelta(build, itemId, metricName, "oh")
         local equippedOhExact = ohId and GetExactDelta(build, ohId, metricName, "oh")
         local gainOh
+        local emptyOh = ohLink == nil
         if candOhExact and equippedOhExact then
             local removed = LinkList(ohLink)
             gainOh = candOhExact - equippedOhExact
                 + Adjustment(build, metricName, itemLink, true, removed, { 15 })
                 - Adjustment(build, metricName, ohLink, true, removed, { 15 })
         else
-            gainOh = ComparePair(itemLink, itemId, ohLink, ohId, build, weights, metricName, "offHand", { 15 })
+            gainOh, emptyOh = ComparePair(itemLink, itemId, ohLink, ohId, build, weights, metricName, "offHand", { 15 })
         end
 
-        return math.max(gainMh, gainOh)
+        local selectedEmpty = emptyMh
+        if gainOh > gainMh then
+            selectedEmpty = emptyOh
+        end
+        return math.max(gainMh, gainOh), selectedEmpty
     end
 
     -- Mano izquierda con una 2M puesta: para llevarla hay que quitarse la 2M,
@@ -1097,7 +1103,7 @@ local function CompareAgainstEquipped(itemLink, itemId, equipLoc, build, weights
             end
             local removed = LinkList(mhLink)
             return gain + Adjustment(build, metricName, itemLink, isExact, removed, { 15 })
-                - Adjustment(build, metricName, mhLink, isExact, removed, { 14 })
+                - Adjustment(build, metricName, mhLink, isExact, removed, { 14 }), false
         end
     end
 
@@ -1127,13 +1133,14 @@ local function CompareAgainstEquipped(itemLink, itemId, equipLoc, build, weights
             local removed = LinkList(equippedLink, ohLink)
             return gain + Adjustment(build, metricName, itemLink, isExact, removed, { 14 })
                 - Adjustment(build, metricName, equippedLink, isExact, removed, { 14 })
-                - Adjustment(build, metricName, ohLink, isExact, removed, { 15 })
+                - Adjustment(build, metricName, ohLink, isExact, removed, { 15 }),
+                not equippedLink and not ohLink and #removed == 0
         end
 
         local hand = SLOT_TO_HAND[slotName]
         local simSlots = { SLOT_SIM_INDEX[slotName] }
         if not equippedLink then
-            return GetScoreAdjusted(itemLink, itemId, build, weights, metricName, hand, simSlots)  -- slot vacío: puntuación completa
+            return GetScoreAdjusted(itemLink, itemId, build, weights, metricName, hand, simSlots), true  -- slot vacío: puntuación completa
         end
         return ComparePair(itemLink, itemId, equippedLink, equippedId, build, weights, metricName, hand, simSlots)
     end
@@ -1145,7 +1152,7 @@ local function CompareAgainstEquipped(itemLink, itemId, equipLoc, build, weights
     for _, slotName in ipairs(slots) do
         local equippedLink, equippedId = GetEquippedItemId(slotName)
         if not equippedLink then
-            return GetScoreAdjusted(itemLink, itemId, build, weights, metricName, nil, simSlots)
+            return GetScoreAdjusted(itemLink, itemId, build, weights, metricName, nil, simSlots), true
         end
         local equippedScore = GetScore(equippedLink, equippedId, build, weights, metricName)
         if not worstScore or equippedScore < worstScore then
@@ -1317,7 +1324,7 @@ local function EvaluateBuild(itemLink, itemId, equipLoc, buildId, build, playerL
 
     local metric = ROLE_METRIC[build.role] or "dps"
     local weights = GetWeightsAtLevel(build, playerLevel, classGameName)
-    local gain = CompareAgainstEquipped(itemLink, itemId, equipLoc, build, weights, metric)
+    local gain, againstEmpty = CompareAgainstEquipped(itemLink, itemId, equipLoc, build, weights, metric)
     if gain == nil then
         return nil
     end
@@ -1357,6 +1364,7 @@ local function EvaluateBuild(itemLink, itemId, equipLoc, buildId, build, playerL
         percent = percent,
         isNoise = isNoise,
         isExact = equipLoc == "INVTYPE_RELIC" or (build.weightsKind == "sim" and playerLevel >= 80),
+        againstEmpty = equipLoc ~= "INVTYPE_RELIC" and not not againstEmpty,
         blockedByLevel = IsBlockedByLevelOnly(itemLink),
         talentTree = build.talentTree,
     }
@@ -1564,6 +1572,7 @@ local function EvaluateBuildComparison(linkA, idA, linkB, idB, equipLoc, buildId
             percent = gain,
             isNoise = math.abs(gain) < NOISE_THRESHOLD_PCT,
             isExact = true,
+            againstEmpty = false,
             talentTree = build.talentTree,
         }
     end
@@ -1572,7 +1581,7 @@ local function EvaluateBuildComparison(linkA, idA, linkB, idB, equipLoc, buildId
     local weights = GetWeightsAtLevel(build, playerLevel, classGameName)
     local hand = GetDefaultHand(linkA)
 
-    local gain = ComparisonGain(linkA, idA, linkB, idB, equipLoc, build, weights, metric, hand, againstEmpty)
+    local gain, comparedAgainstEmpty = ComparisonGain(linkA, idA, linkB, idB, equipLoc, build, weights, metric, hand, againstEmpty)
     if gain == nil then
         return nil
     end
@@ -1604,6 +1613,7 @@ local function EvaluateBuildComparison(linkA, idA, linkB, idB, equipLoc, buildId
         percent = percent,
         isNoise = isNoise,
         isExact = (build.weightsKind == "sim" and playerLevel >= 80),
+        againstEmpty = equipLoc ~= "INVTYPE_RELIC" and not not (againstEmpty or (not linkB and comparedAgainstEmpty)),
         talentTree = build.talentTree,
     }
 end
@@ -1912,8 +1922,15 @@ local function FormatPercent(evaluation)
     if evaluation.isNoise then
         return "≈ igual"
     end
+    if evaluation.againstEmpty then
+        if evaluation.percent > 100 then
+            return "hueco libre"
+        end
+        return string.format("%+.1f %% (hueco libre)", evaluation.percent)
+    end
     return string.format("%+.1f %%", evaluation.percent)
 end
+SimulateX_API.FormatPercent = FormatPercent
 
 local function GetPercentColor(evaluation)
     if evaluation.isNoise then

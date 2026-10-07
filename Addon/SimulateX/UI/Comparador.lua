@@ -104,10 +104,7 @@ local function PercentColor(evaluation)
 end
 
 local function FormatPercent(evaluation)
-    if evaluation.isNoise then
-        return "≈ igual"
-    end
-    return string.format("%+.1f %%", evaluation.percent)
+    return SimulateX_API.FormatPercent(evaluation)
 end
 
 local function CreateSectionHeader(parent, text)
@@ -686,18 +683,18 @@ local function RenderVerdict(rows, targets, linkA, multi)
             SetVerdict(string.format("Para %s, A rinde casi igual que %s.", spec, againstName), 0.8, 0.8, 0.8)
         elseif best.gain > 0 then
             local verb = target.empty and "Póntelo en" or "Cámbialo por"
-            SetVerdict(string.format("%s %s: %+.1f %% para %s.", verb, againstName, best.percent, spec), 0.2, 1, 0.2)
+            SetVerdict(string.format("%s %s: %s para %s.", verb, againstName, FormatPercent(best), spec), 0.2, 1, 0.2)
         else
-            SetVerdict(string.format("A no mejora ninguno de los dos para %s (en el mejor caso %+.1f %%).",
-                spec, best.percent), 1, 0.35, 0.35)
+            SetVerdict(string.format("A no mejora ninguno de los dos para %s (en el mejor caso %s).",
+                spec, FormatPercent(best)), 1, 0.35, 0.35)
         end
     else
         if best.isNoise then
             SetVerdict(string.format("Para %s, A y %s rinden casi igual.", spec, againstName), 0.8, 0.8, 0.8)
         elseif best.gain > 0 then
-            SetVerdict(string.format("A es mejor que %s para %s: %+.1f %%.", againstName, spec, best.percent), 0.2, 1, 0.2)
+            SetVerdict(string.format("A es mejor que %s para %s: %s.", againstName, spec, FormatPercent(best)), 0.2, 1, 0.2)
         else
-            SetVerdict(string.format("A es peor que %s para %s: %+.1f %%.", againstName, spec, best.percent), 1, 0.35, 0.35)
+            SetVerdict(string.format("A es peor que %s para %s: %s.", againstName, spec, FormatPercent(best)), 1, 0.35, 0.35)
         end
     end
     return bestIndex, active

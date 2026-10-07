@@ -14,21 +14,20 @@ Estado tras la auditoría del 2026-10-07 (versión 0.13.0). Lo marcado «hecho»
 - [ ] Reliquias de sanadores y tanques sin valorar (sin simulación de HPS/amenaza para ellas).
 - [ ] Algunos valores bajos (~0,3-0,5 %) de reliquias pueden ser ruido de simulación: considerar subir `NOISE_THRESHOLD_PCT` para reliquias o simularlas con más iteraciones.
 - [ ] **Sufijos aleatorios en Mejoras (fase E de v0.11):** proponer el mejor sufijo («del oso», «del águila»…) para la spec leyendo `item_enchantment_template`. Hoy solo se puntúa el sufijo que trae el objeto. Decidir: 0.12 o fuera de alcance.
-- [ ] **Sanadores sin simulación de HPS** (`holy_paladin`, `restoration_druid`, `restoration_shaman` salen con 0 HPS o pesos del preset). Ver `.agents/plans/simulacion-wowsims/`.
+- [ ] **Decidir si se simula HPS para sanadores** (estudio del 2026-10-08; conclusiones y decisión pendiente abajo).
 - [ ] **Fórmula de nivel bajo** para 19 specs y relanzar simulaciones pendientes (ver el mismo plan).
 - [ ] **Tres «Pendiente» en `Tools/NOTAS_TALENTOS_NIVEL2.md`** (líneas ~93, 102, 106): revisar si siguen vigentes.
 - [ ] `Addon/SimulateX/Media/SimulateX.tga`: comprobar que se usa.
 - [ ] Encantamientos: no se indica la reputación o el pergamino necesarios (cabeza y hombros); solo se valoran niveles 80; sin estadísticas no se puntúan.
 
-## Mejoras propuestas (pendientes de estudio y confirmación)
+## Mejoras propuestas (pendientes de decisión del usuario)
 
-Ninguna se empieza sin confirmación. Por orden de valor estimado, no medido.
+Los estudios siguientes están hechos; sus conclusiones quedan pendientes de decisión del usuario. El resto sigue por orden de valor estimado, no medido.
 
-1. **Simulación real de HPS para sanadores** (hoy pesos del preset): wowsims los soporta en parte; habría que estudiar qué specs son viables.
-2. **Nivel 3 también para tanques** con una métrica que no sacrifique la supervivencia (amenaza con límite de mitigación). Hoy excluidos a propósito.
+1. **Simulación real de HPS para sanadores** (pendiente de decisión del usuario; estudio 2026-10-08). El sacerdote (`healing_priest`, disciplina y sagrado) ya tiene pesos simulados. El chamán Restauración es viable con esfuerzo medio: el simulador ya tiene sus curaciones, pero falta un APL y quitarlo de `SPECS_SIN_ROTACION` en `Tools/extraer_ep_stats.py`. El paladín Sagrado y el druida Restauración no son viables sin portar sus hechizos de curación al fork de wowsims en Go; el esfuerzo sería grande y no se recomienda, porque sus pesos no serían más fiables que los del preset. Además, los pesos dependen del APL escrito a mano.
+2. **Nivel 3 también para tanques** (pendiente de decisión del usuario; estudio 2026-10-08). Es viable con una simulación por cadena y una métrica que promedie las mejoras relativas de TPS y de -DTPS; requiere cambios pequeños-medios en `Tools/talentos_nivel3.py` (`ROLE_METRIC`, `Simulator.run`/`value` y una función `score` nueva). Antes de decidir, medir la dispersión con 5000 iteraciones en `feral_tank_druid`, `protection_paladin`, `tank_deathknight` y `protection_warrior`, y valorar TMI (el proto lo tiene, pero hoy no se extrae). Con 1000 iteraciones, la dispersión de DTPS es del orden de los umbrales (0,01-0,05 %); coste estimado total de 4-12 h de CPU. No promover builds de tanque que solo ganen en TPS.
 3. **Recetas ya aprendidas** (hoy «fuera de alcance»): marcar en Mejoras las profesiones que el jugador ya sabe fabricar. Necesita leer la lista de recetas con la API 3.3.5a.
 4. **Importar/exportar configuración** y perfiles por personaje.
 5. **Aviso de objetos mejores en la bolsa** al abrirla (resumen: «tienes 2 mejoras sin equipar»).
 6. **Comparador contra el equipo de otro jugador/bot** (hoy «inspección de bots» fuera de alcance): valorar si compensa.
 7. **Localización a otros idiomas** de la interfaz del addon (hoy solo esES).
-8. **Revisar los porcentajes inflados a nivel bajo** (hueco vacío = comparación contra nada): mostrar «hueco libre» en lugar de un % enorme.
