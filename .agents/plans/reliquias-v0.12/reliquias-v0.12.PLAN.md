@@ -18,3 +18,5 @@ Valor de una reliquia = % de DPS sobre la misma build **sin reliquia**, simulado
 3. `Tools/generar_db_reliquias.py`: vuelca a `Addon/SimulateX_<Clase>/Data/SimulateX_Reliquias_<Clase>.lua` (id → % por spec) y lo lista en el `.toc` de la clase (`rutas_addon.ensure_class_addon_toc`). **(delegable)**
 4. Addon: `INVTYPE_RELIC` → `RangedSlot`; evaluación de reliquia con esa tabla en tooltip y comparador (contra la equipada); grupo en `SLOT_GROUPS` de Mejoras; opción de configuración; sin dato → sin valor. **(delegable, esfuerzo medio, probar con `Tools/probar_mejoras_lupa.py`)**
 5. Docs: README (es/en), CHANGELOG, versión 0.12.0 (`rutas_addon.VERSION` y `.toc`), `CLAUDE.md` y `TODO.md`. Si cambia el `.toc`, avisar: reiniciar el cliente completo.
+
+Estado: hecho el 2026-10-07 (pasos 1-5, versión 0.12.0).

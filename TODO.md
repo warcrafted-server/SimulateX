@@ -1,19 +1,18 @@
 # TODO de SimulateX
 
-Estado tras la auditoría del 2026-10-07 (versión 0.11.0). Lo marcado «hecho» se quita de aquí al cerrarlo.
+Estado tras la auditoría del 2026-10-07 (versión 0.12.0). Lo marcado «hecho» se quita de aquí al cerrarlo.
 
-## Pendiente confirmado (cierre de la 0.11 y camino a la 1.0)
+## Pendiente confirmado (camino a la 1.0)
 
-- [ ] **Reliquias (fase D de v0.11) — necesita decisión de diseño.** Ídolos, tótems, libramientos y sigilos (`INVTYPE_RELIC`, hueco `RangedSlot`) no se valoran ni salen en Mejoras. Cablearlas no basta: en la BD **no tienen estadísticas** (`stat_value1 = 0`), su efecto es un hechizo (`spellid_1`) que mejora una habilidad concreta, así que con pesos EP valdrían 0. Valorarlas exige simular cada reliquia en wowsims (cambiando el objeto en la petición base, como las variantes de talentos) y guardar su valor por spec. Ojo: en el código «reliquias» también designa los objetos heredados (escalado por nivel, `AddScalingStats`), que es otra cosa. Opciones y coste en la conversación del 2026-10-07; mientras no se decida, el tooltip no las valora.
 - [ ] **Pestaña Talentos en DK, Mago y Paladín (decidir).** No es un fallo de datos: su búsqueda Nivel 3 no halló nada mejor que la distribución estándar de wowsims, así que no tienen fichero de variantes (`TALENT_VARIANTS` vacío, ver `Tools/NOTAS_TALENTOS_NIVEL2.md`). Pero la pestaña dice «Sin distribuciones simuladas todavía» (`UI/Talentos.lua:471`), que parece algo pendiente. Propuesta: mostrar la distribución estándar con su DPS y la nota «óptima según la búsqueda de SimulateX». Pide generar el fichero de la clase con solo la variante `estandar` o cambiar el texto.
-- [ ] **README.md y README.en.md** (siguen en v0.10): Talentos/Nivel 3/glifos, topes de golpe/pericia/penetración, gemas ideales, BiS por fase, aviso de bonus de conjunto, economía en el vendedor, profesiones y bolsas en Mejoras, zona de cada origen, filtro de armadura. Documentar los comandos `/simulatex debug [enlace]`, `/simulatex nivel <n>`, `/simulatex <build>`, `/simulatex` y `/simulatexconfig`. Añadir el enlace a https://portal.warcrafted.com/.
-- [ ] **CHANGELOG:** cambiar «Pestaña Talentos (v0.7, en marcha)», añadir el Nivel 3 por spec (hay variante en Equilibrio, Feral, Cazador, Mejora, Sombra, Pícaro, Brujo y Guerrero; sin mejora en Elemental, Mago, Represalias y DK) y arreglar la entrada antigua sin versión (`## - 2026-09-26`).
 - [ ] Entradas de `SimulateX_TalentDataVars` (`SimulateX.lua:23-30`) de DK, Paladín y Mago apuntan a tablas que no existen: inofensivo, pero limpiar o documentar.
 - [ ] **Prueba en juego (la hace el usuario):** v0.10 (lista de la compra), v0.11 (profesiones, bolsas, zonas), `LoadAddOn` desde `ADDON_LOADED` y pestaña Talentos de las clases nuevas. Tras reiniciar el cliente completo si cambia algún `.toc`.
 - [ ] **Publicar como 1.0.0** cuando lo anterior esté probado (el push exige aprobación del usuario; hay commits locales sin subir).
 
 ## Pendiente menor, a decidir
 
+- [ ] Reliquias de sanadores y tanques sin valorar (sin simulación de HPS/amenaza para ellas).
+- [ ] Algunos valores bajos (~0,3-0,5 %) de reliquias pueden ser ruido de simulación: considerar subir `NOISE_THRESHOLD_PCT` para reliquias o simularlas con más iteraciones.
 - [ ] **Sufijos aleatorios en Mejoras (fase E de v0.11):** proponer el mejor sufijo («del oso», «del águila»…) para la spec leyendo `item_enchantment_template`. Hoy solo se puntúa el sufijo que trae el objeto. Decidir: 0.12 o fuera de alcance.
 - [ ] **Sanadores sin simulación de HPS** (`holy_paladin`, `restoration_druid`, `restoration_shaman` salen con 0 HPS o pesos del preset). Ver `.agents/plans/simulacion-wowsims/`.
 - [ ] **Fórmula de nivel bajo** para 19 specs y relanzar simulaciones pendientes (ver el mismo plan).
