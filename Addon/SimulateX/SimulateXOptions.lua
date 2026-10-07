@@ -83,8 +83,18 @@ function SimulateX_BuildOptions(parent, prefix, textWidth)
         end
     end)
 
+    local relicValuationCheck = CreateCheck(parent, prefix .. "RelicValuationCheck",
+        "Valorar reliquias con simulaciones", textWidth)
+    relicValuationCheck:SetPoint("TOPLEFT", otherArrowCheck, "BOTTOMLEFT", 0, -2)
+    relicValuationCheck:SetScript("OnClick", function(self)
+        SimulateX_DB.relicValuationDisabled = not self:GetChecked() or nil
+        if SimulateX_RefreshIcons then SimulateX_RefreshIcons() end
+        if SimulateX_Comparador_Refresh then SimulateX_Comparador_Refresh() end
+        if SimulateX_Mejoras_MarkDirty then SimulateX_Mejoras_MarkDirty() end
+    end)
+
     local windowTitle = CreateSectionTitle(parent, "Ventana y accesos")
-    windowTitle:SetPoint("TOPLEFT", otherArrowCheck, "BOTTOMLEFT", 2, -16)
+    windowTitle:SetPoint("TOPLEFT", relicValuationCheck, "BOTTOMLEFT", 2, -16)
 
     local minimapCheck = CreateCheck(parent, prefix .. "MinimapCheck",
         "Botón en el minimapa (hace falta /reload)", textWidth)
@@ -399,6 +409,7 @@ function SimulateX_BuildOptions(parent, prefix, textWidth)
     return function()
         lowLevelCheck:SetChecked(not SimulateX_DB.lowLevelEstimateDisabled)
         otherArrowCheck:SetChecked(not SimulateX_DB.otherSpecArrowDisabled)
+        relicValuationCheck:SetChecked(not SimulateX_DB.relicValuationDisabled)
         minimapCheck:SetChecked(not SimulateX_DB.minimapHidden)
         opacitySlider:SetValue(SimulateX_DB.comparadorOpacity or DEFAULT_OPACITY)
         RebuildSpecCheckboxes()

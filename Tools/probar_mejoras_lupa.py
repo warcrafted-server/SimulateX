@@ -46,7 +46,10 @@ GetSpellInfo = function(id) return "Prof" .. id end
 -- Herrería 300 si PROFESION = "herreria"
 GetNumSkillLines = function() return PROFESION and 1 or 0 end
 GetSkillLineInfo = function() return "Prof2018", false, false, 300 end
-GetTalentTabInfo = function(i) return nil, nil, (i == 2 and 51 or 10) end
+GetTalentTabInfo = function(i)
+  local activeTalentTab = CLASSNAME == "Druid" and 1 or CLASSNAME == "Paladin" and 3 or 2
+  return nil, nil, (i == activeTalentTab and 51 or 10)
+end
 GetItemInfo = function() return nil end
 GetItemIcon = function(id) return "icon" .. tostring(id) end
 GetItemCount = function() return 0 end
@@ -85,6 +88,9 @@ for f in ['SimulateX/Data/SimulateX_Levels.lua', 'SimulateX/Data/SimulateX_ItemT
           'SimulateX_Origenes/Data/SimulateX_Origenes.lua',
           'SimulateX/SimulateX.lua', 'SimulateX/UI/Mejoras.lua']:
     load(f)
+relic_data = pathlib.Path(ROOT + f'SimulateX_{CLASS}/Data/SimulateX_Reliquias_{CLASS}.lua')
+if relic_data.exists():
+    load(f'SimulateX_{CLASS}/Data/SimulateX_Reliquias_{CLASS}.lua')
 g.SimulateX_DB = lua.table()
 
 parent = lua.eval('newMock()')
@@ -104,7 +110,7 @@ print(f'{CLASS} {LEVEL} {FACTION}: {frames} frames, {time.time()-t:.2f}s')
 res = g.results
 names = g.SimulateX_OrigenesNombres.objetos
 print('status:', rg(g.statusText, '_text'))
-for gi in range(1, 16):
+for gi in range(1, len(g.SLOT_GROUPS_DEBUG) + 1):
     grp = res[gi]
     if not grp: continue
     print('--', g.SLOT_GROUPS_DEBUG[gi])

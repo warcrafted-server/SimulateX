@@ -16,6 +16,25 @@ SimulateX_ClassDataVars = {
 }
 local CLASS_DATA_VARS = SimulateX_ClassDataVars
 
+local CLASS_RELIC_DATA_VARS = {
+    PALADIN = "SimulateX_Reliquias_Paladin",
+    DEATHKNIGHT = "SimulateX_Reliquias_Deathknight",
+    SHAMAN = "SimulateX_Reliquias_Shaman",
+    DRUID = "SimulateX_Reliquias_Druid",
+}
+
+local RELIC_TYPE_CLASSES = { [407] = "PALADIN", [408] = "DRUID", [409] = "SHAMAN", [410] = "DEATHKNIGHT" }
+
+local function GetRelicValue(spec, itemId)
+    if not itemId or SimulateX_DB.relicValuationDisabled then
+        return nil
+    end
+    local dataVarName = CLASS_RELIC_DATA_VARS[select(2, UnitClass("player"))]
+    local classValues = dataVarName and _G[dataVarName]
+    local specValues = classValues and classValues[spec]
+    return specValues and specValues[itemId]
+end
+
 -- v0.7: mismo patrón que SimulateX_ClassDataVars, para la pestaña Talentos
 -- (Tools/generar_db_talentos.py). Una clase sin fichero consolidado
 -- simplemente no tiene entrada aquí.
@@ -207,7 +226,17 @@ local function IsAllowedClass(itemLink)
     return bit ~= nil and mask % (bit * 2) >= bit
 end
 
-local function IsItemUsable(itemLink)
+local function IsItemUsable(itemLink, equipLoc)
+    if not equipLoc then
+        _, equipLoc = GetItemBasics(itemLink)
+    end
+    if equipLoc == "INVTYPE_RELIC" then
+        local itemId = GetItemIdFromLink(itemLink)
+        local typeCode = itemId and SimulateX_ItemTypes and SimulateX_ItemTypes[itemId]
+        if RELIC_TYPE_CLASSES[typeCode] ~= select(2, UnitClass("player")) then
+            return false
+        end
+    end
     return IsProficient(itemLink) ~= false and IsAllowedClass(itemLink)
 end
 
@@ -716,6 +745,7 @@ local INVTYPE_TO_SLOTS = {
     INVTYPE_WEAPONOFFHAND = { "SecondaryHandSlot" },
     INVTYPE_SHIELD = { "SecondaryHandSlot" }, INVTYPE_HOLDABLE = { "SecondaryHandSlot" },
     INVTYPE_RANGED = { "RangedSlot" }, INVTYPE_RANGEDRIGHT = { "RangedSlot" }, INVTYPE_THROWN = { "RangedSlot" },
+    INVTYPE_RELIC = { "RangedSlot" }, -- comparte hueco con distancia, pero no es un arma a distancia
 }
 
 local OFFHAND_ONLY_EQUIP_LOCS = { INVTYPE_SHIELD = true, INVTYPE_HOLDABLE = true, INVTYPE_WEAPONOFFHAND = true }
@@ -1004,6 +1034,15 @@ end
 -- tps y "Supervivencia" = dtps, donde MENOR es mejor: el llamador invierte
 -- el signo para esos casos, aquí siempre se devuelve candidato − equipado).
 local function CompareAgainstEquipped(itemLink, itemId, equipLoc, build, weights, metricName)
+    if equipLoc == "INVTYPE_RELIC" then
+        local candidateValue = GetRelicValue(build.spec, itemId)
+        if candidateValue == nil then
+            return nil
+        end
+        local _, equippedId = GetEquippedItemId("RangedSlot")
+        return candidateValue - (GetRelicValue(build.spec, equippedId) or 0)
+    end
+
     local slots = INVTYPE_TO_SLOTS[equipLoc]
     if not slots then
         return nil  -- slot no comparable (camisa, tabardo, ...)
@@ -1272,7 +1311,7 @@ end
 -- Una evaluación por build, o nil si no es usable o el slot no es comparable
 -- (camisa, tabardo, munición...). gain > 0 = mejora.
 local function EvaluateBuild(itemLink, itemId, equipLoc, buildId, build, playerLevel, classGameName)
-    if not IsItemUsable(itemLink) then
+    if not IsItemUsable(itemLink, equipLoc) then
         return nil
     end
 
@@ -1283,8 +1322,14 @@ local function EvaluateBuild(itemLink, itemId, equipLoc, buildId, build, playerL
         return nil
     end
 
-    local percent, isNoise = ComputePercent(gain, build.weightsKind, playerLevel,
-        build.base and build.base[metric], weights, build)
+    local percent, isNoise
+    if equipLoc == "INVTYPE_RELIC" then
+        percent = gain
+        isNoise = math.abs(percent) < NOISE_THRESHOLD_PCT
+    else
+        percent, isNoise = ComputePercent(gain, build.weightsKind, playerLevel,
+            build.base and build.base[metric], weights, build)
+    end
 
     -- tanque: media 1:1 de amenaza y supervivencia, como los pesos de tanque
     -- por defecto de wowsims
@@ -1311,7 +1356,7 @@ local function EvaluateBuild(itemLink, itemId, equipLoc, buildId, build, playerL
         gain = gain,
         percent = percent,
         isNoise = isNoise,
-        isExact = (build.weightsKind == "sim" and playerLevel >= 80),
+        isExact = equipLoc == "INVTYPE_RELIC" or (build.weightsKind == "sim" and playerLevel >= 80),
         blockedByLevel = IsBlockedByLevelOnly(itemLink),
         talentTree = build.talentTree,
     }
@@ -1462,15 +1507,51 @@ local function ComparisonGain(linkA, idA, linkB, idB, equipLoc, build, weights, 
     return CompareAgainstEquipped(linkA, idA, equipLoc, build, weights, metric)
 end
 
+local function RelicComparisonGain(idA, idB, spec, againstEmpty)
+    local candidateValue = GetRelicValue(spec, idA)
+    if candidateValue == nil then
+        return nil
+    end
+    local baselineValue = 0
+    if not againstEmpty then
+        if idB then
+            baselineValue = GetRelicValue(spec, idB) or 0
+        else
+            local _, equippedId = GetEquippedItemId("RangedSlot")
+            baselineValue = GetRelicValue(spec, equippedId) or 0
+        end
+    end
+    return candidateValue - baselineValue
+end
+
 -- Evaluación de A frente a B para una build (misma forma que EvaluateBuild),
 -- para el comparador. linkB nil = contra lo equipado; againstEmpty = contra
 -- un hueco vacío.
 local function EvaluateBuildComparison(linkA, idA, linkB, idB, equipLoc, buildId, build, playerLevel, classGameName, againstEmpty)
-    if not IsItemUsable(linkA) then
+    if not IsItemUsable(linkA, equipLoc) then
         return nil
     end
     if linkB and not IsItemUsable(linkB) then
         return nil
+    end
+
+    if equipLoc == "INVTYPE_RELIC" then
+        local gain = RelicComparisonGain(idA, idB, build.spec, againstEmpty)
+        if gain == nil then
+            return nil
+        end
+        return {
+            buildId = buildId,
+            spec = build.spec,
+            specLabel = build.specLabel or build.spec,
+            role = build.role,
+            metric = ROLE_METRIC[build.role] or "dps",
+            gain = gain,
+            percent = gain,
+            isNoise = math.abs(gain) < NOISE_THRESHOLD_PCT,
+            isExact = true,
+            talentTree = build.talentTree,
+        }
     end
 
     local metric = ROLE_METRIC[build.role] or "dps"
@@ -1599,7 +1680,16 @@ local function GetComparisonBreakdown(linkA, linkB, buildId, againstEmpty)
         return nil
     end
 
-    local _, _, _, _, _, _, _, _, equipLoc = GetItemInfo(linkA)
+    local _, equipLoc = GetItemBasics(linkA)
+    if equipLoc == "INVTYPE_RELIC" then
+        local idA = GetItemIdFromLink(linkA)
+        local idB = linkB and GetItemIdFromLink(linkB)
+        local gain = RelicComparisonGain(idA, idB, build.spec, againstEmpty)
+        if gain == nil then
+            return nil
+        end
+        return { { key = "relicEffect", label = "Efecto de reliquia simulada", diff = 0, percent = gain } }
+    end
     local playerLevel = GetEffectivePlayerLevel()
     local weights = GetWeightsAtLevel(build, playerLevel, gameClassName)
     local hand = GetDefaultHand(linkA)
