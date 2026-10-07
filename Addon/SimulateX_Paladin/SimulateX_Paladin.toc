@@ -7,4 +7,5 @@
 ## LoadOnDemand: 1
 
 Data\SimulateX_Data_Paladin.lua
+Data\SimulateX_Reliquias_Paladin.lua
 Data\SimulateX_ArbolTalentos_Paladin.lua

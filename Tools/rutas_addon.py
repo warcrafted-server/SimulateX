@@ -28,12 +28,13 @@ def class_data_dir(class_name: str) -> pathlib.Path:
 def ensure_class_addon_toc(class_name: str) -> None:
     """Regenera el .toc del sub-addon de una clase a partir de los ficheros
     .lua que existan de verdad en su carpeta Data/, en el orden fijo
-    Data, Talentos, ArbolTalentos. No falla si falta alguno: cada clase
+    Data, Reliquias, Talentos, ArbolTalentos. No falla si falta alguno: cada clase
     solo tiene los datos que ya se hayan consolidado."""
     sub_addon_dir = ADDON_ROOT / f"SimulateX_{class_name}"
     data_dir = class_data_dir(class_name)
     ordered_names = [
         f"SimulateX_Data_{class_name}.lua",
+        f"SimulateX_Reliquias_{class_name}.lua",
         f"SimulateX_Talentos_{class_name}.lua",
         f"SimulateX_ArbolTalentos_{class_name}.lua",
     ]

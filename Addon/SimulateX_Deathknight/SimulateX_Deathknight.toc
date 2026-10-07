@@ -7,4 +7,5 @@
 ## LoadOnDemand: 1
 
 Data\SimulateX_Data_Deathknight.lua
+Data\SimulateX_Reliquias_Deathknight.lua
 Data\SimulateX_ArbolTalentos_Deathknight.lua

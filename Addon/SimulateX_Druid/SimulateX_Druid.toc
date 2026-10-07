@@ -7,5 +7,6 @@
 ## LoadOnDemand: 1
 
 Data\SimulateX_Data_Druid.lua
+Data\SimulateX_Reliquias_Druid.lua
 Data\SimulateX_Talentos_Druid.lua
 Data\SimulateX_ArbolTalentos_Druid.lua

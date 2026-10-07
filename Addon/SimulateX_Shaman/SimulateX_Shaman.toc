@@ -7,5 +7,6 @@
 ## LoadOnDemand: 1
 
 Data\SimulateX_Data_Shaman.lua
+Data\SimulateX_Reliquias_Shaman.lua
 Data\SimulateX_Talentos_Shaman.lua
 Data\SimulateX_ArbolTalentos_Shaman.lua
