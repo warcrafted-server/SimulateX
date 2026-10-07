@@ -54,7 +54,7 @@ local page, statusText, scrollFrame, content
 local playerProfessions = {}  -- línea de habilidad -> rango, al empezar cada cálculo
 local headerRows, itemRows = {}, {}
 local job  -- cálculo en curso
-local results  -- [grupo] = { {id, evaluation, origins}, ... }
+local results  -- [grupo] = { {id, evaluation, origins}, ... }; incluye `enchantments`
 local dirty = true
 
 --[[----------------------------------------------------------------------
@@ -140,6 +140,119 @@ end
 local function ProfessionName(skill)
     local spell = SimulateX_OrigenesProfesiones and SimulateX_OrigenesProfesiones[skill]
     return spell and GetSpellInfo(spell) or "Profesión"
+end
+
+local ENCHANTMENT_EQUIPMENT_SLOTS = {
+    { slot = "HeadSlot", key = "Head", label = "INVTYPE_HEAD" },
+    { slot = "ShoulderSlot", key = "Shoulder", label = "INVTYPE_SHOULDER" },
+    { slot = "BackSlot", key = "Back", label = "INVTYPE_CLOAK" },
+    { slot = "ChestSlot", key = "Chest", label = "INVTYPE_CHEST" },
+    { slot = "WristSlot", key = "Wrist", label = "INVTYPE_WRIST" },
+    { slot = "HandsSlot", key = "Hands", label = "INVTYPE_HAND" },
+    { slot = "LegsSlot", key = "Legs", label = "INVTYPE_LEGS" },
+    { slot = "FeetSlot", key = "Feet", label = "INVTYPE_FEET" },
+    { slot = "Finger0Slot", key = "Finger", label = "INVTYPE_FINGER", number = 1 },
+    { slot = "Finger1Slot", key = "Finger", label = "INVTYPE_FINGER", number = 2 },
+    { slot = "MainHandSlot", key = "Weapon", label = "INVTYPE_WEAPONMAINHAND", hand = true },
+    { slot = "SecondaryHandSlot", key = "Weapon", label = "INVTYPE_WEAPONOFFHAND", hand = true },
+}
+
+local function EnchantmentSlotKey(equippedSlot, itemLink)
+    if not equippedSlot.hand then
+        return equippedSlot.key
+    end
+    local _, equipLoc = SimulateX_API.GetItemBasics(itemLink)
+    local itemId = tonumber(itemLink:match("item:(%d+)"))
+    local typeCode = itemId and SimulateX_ItemTypes and SimulateX_ItemTypes[itemId]
+    if equippedSlot.slot == "MainHandSlot" then
+        if equipLoc == "INVTYPE_2HWEAPON" then
+            return typeCode == 210 and "Staff" or "TwoHandWeapon"
+        end
+        if equipLoc == "INVTYPE_WEAPON" or equipLoc == "INVTYPE_WEAPONMAINHAND" then
+            return "Weapon"
+        end
+    else
+        if equipLoc == "INVTYPE_SHIELD" or typeCode == 406 then
+            return "Shield"
+        end
+        if equipLoc == "INVTYPE_WEAPON" or equipLoc == "INVTYPE_WEAPONOFFHAND" then
+            return "Weapon"
+        end
+    end
+end
+
+local function FindEnchantment(enchantments, effect)
+    for _, enchantment in ipairs(enchantments or {}) do
+        if enchantment.effect == effect then
+            return enchantment
+        end
+    end
+end
+
+local function StatDifference(candidate, current)
+    local difference = {}
+    for key, amount in pairs(candidate or {}) do
+        difference[key] = amount - ((current and current[key]) or 0)
+    end
+    for key, amount in pairs(current or {}) do
+        if difference[key] == nil then
+            difference[key] = -amount
+        end
+    end
+    return difference
+end
+
+local function CollectEnchantments(context)
+    local entries = {}
+    if SimulateX_DB.enchantAdviceDisabled or context.playerLevel ~= 80 then
+        return entries
+    end
+    for _, equippedSlot in ipairs(ENCHANTMENT_EQUIPMENT_SLOTS) do
+        local link = GetInventoryItemLink("player", GetInventorySlotInfo(equippedSlot.slot))
+        if link then
+            local slotKey = EnchantmentSlotKey(equippedSlot, link)
+            local available = slotKey and SimulateX_Encantamientos and SimulateX_Encantamientos[slotKey]
+            local currentEffect = tonumber(link:match("item:%d+:(%d+)")) or 0
+            local current
+            if currentEffect ~= 0 then
+                current = FindEnchantment(available, currentEffect)
+            end
+            local canEnchantRings = slotKey ~= "Finger" or playerProfessions[333] ~= nil
+            if available and canEnchantRings and (currentEffect == 0 or current) then
+                local best, bestValue
+                for _, enchantment in ipairs(available) do
+                    if (not enchantment.prof or playerProfessions[enchantment.prof]) and enchantment.stats then
+                        local value = SimulateX_API.EvaluateStatDeltaForContext(context, enchantment.stats).gain
+                        if not bestValue or value > bestValue then
+                            best, bestValue = enchantment, value
+                        end
+                    end
+                end
+                if best then
+                    local difference = StatDifference(best.stats, current and current.stats)
+                    local evaluation = SimulateX_API.EvaluateStatDeltaForContext(context, difference)
+                    if evaluation.gain > 0 and not evaluation.isNoise then
+                        local slotLabel = _G[equippedSlot.label] or equippedSlot.label
+                        if equippedSlot.number then
+                            slotLabel = slotLabel .. " " .. equippedSlot.number
+                        end
+                        local itemId = tonumber(link:match("item:(%d+)"))
+                        table.insert(entries, {
+                            itemId = itemId,
+                            icon = GetInventoryItemTexture("player", GetInventorySlotInfo(equippedSlot.slot))
+                                or (itemId and GetItemIcon(itemId)),
+                            enchantment = best,
+                            name = GetSpellInfo(best.spell),
+                            slotLabel = slotLabel,
+                            difference = difference,
+                            evaluation = evaluation,
+                        })
+                    end
+                end
+            end
+        end
+    end
+    return entries
 end
 
 local function PlayerFaction()
@@ -389,6 +502,7 @@ local function StepJob(self)
     job.next = finish + 1
     if job.next > #job.candidates then
         self:SetScript("OnUpdate", nil)
+        job.results.enchantments = job.enchantments
         results, job = job.results, nil
         if dirty then
             StartJob()  -- algo cambió mientras se calculaba
@@ -414,9 +528,11 @@ function StartJob()
         return
     end
     playerProfessions = ReadPlayerProfessions()
+    local enchantments = CollectEnchantments(context)
     job = {
         context = context,
         candidates = CollectCandidates(context),
+        enchantments = enchantments,
         next = 1,
         results = {},
         limit = SimulateX_DB.upgradesPerSlot or 3,
@@ -444,8 +560,25 @@ end
 
 local function ShowRowTooltip(row)
     GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
-    GameTooltip:SetHyperlink("item:" .. row.itemId .. ":0:0:0:0:0:0:0")
-    if #row.origins > 0 then
+    if row.enchantment then
+        GameTooltip:SetHyperlink("spell:" .. row.enchantment.spell)
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine("Diferencia de estadísticas:", 1, 0.82, 0)
+        local keys = {}
+        for key, amount in pairs(row.difference) do
+            if amount ~= 0 then
+                table.insert(keys, key)
+            end
+        end
+        table.sort(keys)
+        for _, key in ipairs(keys) do
+            local label = SimulateX_API.GetStatLabel(key) or key
+            GameTooltip:AddLine(string.format("%+.0f %s", row.difference[key], label), 0.9, 0.9, 0.9)
+        end
+    else
+        GameTooltip:SetHyperlink("item:" .. row.itemId .. ":0:0:0:0:0:0:0")
+    end
+    if not row.enchantment and #row.origins > 0 then
         GameTooltip:AddLine(" ")
         GameTooltip:AddLine("Dónde conseguirlo:", 1, 0.82, 0)
         for _, origin in ipairs(row.origins) do
@@ -517,6 +650,7 @@ local function CreateHeaderRow()
 end
 
 local function FillItemRow(row, entry, level)
+    row.enchantment = nil
     row.itemId = entry.id
     row.origins = entry.origins
     row.icon:SetTexture(GetItemIcon(entry.id) or "Interface\\Icons\\INV_Misc_QuestionMark")
@@ -550,6 +684,18 @@ local function FillItemRow(row, entry, level)
         table.insert(texts, string.format("y %d más", #entry.origins - MAX_ORIGINS_IN_ROW))
     end
     row.origin:SetText(#texts > 0 and table.concat(texts, "  ·  ") or "Origen no registrado (profesiones, subasta...)")
+end
+
+local function FillEnchantmentRow(row, entry)
+    row.enchantment = entry.enchantment
+    row.itemId = entry.itemId
+    row.origins = {}
+    row.icon:SetTexture(entry.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
+    row.name:SetText(entry.name or "Encantamiento")
+    row.percent:SetText(string.format("%+.1f %%", entry.evaluation.percent))
+    row.percent:SetTextColor(0.2, 1, 0.2)
+    local requirement = entry.enchantment.prof and (" · Requiere " .. ProfessionName(entry.enchantment.prof)) or ""
+    row.origin:SetText(entry.slotLabel .. requirement)
 end
 
 function Render()
@@ -591,6 +737,29 @@ function Render()
             end
             y = y + 8
         end
+    end
+    local enchantments = results.enchantments
+    if enchantments and #enchantments > 0 then
+        headerIndex = headerIndex + 1
+        local header = headerRows[headerIndex] or CreateHeaderRow()
+        headerRows[headerIndex] = header
+        header:SetWidth(width)
+        header:SetPoint("TOPLEFT", 0, -y)
+        header.text:SetText("Encantamientos")
+        header:Show()
+        y = y + HEADER_ROW_HEIGHT + 2
+        for _, entry in ipairs(enchantments) do
+            itemIndex = itemIndex + 1
+            local row = itemRows[itemIndex] or CreateItemRow()
+            itemRows[itemIndex] = row
+            row:SetWidth(width)
+            row:SetPoint("TOPLEFT", 0, -y)
+            FillEnchantmentRow(row, entry)
+            row:Show()
+            y = y + ROW_HEIGHT
+            total = total + 1
+        end
+        y = y + 8
     end
     content:SetHeight(math.max(1, y))
 

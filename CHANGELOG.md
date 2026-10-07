@@ -2,6 +2,10 @@
 
 Todos los cambios notables de este proyecto serán documentados en este archivo.
 
+## [Sin publicar]
+### Añadido
+- Mejoras recomienda encantamientos por hueco para la especialización activa, solo a nivel 80 y solo cuando conoce el valor del encantamiento equipado. Los encantamientos de efecto sin estadísticas no se puntúan; se puede desactivar con la casilla «Recomendar encantamientos» del panel.
+
 ## [0.12.0] - 2026-10-07
 ### Añadido
 - Valoración de reliquias simuladas para ídolos, tótems, libramientos y sigilos en el tooltip, el comparador y Mejoras. Se simula cada reliquia con wowsims frente a no llevar ninguna, usando la build de referencia de cada spec DPS de Druida, Chamán, Paladín y Caballero de la Muerte, con `Tools/simular_reliquias.py` y `Tools/generar_db_reliquias.py`. Hay una casilla en el panel de configuración; las reliquias sin efecto simulado no se puntúan, y tampoco las de sanadores y tanques.

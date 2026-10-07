@@ -1472,6 +1472,20 @@ local function EvaluateForContext(context, itemLink)
         context.playerLevel, context.gameClassName)
 end
 
+local function EvaluateStatDeltaForContext(context, stats)
+    local build = context.build
+    local metric = ROLE_METRIC[build.role] or "dps"
+    local weights = GetWeightsAtLevel(build, context.playerLevel, context.gameClassName)
+    local gain = 0
+    -- CapAdjustment necesita un enlace de objeto; aquí se aplican los pesos directos a la tabla.
+    for key, amount in pairs(stats) do
+        gain = gain + (weights[key] or 0) * amount
+    end
+    local percent, isNoise = ComputePercent(gain, build.weightsKind, context.playerLevel,
+        build.base and build.base[metric], weights, build)
+    return { gain = gain, percent = percent, isNoise = isNoise }
+end
+
 --[[----------------------------------------------------------------------
     COMPARADOR (v0.6): A contra B (huecos ya validados como compatibles por
     el llamador, UI/Comparador.lua) o A contra lo equipado si B está vacío.
@@ -1767,6 +1781,7 @@ SimulateX_API = {
     GetItemBasics = GetItemBasics,
     GetActiveSpecContext = GetActiveSpecContext,
     EvaluateForContext = EvaluateForContext,
+    EvaluateStatDeltaForContext = EvaluateStatDeltaForContext,
     CLASS_MASK_BITS = CLASS_MASK_BITS,
 }
 

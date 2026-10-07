@@ -322,6 +322,14 @@ function SimulateX_BuildOptions(parent, prefix, textWidth)
         if SimulateX_Comparador_LayoutTabs then SimulateX_Comparador_LayoutTabs() end
     end)
 
+    local enchantAdviceCheck = CreateCheck(parent, prefix .. "EnchantAdviceCheck",
+        "Recomendar encantamientos", textWidth)
+    enchantAdviceCheck:SetPoint("TOPLEFT", upgradesTabCheck, "BOTTOMLEFT", 0, -2)
+    enchantAdviceCheck:SetScript("OnClick", function(self)
+        SimulateX_DB.enchantAdviceDisabled = not self:GetChecked() or nil
+        UpgradesChanged()
+    end)
+
     -- { clave en SimulateX_DB, texto, true si la clave desactiva }
     local upgradeChecks = {}
     local upgradeCheckDefs = {
@@ -335,7 +343,7 @@ function SimulateX_BuildOptions(parent, prefix, textWidth)
         { "upgradesAnyArmor", "Incluir armaduras que no son de tu tipo principal (p. ej. tela para un druida)", false },
         { "upgradesOtherFaction", "Incluir objetos y vendedores de la otra facción", false },
     }
-    local previous = upgradesTabCheck
+    local previous = enchantAdviceCheck
     for index, def in ipairs(upgradeCheckDefs) do
         local key, text, inverted = def[1], def[2], def[3]
         local check = CreateCheck(parent, prefix .. "UpgradesCheck" .. index, text, textWidth)
@@ -429,6 +437,7 @@ function SimulateX_BuildOptions(parent, prefix, textWidth)
         bisCheck:SetChecked(not SimulateX_DB.bisTooltipDisabled)
         phaseSlider:SetValue(SimulateX_DB.maxPhase or 6)
         upgradesTabCheck:SetChecked(not SimulateX_DB.upgradesTabDisabled)
+        enchantAdviceCheck:SetChecked(not SimulateX_DB.enchantAdviceDisabled)
         for _, check in ipairs(upgradeChecks) do check.refresh() end
         for _, slider in ipairs(upgradeSliders) do slider.refresh() end
         UpdateContentHeight()
