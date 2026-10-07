@@ -94,6 +94,11 @@ local function ParseOrigin(token)
         return { kind = kind, id = tonumber(f[1]), level = tonumber(f[2]), faction = tonumber(f[3]),
             zone = tonumber(f[4]) }
     elseif kind == "p" then
+        if #f >= 4 then
+            local recipe = tonumber(f[4])
+            return { kind = kind, spell = tonumber(f[1]), skill = tonumber(f[2]), rank = tonumber(f[3]),
+                recipe = recipe ~= 0 and recipe or nil }
+        end
         return { kind = kind, skill = tonumber(f[1]), rank = tonumber(f[2]), recipe = tonumber(f[3]) }
     elseif kind == "b" then
         return { kind = kind, id = tonumber(f[1]), chance = tonumber(f[2]) }
@@ -140,6 +145,123 @@ end
 local function ProfessionName(skill)
     local spell = SimulateX_OrigenesProfesiones and SimulateX_OrigenesProfesiones[skill]
     return spell and GetSpellInfo(spell) or "Profesión"
+end
+
+local function PlayerProfessionKey(lineName)
+    if not lineName then return nil end
+    local professions = ReadPlayerProfessions()
+    for skill in pairs(professions) do
+        if ProfessionName(skill) == lineName then
+            return skill
+        end
+    end
+    return "name:" .. lineName
+end
+
+local function RecipeCharacterKey()
+    local playerName = UnitName("player")
+    local realmName = GetRealmName()
+    if not playerName or not realmName then return nil end
+    return playerName .. "-" .. realmName
+end
+
+local function PlayerRecipeData()
+    local characterKey = RecipeCharacterKey()
+    if not characterKey then return nil end
+    SimulateX_DB.knownRecipes = SimulateX_DB.knownRecipes or {}
+    SimulateX_DB.knownRecipeItems = SimulateX_DB.knownRecipeItems or {}
+    SimulateX_DB.knownRecipes[characterKey] = SimulateX_DB.knownRecipes[characterKey] or {}
+    SimulateX_DB.knownRecipeItems[characterKey] = SimulateX_DB.knownRecipeItems[characterKey] or {}
+    return characterKey, SimulateX_DB.knownRecipes[characterKey], SimulateX_DB.knownRecipeItems[characterKey]
+end
+
+local function SpellFromRecipeLink(link)
+    if not link then return nil end
+    return tonumber(link:match("enchant:(%d+)")) or tonumber(link:match("spell:(%d+)"))
+end
+
+local function ItemIdFromLink(link)
+    return link and tonumber(link:match("item:(%d+)")) or nil
+end
+
+local function CraftRecipeInfo(index)
+    local name, _, skillType = GetCraftInfo(index)
+    return name, skillType
+end
+
+local function SaveProfessionRecipes(lineName, count, getInfo, getRecipeLink, getItemLink)
+    if SimulateX_DB.knownRecipesDisabled or not lineName then return end
+    if IsTradeSkillLinked and IsTradeSkillLinked() then return end
+    local skill = PlayerProfessionKey(lineName)
+    if not skill then return end
+
+    local spells, items, hasRecipe = {}, {}, false
+    for index = 1, count do
+        local name, skillType = getInfo(index)
+        if name and skillType ~= "header" and skillType ~= "subheader" then
+            hasRecipe = true
+            local spell = SpellFromRecipeLink(getRecipeLink(index))
+            if spell then
+                spells[spell] = true
+                local itemId = getItemLink and ItemIdFromLink(getItemLink(index))
+                if itemId then
+                    -- Los orígenes existentes no incluyen el hechizo del objeto fabricado.
+                    items[itemId] = spell
+                end
+            end
+        end
+    end
+
+    if not hasRecipe then return end
+
+    local _, recipesByCharacter, itemsByCharacter = PlayerRecipeData()
+    if not recipesByCharacter then return end
+    recipesByCharacter[skill] = spells
+    itemsByCharacter[skill] = items
+    if SimulateX_Mejoras_MarkDirty then
+        SimulateX_Mejoras_MarkDirty()
+    end
+end
+
+local recipeScanner = CreateFrame("Frame")
+recipeScanner:RegisterEvent("TRADE_SKILL_SHOW")
+recipeScanner:RegisterEvent("TRADE_SKILL_UPDATE")
+recipeScanner:RegisterEvent("CRAFT_SHOW")
+recipeScanner:RegisterEvent("CRAFT_UPDATE")
+recipeScanner:SetScript("OnEvent", function(_, event)
+    if SimulateX_DB.knownRecipesDisabled then return end
+    if event == "TRADE_SKILL_SHOW" or event == "TRADE_SKILL_UPDATE" then
+        local lineName = GetTradeSkillLine()
+        if lineName then
+            SaveProfessionRecipes(lineName, GetNumTradeSkills(), GetTradeSkillInfo,
+                GetTradeSkillRecipeLink, GetTradeSkillItemLink)
+        end
+    elseif GetCraftDisplaySkillLine then
+        local lineName = GetCraftDisplaySkillLine()
+        if lineName then
+            SaveProfessionRecipes(lineName, GetNumCrafts(), CraftRecipeInfo, GetCraftRecipeLink)
+        end
+    end
+end)
+
+local function KnownProfessionRecipe(origin, itemId)
+    if SimulateX_DB.knownRecipesDisabled then return false end
+    local characterKey = RecipeCharacterKey()
+    local recipes = characterKey and SimulateX_DB.knownRecipes
+        and SimulateX_DB.knownRecipes[characterKey]
+    if not recipes then return false end
+    local professionRecipes = recipes[origin.skill]
+        or recipes["name:" .. ProfessionName(origin.skill)]
+    if not professionRecipes then return false end
+    local spell = origin.spell
+    if not spell then
+        local byCharacter = SimulateX_DB.knownRecipeItems
+            and SimulateX_DB.knownRecipeItems[characterKey]
+        local professionItems = byCharacter and (byCharacter[origin.skill]
+            or byCharacter["name:" .. ProfessionName(origin.skill)])
+        spell = professionItems and professionItems[itemId]
+    end
+    return spell and professionRecipes[spell] == true or false
 end
 
 local ENCHANTMENT_EQUIPMENT_SLOTS = {
@@ -368,7 +490,7 @@ local function CurrencyNames(origin)
     return table.concat(names, ", ")
 end
 
-local function OriginText(origin)
+local function OriginText(origin, itemId)
     local kind = origin.kind
     if kind == "j" then
         return WithDetails("Jefe: " .. Name("criaturas", origin.id), origin)
@@ -390,6 +512,9 @@ local function OriginText(origin)
         return string.format("Misión: %s (nivel %d)", Name("misiones", origin.id), origin.level)
             .. (place and (" · " .. place) or "")
     elseif kind == "p" then
+        if KnownProfessionRecipe(origin, itemId) then
+            return "|cff00ff00Ya sabes fabricarlo|r"
+        end
         local text = string.format("%s (%d)", ProfessionName(origin.skill), origin.rank)
         local have = playerProfessions[origin.skill]
         if have and have < origin.rank then
@@ -678,7 +803,7 @@ local function FillItemRow(row, entry, level)
 
     local texts = {}
     for index = 1, math.min(#entry.origins, MAX_ORIGINS_IN_ROW) do
-        table.insert(texts, OriginText(entry.origins[index]))
+        table.insert(texts, OriginText(entry.origins[index], entry.id))
     end
     if #entry.origins > MAX_ORIGINS_IN_ROW then
         table.insert(texts, string.format("y %d más", #entry.origins - MAX_ORIGINS_IN_ROW))

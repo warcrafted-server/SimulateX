@@ -337,6 +337,14 @@ function SimulateX_BuildOptions(parent, prefix, textWidth)
         UpgradesChanged()
     end)
 
+    local knownRecipesCheck = CreateCheck(parent, prefix .. "KnownRecipesCheck",
+        "Recordar y marcar las recetas que ya sé", textWidth)
+    knownRecipesCheck:SetPoint("TOPLEFT", enchantAdviceCheck, "BOTTOMLEFT", 0, -2)
+    knownRecipesCheck:SetScript("OnClick", function(self)
+        SimulateX_DB.knownRecipesDisabled = not self:GetChecked() or nil
+        UpgradesChanged()
+    end)
+
     -- { clave en SimulateX_DB, texto, true si la clave desactiva }
     local upgradeChecks = {}
     local upgradeCheckDefs = {
@@ -350,7 +358,7 @@ function SimulateX_BuildOptions(parent, prefix, textWidth)
         { "upgradesAnyArmor", "Incluir armaduras que no son de tu tipo principal (p. ej. tela para un druida)", false },
         { "upgradesOtherFaction", "Incluir objetos y vendedores de la otra facción", false },
     }
-    local previous = enchantAdviceCheck
+    local previous = knownRecipesCheck
     for index, def in ipairs(upgradeCheckDefs) do
         local key, text, inverted = def[1], def[2], def[3]
         local check = CreateCheck(parent, prefix .. "UpgradesCheck" .. index, text, textWidth)
@@ -446,6 +454,7 @@ function SimulateX_BuildOptions(parent, prefix, textWidth)
         phaseSlider:SetValue(SimulateX_DB.maxPhase or 6)
         upgradesTabCheck:SetChecked(not SimulateX_DB.upgradesTabDisabled)
         enchantAdviceCheck:SetChecked(not SimulateX_DB.enchantAdviceDisabled)
+        knownRecipesCheck:SetChecked(not SimulateX_DB.knownRecipesDisabled)
         for _, check in ipairs(upgradeChecks) do check.refresh() end
         for _, slider in ipairs(upgradeSliders) do slider.refresh() end
         UpdateContentHeight()
