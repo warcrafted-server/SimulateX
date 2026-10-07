@@ -1785,6 +1785,83 @@ SimulateX_API = {
     CLASS_MASK_BITS = CLASS_MASK_BITS,
 }
 
+local function ScanBagUpgrades()
+    local context = SimulateX_API.GetActiveSpecContext()
+    if not context then
+        return {}
+    end
+
+    local playerLevel = SimulateX_API.GetEffectivePlayerLevel()
+    local found = {}
+    for bagId = 0, 4 do
+        for slot = 1, GetContainerNumSlots(bagId) do
+            local link = GetContainerItemLink(bagId, slot)
+            if link then
+                local minLevel, equipLoc = SimulateX_API.GetItemBasics(link)
+                if equipLoc and (not minLevel or minLevel <= playerLevel)
+                    and SimulateX_API.IsItemUsable(link, equipLoc) then
+                    local evaluation = SimulateX_API.EvaluateForContext(context, link)
+                    if evaluation and evaluation.gain > 0 and not evaluation.isNoise and evaluation.percent then
+                        table.insert(found, { link = link, equipLoc = equipLoc, percent = evaluation.percent })
+                    end
+                end
+            end
+        end
+    end
+
+    table.sort(found, function(a, b)
+        if a.percent ~= b.percent then return a.percent > b.percent end
+        return a.link < b.link
+    end)
+
+    local upgrades, perSlot = {}, {}
+    for _, entry in ipairs(found) do
+        local slots = SimulateX_API.INVTYPE_TO_SLOTS[entry.equipLoc]
+        local slotKey = slots and #slots == 1 and slots[1] or entry.equipLoc
+        local count = perSlot[slotKey] or 0
+        if count < 3 then
+            table.insert(upgrades, entry)
+            perSlot[slotKey] = count + 1
+            if #upgrades == 10 then break end
+        end
+    end
+    return upgrades
+end
+
+local bagAlertTimer = CreateFrame("Frame")
+local bagAlertStarted = false
+local function ScheduleBagAlert()
+    if bagAlertStarted then return end
+    bagAlertStarted = true
+    local elapsedTotal = 0
+    bagAlertTimer:SetScript("OnUpdate", function(self, elapsed)
+        elapsedTotal = elapsedTotal + elapsed
+        if elapsedTotal < 5 then return end
+        self:SetScript("OnUpdate", nil)
+        self:Hide()
+        if not SimulateX_DB.bagAlertDisabled then
+            local upgrades = ScanBagUpgrades()
+            if #upgrades > 0 then
+                print(string.format("SimulateX: tienes %d objeto(s) en las bolsas que mejoran tu equipo (/simulatex bolsas).", #upgrades))
+            end
+        end
+    end)
+    bagAlertTimer:Show()
+end
+
+local function PrintBagUpgrades()
+    local upgrades = ScanBagUpgrades()
+    if #upgrades == 0 then
+        print("SimulateX: no hay mejoras en tus bolsas.")
+        return
+    end
+
+    print(string.format("SimulateX: %d mejora(s) en tus bolsas", #upgrades))
+    for _, entry in ipairs(upgrades) do
+        print(string.format("  %s %+.1f%% (%s)", entry.link, entry.percent, _G[entry.equipLoc] or entry.equipLoc))
+    end
+end
+
 --[[----------------------------------------------------------------------
     FLECHA Y TOOLTIP: "active" si mejora la spec activa, "other" si solo
     mejora otra spec de la clase; nunca si no es usable, bloqueado por
@@ -2366,6 +2443,8 @@ local function OnEvent(self, event, ...)
         end
     elseif event == "ADDON_LOADED" and ... == "Blizzard_AuctionUI" then
         HookAuctionFrame()
+    elseif event == "PLAYER_ENTERING_WORLD" then
+        ScheduleBagAlert()
     elseif event == "PLAYER_EQUIPMENT_CHANGED" or event == "PLAYER_LEVEL_UP" or event == "PLAYER_TALENT_UPDATE" then
         if event == "PLAYER_TALENT_UPDATE" then
             playerTalentHit = nil
@@ -2389,6 +2468,7 @@ SimulateX:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
 SimulateX:RegisterEvent("PLAYER_LEVEL_UP")
 SimulateX:RegisterEvent("PLAYER_TALENT_UPDATE")
 SimulateX:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
+SimulateX:RegisterEvent("PLAYER_ENTERING_WORLD")
 SimulateX:SetScript("OnEvent", OnEvent)
 
 --[[----------------------------------------------------------------------
@@ -2455,6 +2535,8 @@ SlashCmdList["SIMULATEX"] = function(msg)
         if SimulateX_Comparador_Toggle then
             SimulateX_Comparador_Toggle()
         end
+    elseif command == "bolsas" then
+        PrintBagUpgrades()
     elseif command == "debug" then
         local link = rest ~= "" and rest or nil
         PrintDebugInfo(link)

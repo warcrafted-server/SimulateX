@@ -25,6 +25,7 @@ El proyecto está diseñado para transformar por completo la forma en que los ju
 ## Comandos
 
 *   `/simulatex`: vuelve a la detección automática de build.
+*   `/simulatex bolsas`: lista los objetos de tus bolsas que mejoran el equipo para la especialización activa.
 *   `/simulatex comparar`: abre o cierra el comparador de equipo.
 *   `/simulatex debug [enlace]`: muestra datos de depuración del objeto enlazado; sin enlace, indica que pegues uno.
 *   `/simulatex nivel <n>`: fuerza un nivel durante la sesión; sin un número válido, desactiva el nivel forzado.

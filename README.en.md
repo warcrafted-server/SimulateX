@@ -25,6 +25,7 @@ The project is designed to completely transform how players evaluate their gear,
 ## Commands
 
 *   `/simulatex`: restore automatic build detection.
+*   `/simulatex bolsas`: list the items in your bags that improve your gear for the active specialization.
 *   `/simulatex comparar`: open or close the gear comparator.
 *   `/simulatex debug [link]`: show debug details for the linked item; without a link, it asks you to paste one.
 *   `/simulatex nivel <n>`: force a level for the current session; without a valid number, disable the forced level.

@@ -66,6 +66,7 @@ for i in "${!clases[@]}"; do
 done
 
 ejecutar "Encantamientos recomendados" "$PYTHON" Tools/probar_encantamientos_lupa.py
+ejecutar "Mejoras en las bolsas" "$PYTHON" Tools/probar_bolsas_lupa.py
 
 printf '\nResumen: %d pruebas, %d fallidas.\n' "$pruebas" "$fallos"
 if (( fallos > 0 )); then

@@ -93,8 +93,15 @@ function SimulateX_BuildOptions(parent, prefix, textWidth)
         if SimulateX_Mejoras_MarkDirty then SimulateX_Mejoras_MarkDirty() end
     end)
 
+    local bagAlertCheck = CreateCheck(parent, prefix .. "BagAlertCheck",
+        "Avisar de mejoras en las bolsas al iniciar sesión", textWidth)
+    bagAlertCheck:SetPoint("TOPLEFT", relicValuationCheck, "BOTTOMLEFT", 0, -2)
+    bagAlertCheck:SetScript("OnClick", function(self)
+        SimulateX_DB.bagAlertDisabled = not self:GetChecked() or nil
+    end)
+
     local windowTitle = CreateSectionTitle(parent, "Ventana y accesos")
-    windowTitle:SetPoint("TOPLEFT", relicValuationCheck, "BOTTOMLEFT", 2, -16)
+    windowTitle:SetPoint("TOPLEFT", bagAlertCheck, "BOTTOMLEFT", 2, -16)
 
     local minimapCheck = CreateCheck(parent, prefix .. "MinimapCheck",
         "Botón en el minimapa (hace falta /reload)", textWidth)
@@ -418,6 +425,7 @@ function SimulateX_BuildOptions(parent, prefix, textWidth)
         lowLevelCheck:SetChecked(not SimulateX_DB.lowLevelEstimateDisabled)
         otherArrowCheck:SetChecked(not SimulateX_DB.otherSpecArrowDisabled)
         relicValuationCheck:SetChecked(not SimulateX_DB.relicValuationDisabled)
+        bagAlertCheck:SetChecked(not SimulateX_DB.bagAlertDisabled)
         minimapCheck:SetChecked(not SimulateX_DB.minimapHidden)
         opacitySlider:SetValue(SimulateX_DB.comparadorOpacity or DEFAULT_OPACITY)
         RebuildSpecCheckboxes()
