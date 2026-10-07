@@ -375,7 +375,8 @@ local function StepJob(self)
         local typeCode = SimulateX_ItemTypes and SimulateX_ItemTypes[candidate.id]
         local wrongArmor = job.mainArmor and equipLoc ~= "INVTYPE_CLOAK"
             and ARMOR_TYPE_CODES[typeCode] and typeCode ~= job.mainArmor
-        if group and not wrongArmor and (equipLoc ~= "INVTYPE_WEAPONOFFHAND" or job.dualWield) then
+        if group and not wrongArmor and (equipLoc ~= "INVTYPE_WEAPONOFFHAND" or job.dualWield)
+            and not (job.hunter and equipLoc == "INVTYPE_THROWN") then
             local evaluation = SimulateX_API.EvaluateForContext(job.context, link)
             if evaluation and evaluation.gain > 0 and not evaluation.isNoise then
                 job.results[group] = job.results[group] or {}
@@ -419,6 +420,7 @@ function StartJob()
         results = {},
         limit = SimulateX_DB.upgradesPerSlot or 3,
         dualWield = DUAL_WIELD_CLASSES[select(2, UnitClass("player"))],
+        hunter = select(2, UnitClass("player")) == "HUNTER",
     }
     local armor = MAIN_ARMOR[select(2, UnitClass("player"))]
     if armor and not SimulateX_DB.upgradesAnyArmor then
