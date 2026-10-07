@@ -2,7 +2,7 @@
 
 Todos los cambios notables de este proyecto serán documentados en este archivo.
 
-## Sin publicar
+## [0.11.0] - 2026-10-07
 ### Añadido
 - Zona o instancia en cada origen de Mejoras (v0.11): "Jefe: Príncipe Valanar · Ciudadela de la Corona de Hielo · 25 jug.", "Vendedor: Rafael Langrom (Dalaran)", "Raro: Fenros · Bosque del Ocaso", y la zona de cada misión. Los nombres salen de las DBC del propio cliente esES (`Tools/extraer_dbc_cliente.py`); la zona de cada PNJ, de su posición y los mapas del mundo del servidor.
 - Mejoras solo propone tu tipo de armadura principal (cuero para druida y pícaro, malla desde nivel 40 para cazador y chamán, placas desde 40 para guerrero y paladín...). Antes un Feral veía piezas de tela con índice de crítico, que a nivel bajo puntúan alto. Las capas no cuentan y el tooltip sigue dando el valor real. Opción para volver a incluir el resto.
