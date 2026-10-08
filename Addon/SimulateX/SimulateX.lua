@@ -40,13 +40,10 @@ end
 -- simplemente no tiene entrada aquí.
 SimulateX_TalentDataVars = {
     WARRIOR = "SimulateX_Talentos_Warrior",
-    PALADIN = "SimulateX_Talentos_Paladin",
     HUNTER = "SimulateX_Talentos_Hunter",
     ROGUE = "SimulateX_Talentos_Rogue",
     PRIEST = "SimulateX_Talentos_Priest",
-    DEATHKNIGHT = "SimulateX_Talentos_Deathknight",
     SHAMAN = "SimulateX_Talentos_Shaman",
-    MAGE = "SimulateX_Talentos_Mage",
     WARLOCK = "SimulateX_Talentos_Warlock",
     DRUID = "SimulateX_Talentos_Druid",
 }

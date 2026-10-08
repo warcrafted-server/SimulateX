@@ -8,6 +8,8 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 - Mejoras marca en verde «Ya sabes fabricarlo» las recetas de profesión que ya conoce el personaje, después de abrir una vez la ventana de la profesión. El recuerdo se guarda por personaje y profesión y se puede desactivar en Configuración.
 
 ### Corregido
+- La pestaña Talentos de Caballero de la Muerte, Mago, Paladín Represalias y Chamán Elemental indica que la búsqueda no halló nada mejor que la distribución estándar de wowsims, en vez de «Sin distribuciones simuladas todavía».
+- Se eliminan de `SimulateX_TalentDataVars` las entradas de Caballero de la Muerte, Paladín y Mago, que apuntaban a tablas inexistentes.
 - Al comparar un objeto con un hueco de equipo vacío, los porcentajes superiores al 100 % ahora dicen «hueco libre»; los porcentajes menores conservan su valor e indican que el hueco está libre.
 
 ## [0.13.0] - 2026-10-07

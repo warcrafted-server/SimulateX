@@ -18,6 +18,13 @@ local TREE_COLUMNS = 4
 local TREE_ROWS = 11
 local NOISE_THRESHOLD_PCT = 0.3  -- mismo umbral que SimulateX.lua
 
+local STANDARD_BUILD_IS_OPTIMAL = {
+    DEATHKNIGHT = { deathknight = true },
+    MAGE = { mage = true },
+    PALADIN = { retribution_paladin = true },
+    SHAMAN = { elemental_shaman = true },
+}
+
 -- Coordenadas reales de Interface\TalentFrame\UI-TalentBranches (líneas
 -- rectas entre celdas adyacentes): [1] = requisito cumplido (dorado en la
 -- textura), [-1] = no cumplido (gris). Solo "down" (prerrequisito en la fila
@@ -468,7 +475,13 @@ RenderPage = function(page, spec)
     end
 
     if not specData or not specData.variants or #specData.variants == 0 then
-        page.emptyText:SetText("Sin distribuciones simuladas todavía para esta especialización")
+        local classFileName = select(2, UnitClass("player"))
+        local optimalSpecs = STANDARD_BUILD_IS_OPTIMAL[classFileName]
+        if optimalSpecs and optimalSpecs[spec] then
+            page.emptyText:SetText("Sin variantes: la búsqueda de SimulateX no halló nada mejor que la distribución estándar de wowsims.")
+        else
+            page.emptyText:SetText("Sin distribuciones simuladas todavía para esta especialización")
+        end
         page.emptyText:Show()
         page.variantBar:Hide()
         page.glyphPanel:Hide()
