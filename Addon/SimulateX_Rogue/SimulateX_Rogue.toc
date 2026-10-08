@@ -2,7 +2,7 @@
 ## Title: SimulateX (datos de Rogue)
 ## Notes: Datos de simulación y talentos de esta clase para SimulateX. Se carga solo para tu clase.
 ## Author: WarCrafted
-## Version: 0.13.0
+## Version: 0.14.0
 ## Dependencies: SimulateX
 ## LoadOnDemand: 1
 

@@ -3,6 +3,8 @@
 Todos los cambios notables de este proyecto serán documentados en este archivo.
 
 ## [Sin publicar]
+
+## [0.14.0] - 2026-10-08
 ### Añadido
 - `/simulatex bolsas` lista los objetos de las bolsas que mejoran el equipo para la especialización activa; al iniciar sesión puede avisar una vez si hay mejoras, con una opción para desactivarlo.
 - Mejoras marca en verde «Ya sabes fabricarlo» las recetas de profesión que ya conoce el personaje, después de abrir una vez la ventana de la profesión. El recuerdo se guarda por personaje y profesión y se puede desactivar en Configuración.

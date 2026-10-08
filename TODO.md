@@ -1,6 +1,6 @@
 # TODO de SimulateX
 
-Estado tras la auditoría del 2026-10-07 (versión 0.13.0). Lo marcado «hecho» se quita de aquí al cerrarlo.
+Estado tras la auditoría del 2026-10-07 (versión 0.14.0). Lo marcado «hecho» se quita de aquí al cerrarlo.
 
 ## Pendiente confirmado (camino a la 1.0)
 
@@ -9,6 +9,7 @@ Estado tras la auditoría del 2026-10-07 (versión 0.13.0). Lo marcado «hecho»
 
 ## Pendiente menor, a decidir
 
+- [ ] `Addon/SimulateX/Media/SimulateX.tga` no se referencia en ningún .lua, .toc ni .xml: borrarlo o usarlo (decidir).
 - [ ] Reliquias de sanadores y tanques sin valorar (sin simulación de HPS/amenaza para ellas).
 - [ ] Algunos valores bajos (~0,3-0,5 %) de reliquias pueden ser ruido de simulación: considerar subir `NOISE_THRESHOLD_PCT` para reliquias o simularlas con más iteraciones.
 - [ ] **Sufijos aleatorios en Mejoras (fase E de v0.11):** proponer el mejor sufijo («del oso», «del águila»…) para la spec leyendo `item_enchantment_template`. Hoy solo se puntúa el sufijo que trae el objeto. Decidir: 0.12 o fuera de alcance.
