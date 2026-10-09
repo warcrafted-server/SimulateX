@@ -3,6 +3,8 @@
 Todos los cambios notables de este proyecto serán documentados en este archivo.
 
 ## [Sin publicar]
+### Cambiado
+- Datos de simulación de Druida regenerados con las últimas simulaciones de Feral y Equilibrio.
 
 ## [0.14.0] - 2026-10-08
 ### Añadido
